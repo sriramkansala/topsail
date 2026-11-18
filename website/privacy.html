@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Privacy Policy — Clove</title>
+  <meta name="description" content="Clove collects no personal data. What it reads on your Mac, why, and where anything goes.">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="styles.css">
+  <script>
+    try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a class="brand" href="./" aria-label="Clove home"><img src="images/icon.png" alt="" width="28" height="28">Clove</a>
+      <nav class="primary-nav" aria-label="Primary">
+        <a href="./#pages">Features</a>
+        <a href="./#activities">Activities</a>
+        <a href="./#faq">FAQ</a>
+      </nav>
+      <div class="header-actions">
+        <a class="pill pill-dark pill-compact" href="https://github.com/sriramkansala/clove">GitHub</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="doc">
+    <h1>Privacy Policy</h1>
+    <p class="updated">Effective 19 November 2026</p>
+
+    <p><strong>Clove does not collect, store or share any personal data.</strong> It has no account,
+    no analytics, no ads, no tracking and no server of its own. Everything it shows is read on your
+    Mac, and stays there, except where you connect a service yourself, as described below.</p>
+
+    <h2>What Clove reads on your Mac, and why</h2>
+    <table>
+      <thead><tr><th>What</th><th>Why, and where it goes</th></tr></thead>
+      <tbody>
+        <tr><td>Calendar events</td><td>To show your upcoming events and remind you before a meeting. Read with your permission through macOS; never stored or sent anywhere.</td></tr>
+        <tr><td>What's playing in Music or Spotify</td><td>To show the track and its controls. Read with your permission (Automation). For Spotify, the album artwork is downloaded from Spotify's own image servers, the same way the Spotify app does.</td></tr>
+        <tr><td>Battery and performance figures</td><td>To show the System page and the charging and low-battery activities. Read only while shown; never stored or sent.</td></tr>
+        <tr><td>Volume and brightness keys</td><td>If you let Clove handle them, it receives only the volume, mute and brightness keys (with your Input Monitoring and Accessibility permission). It cannot see anything you type.</td></tr>
+        <tr><td>Microphone</td><td>Only while you record a voice note. The audio is transcribed and understood on your Mac and is never saved or sent.</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Linear, if you connect it</h2>
+    <p>If you paste a Linear personal API key into Clove's Settings, Clove keeps it in your Mac's
+    keychain and uses it only to talk to Linear's API (<code>api.linear.app</code>): to read the
+    issues assigned to you, and to make changes from a voice note after you have reviewed and
+    approved them. That information goes between your Mac and Linear only, and Linear's own
+    privacy policy applies to it. Disconnecting in Settings deletes the key.</p>
+
+    <h2>What Clove stores on your Mac</h2>
+    <p>Your settings, and a few small notes such as which deadlines it has already reminded you
+    about and the names of your Linear projects and labels (so voice notes recognise them). They
+    stay in Clove's preferences on your Mac. Deleting Clove removes them.</p>
+
+    <h2>Apple</h2>
+    <p>Voice notes use Apple's on-device speech recognition and Apple Intelligence models; nothing
+    is sent to Apple for them. If you have chosen to share analytics with app developers in macOS,
+    Apple may send Clove's developers anonymous crash reports.</p>
+
+    <h2>This website</h2>
+    <p>This site is hosted by GitHub Pages, which, like any web host, receives your IP address when
+    you visit. The site uses no cookies or analytics; it asks GitHub's public API for the number of
+    stars and the latest download, and remembers your light or dark choice in your browser.</p>
+
+    <h2>Children</h2>
+    <p>Clove collects no data from anyone, including children.</p>
+
+    <h2>Changes</h2>
+    <p>If this policy changes, the new version will be posted here with a new effective date. Every
+    earlier version is in the project's history on <a href="https://github.com/sriramkansala/clove/commits/main/website/privacy.html">GitHub</a>.</p>
+
+    <h2>Contact</h2>
+    <p>Questions about privacy: open an issue at
+    <a href="https://github.com/sriramkansala/clove/issues">github.com/sriramkansala/clove/issues</a>.</p>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-bottom">
+        <a href="./">← Back to Clove</a>
+        <span>© 2026 Clove contributors</span>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
