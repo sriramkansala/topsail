@@ -46,7 +46,7 @@ final class AppSettings: ObservableObject {
             "showCalendar": true,
             "showSystemPage": true,
             "hapticFeedback": true,
-            "hideSystemVolumeHUD": true,
+            "hideSystemVolumeHUD": Self.takesOverKeysByDefault,
         ])
         showMusicActivity = defaults.bool(forKey: "showMusicActivity")
         showChargingActivity = defaults.bool(forKey: "showChargingActivity")
@@ -147,6 +147,15 @@ final class AppSettings: ObservableObject {
             NSWorkspace.shared.open(url)
         }
     }
+
+    /// The App Store build leaves the volume keys to macOS until the user asks Clove to handle
+    /// them (and so is asked for Input Monitoring and Accessibility only then); the direct build
+    /// takes them from the start.
+    #if DIRECT
+    private static let takesOverKeysByDefault = true
+    #else
+    private static let takesOverKeysByDefault = false
+    #endif
 
     private func save(_ value: Bool, _ key: String) {
         defaults.set(value, forKey: key)
