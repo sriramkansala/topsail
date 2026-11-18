@@ -59,13 +59,11 @@ rm -rf $APP
 mkdir -p ${APP:h}
 cp -R $DERIVED/Build/Products/Debug/Clove.app $APP
 
-# Give every dev build the same identity, so macOS privacy permissions (Input Monitoring,
-# Accessibility) and keychain access survive rebuilds instead of resetting or prompting:
-# - with an Apple Development certificate (signed in to Xcode), sign with it;
-# - otherwise ad-hoc, with a designated requirement that names just the bundle id (keeps
-#   permissions, but the keychain still asks again after each rebuild).
+# With an Apple Development certificate (signed in to Xcode), every dev build has the same
+# identity, so macOS privacy permissions (Input Monitoring, Accessibility) and keychain access
+# survive rebuilds. Without one it's ad hoc, and macOS asks again after each rebuild: a stable
+# ad-hoc identity would be one any other ad-hoc binary could claim, permissions and all.
 # Release builds are signed by release.sh / release-direct.sh.
-BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" $APP/Contents/Info.plist)
 ENTITLEMENTS=$(mktemp "${TMPDIR:-/tmp}/clove-entitlements.XXXXXX")
 codesign -d --entitlements - --xml $APP > $ENTITLEMENTS 2>/dev/null
 DEV_IDENTITY=$(security find-identity -v -p codesigning 2>/dev/null | awk -F'"' '/"Apple Development: / {print $2; exit}')
@@ -83,9 +81,8 @@ if [[ -n $DEV_IDENTITY ]]; then
     --entitlements $ENTITLEMENTS $APP \
     || echo "warning: could not sign with $DEV_IDENTITY"
 else
-  codesign --force --sign - --options runtime --entitlements $ENTITLEMENTS \
-    --requirements "=designated => identifier \"$BUNDLE_ID\"" $APP \
-    || echo "warning: could not re-sign with a stable identity; permissions will reset per build"
+  codesign --force --sign - --options runtime --entitlements $ENTITLEMENTS $APP \
+    || echo "warning: could not re-sign the app"
 fi
 rm -f $ENTITLEMENTS
 echo "\nBUILD OK -> ${APP#$ROOT/}"

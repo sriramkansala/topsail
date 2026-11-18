@@ -58,13 +58,31 @@ func ownTeam() -> String? {
     return info[kSecCodeInfoTeamIdentifier as String] as? String
 }
 
+/// Signed with a Developer ID, the way releases are: Apple's Developer ID intermediate and leaf.
+let developerID = "certificate 1[field.1.2.840.113635.100.6.2.6] exists and certificate leaf[field.1.2.840.113635.100.6.1.13] exists"
+
+/// Whether this helper meets `requirement`.
+func satisfies(_ requirement: String) -> Bool {
+    var code: SecCode?
+    var compiled: SecRequirement?
+    guard SecCodeCopySelf([], &code) == errSecSuccess, let code,
+          SecRequirementCreateWithString(requirement as CFString, [], &compiled) == errSecSuccess, let compiled
+    else { return false }
+    return SecCodeCheckValidity(code, [], compiled) == errSecSuccess
+}
+
 // An ad-hoc signed helper can't tell Clove from anything else, so it serves no one.
 guard let team = ownTeam() else { exit(1) }
 
+// Only Clove signed by this helper's team; and a release helper only a release Clove, so a
+// development build (debuggable, so open to other processes) can never reach it.
+var requirement = "anchor apple generic and identifier \"\(LowPowerModeHelperID.client)\" and certificate leaf[subject.OU] = \"\(team)\""
+if satisfies(developerID) {
+    requirement += " and " + developerID
+}
+
 let listener = NSXPCListener(machServiceName: LowPowerModeHelperID.label)
-listener.setConnectionCodeSigningRequirement(
-    "anchor apple generic and identifier \"\(LowPowerModeHelperID.client)\" and certificate leaf[subject.OU] = \"\(team)\""
-)
+listener.setConnectionCodeSigningRequirement(requirement)
 let helper = Helper()
 listener.delegate = helper
 listener.resume()

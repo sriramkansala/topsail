@@ -291,10 +291,16 @@ final class NowPlayingService: ObservableObject {
         case .spotify:
             AppleScriptRunner.run(app.artworkScript) { [weak self] outcome in
                 guard let urlString = outcome.descriptor?.stringValue,
-                      let url = URL(string: urlString) else { return }
+                      let url = URL(string: urlString), Self.isSpotifyArtwork(url) else { return }
                 self?.downloadArtwork(from: url, taskID: id)
             }
         }
+    }
+
+    /// Spotify hands over an artwork URL; only its own image servers are fetched from.
+    private static func isSpotifyArtwork(_ url: URL) -> Bool {
+        guard url.scheme == "https", let host = url.host()?.lowercased() else { return false }
+        return ["scdn.co", "spotifycdn.com"].contains { host == $0 || host.hasSuffix(".\($0)") }
     }
 
     private func downloadArtwork(from url: URL, taskID id: Int) {

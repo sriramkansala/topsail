@@ -5,7 +5,9 @@
 #   scripts/embed-helper.sh <Clove.app> <signing identity, or - for ad hoc> [--release]
 #
 # --release builds for Apple silicon and Intel and signs with a secure timestamp (notarization
-# needs both); otherwise it's this Mac's architecture only. The helper is a launchd daemon that
+# needs both); otherwise it's this Mac's architecture only. With --release, TEAM_ID must be set:
+# the daemon's plist gets a launch constraint, so launchd runs it as root only if it is still
+# the helper signed by that team (not a binary swapped into the app bundle). The helper is a launchd daemon that
 # runs as root, so it never goes into the App Store build. An ad-hoc signed helper serves no
 # one, and Clove falls back to Battery settings.
 set -euo pipefail
@@ -38,5 +40,13 @@ rm -rf $WORK
 
 mkdir -p $DAEMONS
 cp $ROOT/CloveHelper/$LABEL.plist $DAEMONS/
+if (( RELEASE )); then
+  : ${TEAM_ID:?Set TEAM_ID for a release helper}
+  /usr/libexec/PlistBuddy \
+    -c "Add :SpawnConstraint dict" \
+    -c "Add :SpawnConstraint:team-identifier string $TEAM_ID" \
+    -c "Add :SpawnConstraint:signing-identifier string $LABEL" \
+    $DAEMONS/$LABEL.plist
+fi
 
 codesign --force --sign $IDENTITY --identifier $LABEL --options runtime $TIMESTAMP $HELPER

@@ -49,9 +49,6 @@ final class LinearService: ObservableObject {
         // Read the key off the main thread: if macOS has to ask before handing it over, that
         // prompt must never freeze launch (it blocks the reading thread until answered).
         Task.detached(priority: .userInitiated) { [weak self] in
-            #if DIRECT
-            Keychain.migrateLegacyItem(LinearService.keychainAccount)
-            #endif
             let key = Keychain.read(LinearService.keychainAccount)
             await self?.restore(key)
         }
@@ -118,7 +115,9 @@ final class LinearService: ObservableObject {
         apply(fetched)
     }
 
+    /// Opens the issue in the browser, if its link is Linear's own.
     func open(_ issue: LinearIssue) {
+        guard issue.url.scheme == "https", issue.url.host() == "linear.app" else { return }
         NSWorkspace.shared.open(issue.url)
     }
 

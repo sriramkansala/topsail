@@ -32,19 +32,6 @@ enum Keychain {
         SecItemDelete(baseQuery(account, service: service) as CFDictionary)
     }
 
-    #if DIRECT
-    /// Moves an item saved by an earlier direct build under the shared "app.clove.Clove"
-    /// service to this build's own service. Only the direct build ever wrote there.
-    static func migrateLegacyItem(_ account: String) {
-        let legacy = "app.clove.Clove"
-        guard service != legacy, read(account) == nil,
-              let value = read(account, service: legacy),
-              write(value, account: account)
-        else { return }
-        SecItemDelete(baseQuery(account, service: legacy) as CFDictionary)
-    }
-    #endif
-
     private static func read(_ account: String, service: String) -> String? {
         var query = baseQuery(account, service: service)
         query[kSecReturnData as String] = true

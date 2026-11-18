@@ -56,6 +56,10 @@ struct LinearClient {
         return Self.makeSnapshot(from: viewer, preferredTeamID: preferredTeamID)
     }
 
+    /// No cache, no cookies, and no redirects: the request carries the API key in its header,
+    /// which must never be sent on to wherever a redirect points.
+    private static let session = URLSession(configuration: .ephemeral, delegate: NoRedirects(), delegateQueue: nil)
+
     /// Runs a GraphQL query or mutation and decodes its `data`. Use `NSNull()` in `variables` for null.
     func execute<Payload: Decodable>(_ query: String, variables: [String: Any] = [:], as: Payload.Type) async throws -> Payload {
         var request = URLRequest(url: Self.endpoint, timeoutInterval: 20)
@@ -64,7 +68,7 @@ struct LinearClient {
         request.setValue(apiKey, forHTTPHeaderField: "Authorization")
         request.httpBody = try JSONSerialization.data(withJSONObject: ["query": query, "variables": variables])
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await Self.session.data(for: request)
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
         if status == 401 { throw LinearError.unauthorized }
 
@@ -229,4 +233,11 @@ private struct TeamNode: Decodable {
     let name: String
     let key: String
     let activeCycle: Cycle?
+}
+
+private final class NoRedirects: NSObject, URLSessionTaskDelegate {
+    func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
+                    newRequest request: URLRequest) async -> URLRequest? {
+        nil
+    }
 }
