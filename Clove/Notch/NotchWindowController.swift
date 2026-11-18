@@ -35,7 +35,7 @@ final class NotchWindowController: NSWindowController {
         model.onRequestLowPowerMode = { [weak batteryMonitor] in batteryMonitor?.requestLowPowerMode() }
         self.batteryMonitor = batteryMonitor
         audioMonitor = AudioMonitor(center: activities)
-        volumeKeys = VolumeKeyInterceptor(settings: settings, center: activities)
+        volumeKeys = VolumeKeyInterceptor(settings: settings, center: activities, nowPlaying: nowPlaying)
 
         let panel = NotchPanel(contentRect: .zero)
         super.init(window: panel)

@@ -54,7 +54,12 @@ struct TransientActivityView: View {
     @ViewBuilder
     private var leftWing: some View {
         switch activity.kind {
-        case .volume(let level, let muted):
+        case .volume(let level, let muted, let remote) where remote:
+            // Spotify playing on another device: that device, not this Mac's speaker.
+            Image(systemName: "hifispeaker.fill")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.white.opacity(muted || level == 0 ? 0.5 : 1))
+        case .volume(let level, let muted, _):
             Image(systemName: muted || level == 0 ? "speaker.slash.fill" : "speaker.wave.3.fill",
                   variableValue: Double(level))
                 .font(.system(size: 13, weight: .semibold))
@@ -84,7 +89,7 @@ struct TransientActivityView: View {
     @ViewBuilder
     private var rightWing: some View {
         switch activity.kind {
-        case .volume(let level, let muted):
+        case .volume(let level, let muted, _):
             // The number is a derived value: the text is always the final value; only its
             // digits roll, on base, so correctness never depends on the animation.
             Text("\(Int(((muted ? 0 : level) * 100).rounded()))")
@@ -129,7 +134,7 @@ struct TransientActivityView: View {
 
     private var meter: (level: Double, color: Color, dimmed: Bool)? {
         switch activity.kind {
-        case .volume(let level, let muted): return (Double(level), .white, muted)
+        case .volume(let level, let muted, _): return (Double(level), .white, muted)
         case .brightness(let level): return (Double(level), .white, false)
         case .charging, .lowBattery, .audioDevice, .taskDue: return nil
         }

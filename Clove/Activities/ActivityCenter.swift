@@ -5,7 +5,7 @@ enum ActivityKind: Equatable {
     case charging(level: Int)          // just plugged in
     case lowBattery(level: Int, lowPowerMode: LowPowerMode)  // crossed 20 % or 10 % while on battery
     case audioDevice(name: String)     // default output switched to a Bluetooth device
-    case volume(level: Float, muted: Bool)  // output volume changed; level is 0...1
+    case volume(level: Float, muted: Bool, remote: Bool = false)  // output volume changed; level is 0...1; remote: Spotify's device elsewhere
     case brightness(level: Float)           // display brightness changed (direct build only)
     case taskDue(title: String, overdue: Bool)  // a Linear issue is due today or overdue
 }

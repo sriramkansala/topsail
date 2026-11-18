@@ -114,11 +114,11 @@ struct SettingsView: View {
 private extension SettingsView {
     #if DIRECT
     static let takeoverTitle = "Hide macOS volume and brightness indicators"
-    static let takeoverNote = "Clove handles the volume and brightness keys itself. Needs Input Monitoring and Accessibility permission."
+    static let takeoverNote = "Clove handles the volume and brightness keys itself; while Spotify plays on another device, the volume keys control that device. Needs Input Monitoring and Accessibility permission."
     static let lowBatteryNote = "Clicking the low-battery notice turns on Low Power Mode, through a helper you allow once in Login Items."
     #else
     static let takeoverTitle = "Hide macOS volume indicator"
-    static let takeoverNote = "Clove handles the volume keys itself. Needs Input Monitoring and Accessibility permission."
+    static let takeoverNote = "Clove handles the volume keys itself; while Spotify plays on another device, they control that device. Needs Input Monitoring and Accessibility permission."
     static let lowBatteryNote = "Clicking the low-battery notice opens Battery settings, where you can turn on Low Power Mode."
     #endif
 }

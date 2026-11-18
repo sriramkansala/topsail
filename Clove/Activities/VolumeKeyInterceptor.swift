@@ -17,6 +17,7 @@ final class VolumeKeyInterceptor {
     private let settings: AppSettings
     private let center: ActivityCenter
     private let tap: VolumeKeyTap
+    private let remoteVolume: SpotifyRemoteVolume
     private var trustPoll: Timer?
     private var cancellables = Set<AnyCancellable>()
 
@@ -25,9 +26,11 @@ final class VolumeKeyInterceptor {
     // posting before are asked once more.
     private static let askedKey = "askedForInputMonitoring"
 
-    init(settings: AppSettings, center: ActivityCenter) {
+    init(settings: AppSettings, center: ActivityCenter, nowPlaying: NowPlayingService) {
         self.settings = settings
         self.center = center
+        let remoteVolume = SpotifyRemoteVolume(nowPlaying: nowPlaying, center: center)
+        self.remoteVolume = remoteVolume
         // Called on the key queue after a key changed the level.
         tap = VolumeKeyTap(
             onVolume: { [weak center] level, muted in
@@ -39,8 +42,14 @@ final class VolumeKeyInterceptor {
                 DispatchQueue.main.async {
                     MainActor.assumeIsolated { center?.post(.brightness(level: level)) }
                 }
+            },
+            onRemoteVolume: { [weak remoteVolume] key, fine in
+                DispatchQueue.main.async {
+                    MainActor.assumeIsolated { remoteVolume?.change(key, fine: fine) }
+                }
             }
         )
+        remoteVolume.onActiveChange = { [tap] active in tap.remoteVolume = active }
 
         // At launch: start if already allowed, otherwise wait quietly for the permission.
         apply(enabled: settings.hideSystemVolumeHUD, userTurnedOn: false)
@@ -138,7 +147,7 @@ final class VolumeKeyInterceptor {
 /// main thread (busy drawing, decoding artwork, reading the calendar), its callback only
 /// decides and returns, and the Core Audio work happens afterwards on `volumeQueue`.
 final class VolumeKeyTap: @unchecked Sendable {
-    private enum Key { case volumeUp, volumeDown, mute, brightnessUp, brightnessDown }
+    enum Key { case volumeUp, volumeDown, mute, brightnessUp, brightnessDown }
 
     // NX_KEYTYPE_* from IOKit/hidsystem/ev_keymap.h and NX_SUBTYPE_AUX_CONTROL_BUTTONS.
     private static let soundUp = 0, soundDown = 1, brightnessUp = 2, brightnessDown = 3, mute = 7
@@ -149,6 +158,8 @@ final class VolumeKeyTap: @unchecked Sendable {
     /// Report the new level after a key press, on `keyQueue`.
     private let onVolume: (Float32, Bool) -> Void
     private let onBrightness: (Float) -> Void
+    /// A volume key for Spotify's device elsewhere (`remoteVolume`), on `keyQueue`.
+    private let onRemoteVolume: (Key, Bool) -> Void
 
     private let lock = NSLock()
     private var machPort: CFMachPort?
@@ -156,6 +167,7 @@ final class VolumeKeyTap: @unchecked Sendable {
     private var _outputSettable = false
     private var _takesVolume = true
     private var _takesBrightness = true
+    private var _remoteVolume = false
 
     /// Whether the current default output's volume can be set; if not, keys go to macOS.
     var outputSettable: Bool {
@@ -175,9 +187,18 @@ final class VolumeKeyTap: @unchecked Sendable {
         set { lock.withLock { _takesBrightness = newValue } }
     }
 
-    init(onVolume: @escaping (Float32, Bool) -> Void, onBrightness: @escaping (Float) -> Void) {
+    /// Whether Spotify is playing on another device: the volume keys go to it (`onRemoteVolume`)
+    /// whatever this Mac's output is.
+    var remoteVolume: Bool {
+        get { lock.withLock { _remoteVolume } }
+        set { lock.withLock { _remoteVolume = newValue } }
+    }
+
+    init(onVolume: @escaping (Float32, Bool) -> Void, onBrightness: @escaping (Float) -> Void,
+         onRemoteVolume: @escaping (Key, Bool) -> Void) {
         self.onVolume = onVolume
         self.onBrightness = onBrightness
+        self.onRemoteVolume = onRemoteVolume
     }
 
     /// Creates and starts the tap; true if it is running. `quiet` skips the failure log, for
@@ -262,10 +283,13 @@ final class VolumeKeyTap: @unchecked Sendable {
         default: return Unmanaged.passUnretained(event)  // media keys, and brightness in the App Store build
         }
 
+        var remote = false
         switch key {
         case .volumeUp, .volumeDown, .mute:
-            // Outputs without software volume (some HDMI/USB devices) stay with macOS.
-            guard outputSettable, takesVolume else { return Unmanaged.passUnretained(event) }
+            // Spotify playing on another device takes the keys. Otherwise, outputs without
+            // software volume (some HDMI/USB devices) stay with macOS.
+            remote = remoteVolume
+            guard remote || (outputSettable && takesVolume) else { return Unmanaged.passUnretained(event) }
         case .brightnessUp, .brightnessDown:
             #if DIRECT
             // External displays and a closed lid stay with macOS.
@@ -278,17 +302,21 @@ final class VolumeKeyTap: @unchecked Sendable {
         let isKeyDown = (nsEvent.data1 & 0xFF00) >> 8 == 0xA
         if isKeyDown {
             let fine = event.flags.contains(.maskAlternate) && event.flags.contains(.maskShift)
-            keyQueue.async { [weak self] in self?.change(key, fine: fine) }
+            keyQueue.async { [weak self] in self?.change(key, fine: fine, remote: remote) }
         }
         return nil  // consume both key down and key up: macOS sees nothing and shows nothing
     }
 
     /// Runs on `keyQueue`.
-    private func change(_ key: Key, fine: Bool) {
+    private func change(_ key: Key, fine: Bool, remote: Bool) {
         let step: Float32 = fine ? 1.0 / 64 : 1.0 / 16
         switch key {
         case .volumeUp, .volumeDown, .mute:
-            changeVolume(key, step: step)
+            if remote {
+                onRemoteVolume(key, fine)
+            } else {
+                changeVolume(key, step: step)
+            }
         case .brightnessUp, .brightnessDown:
             #if DIRECT
             changeBrightness(up: key == .brightnessUp, step: step)
@@ -326,7 +354,7 @@ final class VolumeKeyTap: @unchecked Sendable {
     #endif
 
     /// Moves `value` to the next step boundary, as macOS does (so 0.53 + 1/16 lands on 0.5625).
-    private static func stepped(_ value: Float, by step: Float) -> Float {
+    static func stepped(_ value: Float, by step: Float) -> Float {
         let next = ((value / abs(step)).rounded() + (step > 0 ? 1 : -1)) * abs(step)
         return min(1, max(0, next))
     }

@@ -81,6 +81,39 @@ enum AudioHardware {
         AudioObjectSetPropertyData(device, &address, 0, nil, UInt32(MemoryLayout<UInt32>.size), &value)
     }
 
+    /// Whether a process of the app with this bundle id is sending audio to an output right now:
+    /// false when none is (including when the app has no audio connection at all), nil when
+    /// macOS won't say.
+    static func isPlayingAudio(bundleID: String) -> Bool? {
+        var address = address(kAudioHardwarePropertyProcessObjectList)
+        var size: UInt32 = 0
+        guard AudioObjectGetPropertyDataSize(systemObject, &address, 0, nil, &size) == noErr else { return nil }
+        var processes = [AudioObjectID](repeating: 0, count: Int(size) / MemoryLayout<AudioObjectID>.size)
+        guard AudioObjectGetPropertyData(systemObject, &address, 0, nil, &size, &processes) == noErr else { return nil }
+        return processes.contains { process in
+            bundleIdentifier(ofProcess: process)?.hasPrefix(bundleID) == true && isRunningOutput(process)
+        }
+    }
+
+    private static func bundleIdentifier(ofProcess process: AudioObjectID) -> String? {
+        var address = address(kAudioProcessPropertyBundleID)
+        var bundleID: Unmanaged<CFString>?
+        var size = UInt32(MemoryLayout<Unmanaged<CFString>?>.size)
+        let status = withUnsafeMutablePointer(to: &bundleID) {
+            AudioObjectGetPropertyData(process, &address, 0, nil, &size, $0)
+        }
+        guard status == noErr else { return nil }
+        return bundleID?.takeRetainedValue() as String?
+    }
+
+    private static func isRunningOutput(_ process: AudioObjectID) -> Bool {
+        var address = address(kAudioProcessPropertyIsRunningOutput)
+        var running: UInt32 = 0
+        var size = UInt32(MemoryLayout<UInt32>.size)
+        let status = AudioObjectGetPropertyData(process, &address, 0, nil, &size, &running)
+        return status == noErr && running != 0
+    }
+
     static func isMuted(_ device: AudioDeviceID) -> Bool {
         var address = muteAddress
         guard AudioObjectHasProperty(device, &address) else { return false }
