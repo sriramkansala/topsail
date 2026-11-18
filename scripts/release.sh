@@ -20,7 +20,7 @@ OPTS=$ROOT/build/ExportOptions.plist
 rm -rf $ARCHIVE $EXPORT
 mkdir -p $ROOT/build
 
-xcodebuild -project $ROOT/Clove/Clove.xcodeproj -scheme Clove -configuration Release \
+xcodebuild -project $ROOT/Clove.xcodeproj -scheme Clove -configuration Release \
   -destination 'generic/platform=macOS' -archivePath $ARCHIVE \
   DEVELOPMENT_TEAM=$TEAM_ID CURRENT_PROJECT_VERSION=$BUILD \
   -allowProvisioningUpdates archive

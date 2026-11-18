@@ -23,11 +23,11 @@ OPTS=$OUT/ExportOptions.plist
 rm -rf $OUT
 mkdir -p $OUT
 
-xcodebuild -project $ROOT/Clove/Clove.xcodeproj -scheme Clove -configuration Release \
+xcodebuild -project $ROOT/Clove.xcodeproj -scheme Clove -configuration Release \
   -destination 'generic/platform=macOS' -archivePath $ARCHIVE \
   DEVELOPMENT_TEAM=$TEAM_ID CURRENT_PROJECT_VERSION=$BUILD \
   'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) DIRECT' \
-  CODE_SIGN_ENTITLEMENTS=Support/Clove-Direct.entitlements \
+  CODE_SIGN_ENTITLEMENTS=Clove/Resources/Clove-Direct.entitlements \
   PRODUCT_BUNDLE_IDENTIFIER=app.clove.Clove.direct \
   -allowProvisioningUpdates archive
 

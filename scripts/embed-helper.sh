@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Build Clove's Low Power Mode helper (Clove/Helper) into a direct-download Clove.app and sign
+# Build Clove's Low Power Mode helper (CloveHelper/) into a direct-download Clove.app and sign
 # it; sign the app itself afterwards, so its seal covers the helper.
 #
 #   scripts/embed-helper.sh <Clove.app> <signing identity, or - for ad hoc> [--release]
@@ -17,7 +17,7 @@ RELEASE=0
 [[ ${3:-} == --release ]] && RELEASE=1
 
 LABEL=app.clove.Clove.direct.helper
-SOURCES=($ROOT/Clove/Helper/main.swift $ROOT/Clove/Sources/Clove/Activities/LowPowerModeSwitching.swift)
+SOURCES=($ROOT/CloveHelper/main.swift $ROOT/Clove/Activities/LowPowerModeSwitching.swift)
 HELPER=$APP/Contents/MacOS/CloveHelper
 DAEMONS=$APP/Contents/Library/LaunchDaemons
 
@@ -37,6 +37,6 @@ lipo -create -output $HELPER $WORK/${^ARCHS}
 rm -rf $WORK
 
 mkdir -p $DAEMONS
-cp $ROOT/Clove/Helper/$LABEL.plist $DAEMONS/
+cp $ROOT/CloveHelper/$LABEL.plist $DAEMONS/
 
 codesign --force --sign $IDENTITY --identifier $LABEL --options runtime $TIMESTAMP $HELPER

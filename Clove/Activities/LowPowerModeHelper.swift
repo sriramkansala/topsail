@@ -3,7 +3,7 @@ import Foundation
 import ServiceManagement
 
 /// Switches Low Power Mode on through Clove's helper, a launchd daemon that runs as root
-/// (Clove/Helper; macOS lets only root change Low Power Mode).
+/// (CloveHelper/; macOS lets only root change Low Power Mode).
 ///
 /// The first time, macOS wants the user to allow the helper in Login Items: Clove opens Login
 /// Items and switches Low Power Mode on as soon as it's allowed. After that a click is enough.

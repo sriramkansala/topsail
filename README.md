@@ -5,7 +5,7 @@ shows what's playing, what's next and what your Mac is doing, and grows when you
 pointer to it.
 
 <p align="center">
-  <img src="docs/images/player.png" width="640" alt="The expanded island showing the music player">
+  <img src="website/images/player.png" width="640" alt="The expanded island showing the music player">
 </p>
 
 ## What it does
@@ -14,19 +14,19 @@ pointer to it.
 
 | | |
 |---|---|
-| <img src="docs/images/calendar.png" width="400" alt="Calendar page"> | **Calendar.** Your next events today and tomorrow, with a Join button for Zoom, Meet, Teams, Webex and FaceTime links. |
-| <img src="docs/images/tasks.png" width="400" alt="Tasks page"> | **Tasks.** Your Linear issues for the current cycle, grouped by status. Press ⌥ Space to dictate a voice note; the on-device model turns it into issue changes you review before anything is sent. |
-| <img src="docs/images/system.png" width="400" alt="System page"> | **System.** Battery, charger and power draw, per-core CPU, memory, GPU, network and free disk space. Sampled only while the page is open. |
+| <img src="website/images/calendar.png" width="400" alt="Calendar page"> | **Calendar.** Your next events today and tomorrow, with a Join button for Zoom, Meet, Teams, Webex and FaceTime links. |
+| <img src="website/images/tasks.png" width="400" alt="Tasks page"> | **Tasks.** Your Linear issues for the current cycle, grouped by status. Press ⌥ Space to dictate a voice note; the on-device model turns it into issue changes you review before anything is sent. |
+| <img src="website/images/system.png" width="400" alt="System page"> | **System.** Battery, charger and power draw, per-core CPU, memory, GPU, network and free disk space. Sampled only while the page is open. |
 
 **When something happens**, the island shows it beside the notch for a few seconds:
 
 | | |
 |---|---|
-| <img src="docs/images/music.png" width="400" alt="Now playing beside the notch"> | Now playing in Music or Spotify. |
-| <img src="docs/images/charging.png" width="400" alt="Charging"> | Plugging in: a band of gold light falls through the island. |
-| <img src="docs/images/low-battery.png" width="400" alt="Low battery notice"> | Low battery at 20 % and 10 %. Click it to turn on Low Power Mode… |
-| <img src="docs/images/low-power.png" width="400" alt="Low Power Mode on"> | …and it turns gold. |
-| <img src="docs/images/volume.png" width="400" alt="Volume"> | Volume and brightness, in place of the macOS indicators. |
+| <img src="website/images/music.png" width="400" alt="Now playing beside the notch"> | Now playing in Music or Spotify. |
+| <img src="website/images/charging.png" width="400" alt="Charging"> | Plugging in: a band of gold light falls through the island. |
+| <img src="website/images/low-battery.png" width="400" alt="Low battery notice"> | Low battery at 20 % and 10 %. Click it to turn on Low Power Mode… |
+| <img src="website/images/low-power.png" width="400" alt="Low Power Mode on"> | …and it turns gold. |
+| <img src="website/images/volume.png" width="400" alt="Volume"> | Volume and brightness, in place of the macOS indicators. While Spotify plays on another device (a phone, a speaker, a TV), the volume keys turn that device up and down. |
 
 It also shows headphones and speakers connecting, meetings about to start and Linear issues
 coming due. Each one can be turned off in Settings.
@@ -71,7 +71,7 @@ flavour (`build/Direct/Clove.app`) and `--install` to replace `/Applications/Clo
 relaunch it. If you have an Apple Development certificate, dev builds are signed with it, so
 permissions you grant survive rebuilds. Without one, they are signed ad hoc.
 
-You can also open `Clove/Clove.xcodeproj` in Xcode and run the `Clove` scheme, which builds the
+You can also open `Clove.xcodeproj` in Xcode and run the `Clove` scheme, which builds the
 App Store flavour.
 
 In debug builds, `open clove://preview/low-battery` or `open clove://preview/charging` shows

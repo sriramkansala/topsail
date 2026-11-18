@@ -33,7 +33,7 @@ if (( DIRECT )); then
   APP=$ROOT/build/Direct/Clove.app
   FLAVOUR_SETTINGS=(
     'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) DIRECT'
-    CODE_SIGN_ENTITLEMENTS=Support/Clove-Direct.entitlements
+    CODE_SIGN_ENTITLEMENTS=Clove/Resources/Clove-Direct.entitlements
     PRODUCT_BUNDLE_IDENTIFIER=app.clove.Clove.direct
   )
 else
@@ -41,7 +41,7 @@ else
   APP=$ROOT/build/Clove.app
 fi
 
-xcodebuild -project $ROOT/Clove/Clove.xcodeproj -scheme Clove -configuration Debug \
+xcodebuild -project $ROOT/Clove.xcodeproj -scheme Clove -configuration Debug \
   -derivedDataPath $DERIVED \
   CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= \
   ENABLE_DEBUG_DYLIB=NO \
