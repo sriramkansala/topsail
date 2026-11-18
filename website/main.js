@@ -77,7 +77,8 @@ themeButtons.forEach((b) => b.addEventListener("click", () => applyTheme(b.datas
 fetch(`https://api.github.com/repos/${repo}`)
   .then((r) => (r.ok ? r.json() : null))
   .then((info) => {
-    if (!info || typeof info.stargazers_count !== "number") return;
+    // A brand-new repo keeps saying "GitHub" rather than "0 stars".
+    if (!info || typeof info.stargazers_count !== "number" || info.stargazers_count === 0) return;
     const label = document.querySelector("[data-stars-label]");
     label.textContent = `${info.stargazers_count.toLocaleString()} stars`;
   })

@@ -307,6 +307,7 @@ button { font: inherit; color: inherit; }
 
 .tabs {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   gap: 4px;
   padding: 10px 0 6px;
@@ -504,7 +505,7 @@ h2.title.small { font-size: 31px; line-height: 34px; letter-spacing: -0.6px; }
 }
 .stage-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
 .stage figure { margin: 0; }
-.stage .screen { aspect-ratio: 16 / 7; }
+.stage .screen { aspect-ratio: 16 / 5; }
 .stage .screen .island { width: 86cqw; }
 .stage .screen .menubar, .stage .screen .notch { display: none; }
 .stage figcaption { margin-top: 10px; font-size: 14px; color: var(--muted); }
@@ -666,6 +667,7 @@ h2.title.small { font-size: 31px; line-height: 34px; letter-spacing: -0.6px; }
   .stat strong { font-size: 44px; }
   .footer-cols { grid-template-columns: 1fr 1fr; }
   .pill { height: 44px; font-size: 15px; }
+  .tab { padding: 6px 10px; font-size: 13px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
