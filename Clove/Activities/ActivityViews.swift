@@ -2,8 +2,9 @@ import SwiftUI
 
 /// A transient activity beside the notch: an icon in the left wing, a value in the right wing,
 /// and — for volume and brightness — a level meter along the island's bottom edge, so the island
-/// itself becomes the gauge. A charger connecting gets its own moment, `ChargingSweep`, and low
-/// battery its own notice, `LowBatteryNotice`.
+/// itself becomes the gauge. A charger connecting gets its own moment, `ChargingSweep`; low
+/// battery, a call starting and a device connecting get cards below the camera
+/// (`LowBatteryNotice`, `MeetingReminderNotice`, `DeviceConnectedNotice`).
 struct TransientActivityView: View {
     let activity: TransientActivity
     let notchSize: CGSize
@@ -14,6 +15,8 @@ struct TransientActivityView: View {
     var onRequestLowPowerMode: () -> Void = {}
     /// One of the meeting reminder's buttons was clicked.
     var onMeetingAnswer: (UpcomingEvent, MeetingAnswer) -> Void = { _, _ in }
+    /// What is playing, which a device connecting keeps beside the notch; nil when nothing is.
+    var nowPlaying: NowPlayingService? = nil
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -26,6 +29,9 @@ struct TransientActivityView: View {
                              onClick: onRequestLowPowerMode)
         case .meetingReminder(let meeting):
             MeetingReminderNotice(meeting: meeting, notchSize: notchSize) { onMeetingAnswer(meeting, $0) }
+        case .audioDevice(let name, let battery):
+            DeviceConnectedNotice(name: name, battery: battery, notchSize: notchSize, wingWidth: wingWidth,
+                                  nowPlaying: nowPlaying)
         default:
             wingsAndMeter
         }
@@ -74,10 +80,8 @@ struct TransientActivityView: View {
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.white)
                 .contentTransition(.symbolEffect(.replace))
-        case .charging, .lowBattery, .meetingReminder:
+        case .charging, .lowBattery, .meetingReminder, .audioDevice:
             EmptyView()  // ChargingSweep and the notices draw their own.
-        case .audioDevice(let name):
-            icon(Self.audioSymbol(for: name), .white)
         case .taskDue(let title, let overdue):
             HStack(spacing: 5) {
                 icon("checklist", overdue ? .red : .orange)
@@ -107,14 +111,8 @@ struct TransientActivityView: View {
                 .foregroundStyle(.white)
                 .contentTransition(.numericText(value: Double(level)))
                 .animation(reduceMotion ? nil : Motion.base, value: level)
-        case .charging, .lowBattery, .meetingReminder:
+        case .charging, .lowBattery, .meetingReminder, .audioDevice:
             EmptyView()
-        case .audioDevice(let name):
-            Text(name)
-                .font(Self.valueFont)
-                .foregroundStyle(.white)
-                .lineLimit(1)
-                .truncationMode(.tail)
         case .taskDue(_, let overdue):
             value(overdue ? "Overdue" : "Due today", overdue ? .red : .orange)
         }
@@ -142,15 +140,6 @@ struct TransientActivityView: View {
         case .brightness(let level): return (Double(level), .white, false)
         case .charging, .lowBattery, .audioDevice, .taskDue, .meetingReminder: return nil
         }
-    }
-
-    static func audioSymbol(for name: String) -> String {
-        let lower = name.lowercased()
-        if lower.contains("airpods max") { return "airpods.max" }
-        if lower.contains("airpods pro") { return "airpods.pro" }
-        if lower.contains("airpods") { return "airpods" }
-        if lower.contains("beats") { return "beats.headphones" }
-        return "headphones"
     }
 }
 

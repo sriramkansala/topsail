@@ -101,6 +101,12 @@ final class NotchWindowController: NSWindowController {
                                         start: start, end: start.addingTimeInterval(30 * 60), isAllDay: false,
                                         color: .purple, joinURL: URL(string: "https://zoom.us/test"))
             model.activities.post(.meetingReminder(meeting))
+        case "airpods":
+            model.activities.post(.audioDevice(name: "AirPods Pro",
+                                               battery: DeviceBattery(left: 80, right: 75, chargingCase: 60)))
+        case "headphones":
+            // The App Store build's card: no battery.
+            model.activities.post(.audioDevice(name: "Headphones", battery: nil))
         default: break
         }
     }

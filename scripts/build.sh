@@ -35,6 +35,10 @@ if (( DIRECT )); then
     'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) DIRECT'
     CODE_SIGN_ENTITLEMENTS=Clove/Resources/Clove-Direct.entitlements
     PRODUCT_BUNDLE_IDENTIFIER=app.clove.Clove.direct
+    # Only the direct build reads Bluetooth (headphones' battery), so only it asks. Generated keys
+    # are merged into Info.plist.
+    GENERATE_INFOPLIST_FILE=YES
+    'INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription=Clove shows your headphones’ battery when they connect.'
   )
 else
   DERIVED=$ROOT/build/DerivedData

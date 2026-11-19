@@ -48,6 +48,19 @@ enum AudioHardware {
         return name?.takeRetainedValue() as String?
     }
 
+    /// The device's persistent ID. For a Bluetooth output it is the device's address, as
+    /// "aa-bb-cc-dd-ee-ff:output".
+    static func uid(of device: AudioDeviceID) -> String? {
+        var address = address(kAudioDevicePropertyDeviceUID)
+        var uid: Unmanaged<CFString>?
+        var size = UInt32(MemoryLayout<Unmanaged<CFString>?>.size)
+        let status = withUnsafeMutablePointer(to: &uid) {
+            AudioObjectGetPropertyData(device, &address, 0, nil, &size, $0)
+        }
+        guard status == noErr else { return nil }
+        return uid?.takeRetainedValue() as String?
+    }
+
     /// Output volume 0...1, or nil if the device has no software volume (e.g. some HDMI outputs).
     static func volume(of device: AudioDeviceID) -> Float32? {
         var address = volumeAddress

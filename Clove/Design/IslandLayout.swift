@@ -75,6 +75,13 @@ enum IslandLayout {
     static let reminderStageHeight: CGFloat = noticeTopGap + reminderHeaderHeight + reminderRowGap
         + reminderButtonHeight + reminderInset
 
+    // A device connecting, below the camera: the device and its name on the left, its battery on
+    // the right (each earbud and the case, or one level). Music stays beside the notch above it.
+    static let deviceTileSize: CGFloat = 34
+    static let deviceInset: CGFloat = 14
+    static let deviceGaugeSize: CGFloat = 24
+    static let deviceStageHeight: CGFloat = noticeTopGap + deviceTileSize + deviceInset
+
     // Tasks page: issues grouped under their workflow state, as in Linear's "My issues".
     static let taskRowHeight: CGFloat = 18
     static let taskHeaderHeight: CGFloat = 14

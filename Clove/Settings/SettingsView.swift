@@ -45,7 +45,9 @@ struct SettingsView: View {
                 Captioned(caption: Self.lowBatteryNote) {
                     Toggle("Charging and low battery", isOn: $settings.showChargingActivity)
                 }
-                Toggle("Headphones and speakers", isOn: $settings.showDeviceActivity)
+                Captioned(caption: Self.deviceNote) {
+                    Toggle("Headphones and speakers", isOn: $settings.showDeviceActivity)
+                }
                 Captioned(caption: "A countdown beside the notch, then Join, Ignore or Remind me in 5 min as the call starts.") {
                     Toggle("Meeting reminders", isOn: $settings.showMeetingReminders)
                 }
@@ -118,10 +120,12 @@ private extension SettingsView {
     static let takeoverTitle = "Hide macOS volume and brightness indicators"
     static let takeoverNote = "Clove handles the volume and brightness keys itself; while Spotify plays on another device, the volume keys control that device. Needs Input Monitoring and Accessibility permission."
     static let lowBatteryNote = "Clicking the low-battery notice turns on Low Power Mode, through a helper you allow once in Login Items."
+    static let deviceNote = "A card under the notch with each earbud's and the case's battery; what's playing stays beside it. Asks for Bluetooth access the first time."
     #else
     static let takeoverTitle = "Hide macOS volume indicator"
     static let takeoverNote = "Clove handles the volume keys itself; while Spotify plays on another device, they control that device. Needs Input Monitoring and Accessibility permission."
     static let lowBatteryNote = "Clicking the low-battery notice opens Battery settings, where you can turn on Low Power Mode."
+    static let deviceNote = "A card under the notch with the device's name; what's playing stays beside it."
     #endif
 }
 

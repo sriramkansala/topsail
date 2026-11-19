@@ -29,6 +29,8 @@ xcodebuild -project $ROOT/Clove.xcodeproj -scheme Clove -configuration Release \
   'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) DIRECT' \
   CODE_SIGN_ENTITLEMENTS=Clove/Resources/Clove-Direct.entitlements \
   PRODUCT_BUNDLE_IDENTIFIER=app.clove.Clove.direct \
+  GENERATE_INFOPLIST_FILE=YES \
+  'INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription=Clove shows your headphones’ battery when they connect.' \
   -allowProvisioningUpdates archive
 
 sed "s/__TEAM_ID__/$TEAM_ID/" $ROOT/scripts/ExportOptions-Direct.plist > $OPTS

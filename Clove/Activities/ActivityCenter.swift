@@ -4,7 +4,7 @@ import SwiftUI
 enum ActivityKind: Equatable {
     case charging(level: Int)          // just plugged in
     case lowBattery(level: Int, lowPowerMode: LowPowerMode)  // crossed 20 % or 10 % while on battery
-    case audioDevice(name: String)     // default output switched to a Bluetooth device
+    case audioDevice(name: String, battery: DeviceBattery?)  // default output switched to a Bluetooth device
     case volume(level: Float, muted: Bool, remote: Bool = false)  // output volume changed; level is 0...1; remote: Spotify's device elsewhere
     case brightness(level: Float)           // display brightness changed (direct build only)
     case taskDue(title: String, overdue: Bool)  // a Linear issue is due today or overdue
@@ -30,11 +30,11 @@ enum LowPowerMode: Equatable {
 }
 
 extension ActivityKind {
-    /// The low-battery notice and the meeting reminder: cards below the camera that the pointer
-    /// can rest on (they stay put instead of opening the island) and click.
+    /// The low-battery notice, the meeting reminder and a device connecting: cards below the
+    /// camera that the pointer can rest on (they stay put instead of opening the island).
     var isNotice: Bool {
         switch self {
-        case .lowBattery, .meetingReminder: return true
+        case .lowBattery, .meetingReminder, .audioDevice: return true
         default: return false
         }
     }
@@ -86,6 +86,8 @@ final class ActivityCenter: ObservableObject {
     private var pendingWork: DispatchWorkItem?
     private let displayDuration: TimeInterval = 3
     private let levelDisplayDuration: TimeInterval = 1.5
+    /// A device connecting: long enough to read each battery.
+    private let deviceDuration: TimeInterval = 4
     /// The low-battery notice gives the user time to reach it, and to finish in System Settings.
     private let noticeDuration: TimeInterval = 6
     private let lowPowerWait: TimeInterval = 30
@@ -100,14 +102,15 @@ final class ActivityCenter: ObservableObject {
     }
 
     /// Extra height below the notch for the level meter drawn along the island's bottom edge, for
-    /// the charging moment, or for the low-battery notice.
+    /// the charging moment, or for a notice's card.
     var meterHeight: CGFloat {
         switch current?.kind {
         case .charging: return 34
         case .lowBattery: return IslandLayout.noticeStageHeight
         case .meetingReminder: return IslandLayout.reminderStageHeight
+        case .audioDevice: return IslandLayout.deviceStageHeight
         case .volume, .brightness: return 8
-        case .audioDevice, .taskDue, nil: return 0
+        case .taskDue, nil: return 0
         }
     }
 
@@ -146,6 +149,7 @@ final class ActivityCenter: ObservableObject {
             // Until it can no longer be joined.
             let closes = min(meeting.end, meeting.start.addingTimeInterval(CalendarService.meetingGrace))
             return max(closes.timeIntervalSinceNow, displayDuration)
+        case .audioDevice: return deviceDuration
         default: return displayDuration
         }
     }
@@ -177,6 +181,16 @@ final class ActivityCenter: ObservableObject {
         guard let showing = current, case .lowBattery(let level, let mode) = showing.kind, mode != .on else { return }
         replace(showing, with: .lowBattery(level: level, lowPowerMode: .on))
         schedule(after: displayDuration) { [weak self] in self?.hideCurrent() }
+    }
+
+    /// Something an activity shows arrived late (a device's battery): the activity takes it in
+    /// place if it is on screen, keeping its time there, or in the queue if it is waiting.
+    func update(_ old: ActivityKind, to new: ActivityKind) {
+        if let showing = current, showing.kind == old {
+            replace(showing, with: new)
+        } else if let index = queue.firstIndex(of: old) {
+            queue[index] = new
+        }
     }
 
     /// One of the meeting reminder's buttons was clicked: it leaves.

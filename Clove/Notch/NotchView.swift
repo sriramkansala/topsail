@@ -28,7 +28,8 @@ struct NotchView: View {
                                           wingWidth: model.activities.wingWidth,
                                           meterHeight: model.activities.meterHeight,
                                           onRequestLowPowerMode: model.requestLowPowerMode,
-                                          onMeetingAnswer: model.answerMeeting)
+                                          onMeetingAnswer: model.answerMeeting,
+                                          nowPlaying: model.showsMusicActivity ? nowPlaying : nil)
                         .id(activity.id)
                         .transition(activity.kind.isNotice ? .noticeBlur(reduceMotion: reduceMotion)
                                                            : .cascade(0, reduceMotion: reduceMotion))

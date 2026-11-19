@@ -65,7 +65,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             switch url.host {
             case "settings": showSettings()
             #if DEBUG
-            // Debug builds only: `open clove://preview/low-battery` (or `/charging`, `/meeting`) shows that
+            // Debug builds only: `open clove://preview/low-battery` (or `/charging`, `/meeting`, `/airpods`, `/headphones`) shows that
             // activity now, without draining the battery or unplugging.
             case "preview": windowController?.preview(url.lastPathComponent)
             #endif
