@@ -32,6 +32,23 @@ enum MeetingLink {
             .first(where: isMeeting)
     }
 
+    /// The service a link opens, for the reminder card ("Zoom", "Google Meet"), or nil.
+    static func service(of url: URL) -> String? {
+        let scheme = url.scheme?.lowercased() ?? ""
+        let host = url.host?.lowercased() ?? ""
+        func on(_ domain: String) -> Bool { host == domain || host.hasSuffix("." + domain) }
+        if scheme.hasPrefix("zoom") || on("zoom.us") || on("zoom.com") { return "Zoom" }
+        if on("meet.google.com") { return "Google Meet" }
+        if scheme == "msteams" || on("teams.microsoft.com") || on("teams.live.com") { return "Teams" }
+        if scheme == "webex" || on("webex.com") { return "Webex" }
+        if on("facetime.apple.com") { return "FaceTime" }
+        if on("whereby.com") { return "Whereby" }
+        if on("gotomeeting.com") { return "GoTo Meeting" }
+        if on("chime.aws") { return "Chime" }
+        if on("meet.jit.si") { return "Jitsi" }
+        return nil
+    }
+
     /// Schemes that open a meeting app directly (Zoom, Teams, Webex).
     private static let appSchemes: Set<String> = ["zoommtg", "zoomus", "msteams", "webex"]
 

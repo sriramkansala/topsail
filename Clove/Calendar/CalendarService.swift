@@ -29,6 +29,20 @@ final class CalendarService: ObservableObject {
 
     static let meetingLeadTime: TimeInterval = 10 * 60
     static let meetingGrace: TimeInterval = 10 * 60
+    /// The reminder card (Join, Ignore, Remind me in 5 min) drops this long before a call starts.
+    static let reminderLeadTime: TimeInterval = 60
+    static let snoozeInterval: TimeInterval = 5 * 60
+
+    /// A call's reminder is due: shown once as it starts, and again after each snooze. Set after
+    /// launch, by when the island exists; a reminder already due then is sent at once.
+    var onReminder: ((UpcomingEvent) -> Void)? {
+        didSet { updateImminentMeeting() }
+    }
+    /// Calls whose reminder has been shown, and calls the user joined or ignored (no more
+    /// reminders, nothing beside the notch). Keyed by event id, which includes the start time.
+    private var reminded: Set<String> = []
+    private var answered: Set<String> = []
+    private var snoozedUntil: [String: Date] = [:]
 
     /// Every upcoming event in the window, not just the ones shown: a meeting can be imminent
     /// while earlier, non-meeting events fill the visible rows.
@@ -86,6 +100,11 @@ final class CalendarService: ObservableObject {
         if visible != events {
             events = visible
         }
+        // Forget calls that have ended.
+        let ids = Set(upcoming.map(\.id))
+        reminded.formIntersection(ids)
+        answered.formIntersection(ids)
+        snoozedUntil = snoozedUntil.filter { ids.contains($0.key) }
         updateImminentMeeting()
     }
 
@@ -99,14 +118,51 @@ final class CalendarService: ObservableObject {
     func join(_ event: UpcomingEvent) {
         guard let url = event.joinURL else { return }
         NSWorkspace.shared.open(url)
+        answer(event)
     }
 
-    /// Cheap and frequent: re-evaluates the already-fetched events against the clock.
+    /// The user isn't taking this call: no more reminders, and it leaves the notch.
+    func ignore(_ event: UpcomingEvent) {
+        answer(event)
+    }
+
+    /// "Remind me in 5 min": the card comes back then, while the call can still be joined.
+    func snooze(_ event: UpcomingEvent) {
+        snoozedUntil[event.id] = Date().addingTimeInterval(Self.snoozeInterval)
+    }
+
+    /// Whether `event`'s reminder should still be shown: it can be joined, and the user hasn't
+    /// answered it or put it off.
+    func isReminderDue(_ event: UpcomingEvent, at date: Date = Date()) -> Bool {
+        guard Self.isJoinable(event, at: date), !answered.contains(event.id) else { return false }
+        return snoozedUntil[event.id].map { date >= $0 } ?? true
+    }
+
+    private func answer(_ event: UpcomingEvent) {
+        answered.insert(event.id)
+        snoozedUntil[event.id] = nil
+        updateImminentMeeting()
+    }
+
+    /// Cheap and frequent: re-evaluates the already-fetched events against the clock, and posts
+    /// any reminder that has come due.
     private func updateImminentMeeting() {
         let now = Date()
-        let next = upcoming.first { Self.isJoinable($0, at: now) }
+        let next = upcoming.first { Self.isJoinable($0, at: now) && !answered.contains($0.id) }
         if next != imminentMeeting {
             imminentMeeting = next
+        }
+
+        // Nothing is marked as reminded until there is someone to remind.
+        guard let onReminder else { return }
+        for event in upcoming where isReminderDue(event, at: now) {
+            if snoozedUntil[event.id] != nil {
+                snoozedUntil[event.id] = nil
+                onReminder(event)
+            } else if !reminded.contains(event.id), event.start.timeIntervalSince(now) <= Self.reminderLeadTime {
+                reminded.insert(event.id)
+                onReminder(event)
+            }
         }
     }
 
@@ -123,8 +179,9 @@ final class CalendarService: ObservableObject {
         RunLoop.main.add(timer, forMode: .common)
         refreshTimer = timer
 
-        // The meeting window opens and closes with the clock, between fetches.
-        let clock = Timer(timeInterval: 15, repeats: true) { [weak self] _ in
+        // The meeting window opens and closes with the clock, between fetches, and reminders
+        // come due; a few seconds' slack is fine for both.
+        let clock = Timer(timeInterval: 5, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.updateImminentMeeting() }
         }
         RunLoop.main.add(clock, forMode: .common)

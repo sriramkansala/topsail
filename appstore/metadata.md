@@ -35,7 +35,8 @@ See the track playing in Music or Spotify, with artwork and controls. Click it t
 
 CALENDAR
 Your next events today and tomorrow. Before a call with a Zoom, Meet, Teams, Webex or FaceTime
-link, a countdown appears beside the notch, and the island offers a Join button.
+link, a countdown appears beside the notch. As the call starts, a card asks: Join, Ignore, or
+Remind me in 5 min.
 
 TASKS
 Connect Linear with your own API key to see this cycle's issues, grouped by status. Press

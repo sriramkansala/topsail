@@ -474,6 +474,16 @@ final class NotchViewModel: ObservableObject {
         onRequestLowPowerMode?()
     }
 
+    /// One of the meeting reminder's buttons: join the call, ignore it, or be reminded in 5 min.
+    func answerMeeting(_ meeting: UpcomingEvent, _ answer: MeetingAnswer) {
+        switch answer {
+        case .join: calendar.join(meeting)
+        case .ignore: calendar.ignore(meeting)
+        case .snooze: calendar.snooze(meeting)
+        }
+        activities.reminderAnswered()
+    }
+
     /// The 🎙 button in the notch row.
     func toggleVoice() {
         voice.toggle()

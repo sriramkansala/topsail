@@ -66,6 +66,15 @@ enum IslandLayout {
     static let noticeTopGap: CGFloat = 4
     static let noticeStageHeight: CGFloat = noticeTopGap + noticePillSize.height + noticeInset
 
+    // Meeting reminder, below the camera: the call's colour, title and start over a row of
+    // buttons (Remind me in 5 min on the left, Ignore and Join on the right).
+    static let reminderInset: CGFloat = 14
+    static let reminderHeaderHeight: CGFloat = 34
+    static let reminderRowGap: CGFloat = 12
+    static let reminderButtonHeight: CGFloat = 28
+    static let reminderStageHeight: CGFloat = noticeTopGap + reminderHeaderHeight + reminderRowGap
+        + reminderButtonHeight + reminderInset
+
     // Tasks page: issues grouped under their workflow state, as in Linear's "My issues".
     static let taskRowHeight: CGFloat = 18
     static let taskHeaderHeight: CGFloat = 14

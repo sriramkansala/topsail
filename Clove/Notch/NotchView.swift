@@ -27,7 +27,8 @@ struct NotchView: View {
                                           notchSize: model.notchSize,
                                           wingWidth: model.activities.wingWidth,
                                           meterHeight: model.activities.meterHeight,
-                                          onRequestLowPowerMode: model.requestLowPowerMode)
+                                          onRequestLowPowerMode: model.requestLowPowerMode,
+                                          onMeetingAnswer: model.answerMeeting)
                         .id(activity.id)
                         .transition(activity.kind.isNotice ? .noticeBlur(reduceMotion: reduceMotion)
                                                            : .cascade(0, reduceMotion: reduceMotion))

@@ -14,7 +14,8 @@ final class AppSettings: ObservableObject {
     @Published var showVolumeActivity: Bool { didSet { save(showVolumeActivity, "showVolumeActivity") } }
     /// Direct-download build only; the App Store build cannot change brightness.
     @Published var showBrightnessActivity: Bool { didSet { save(showBrightnessActivity, "showBrightnessActivity") } }
-    /// "Meeting in 10 min" beside the notch before a calendar event with a video link.
+    /// "Meeting in 10 min" beside the notch before a calendar event with a video link, and the
+    /// Join / Ignore / Remind me card as it starts.
     @Published var showMeetingReminders: Bool { didSet { save(showMeetingReminders, "showMeetingReminders") } }
     /// A short notice when a Linear issue is due today or overdue.
     @Published var showTaskReminders: Bool { didSet { save(showTaskReminders, "showTaskReminders") } }
@@ -71,6 +72,7 @@ final class AppSettings: ObservableObject {
         case .volume: return showVolumeActivity
         case .brightness: return showBrightnessActivity
         case .taskDue: return showTaskReminders
+        case .meetingReminder: return showMeetingReminders
         }
     }
 

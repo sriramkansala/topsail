@@ -8,6 +8,12 @@ enum ActivityKind: Equatable {
     case volume(level: Float, muted: Bool, remote: Bool = false)  // output volume changed; level is 0...1; remote: Spotify's device elsewhere
     case brightness(level: Float)           // display brightness changed (direct build only)
     case taskDue(title: String, overdue: Bool)  // a Linear issue is due today or overdue
+    case meetingReminder(UpcomingEvent)    // a call is starting: Join, Ignore or Remind me in 5 min
+}
+
+/// The meeting reminder's three buttons.
+enum MeetingAnswer {
+    case join, ignore, snooze
 }
 
 /// Where Low Power Mode stands for the low-battery notice.
@@ -24,15 +30,26 @@ enum LowPowerMode: Equatable {
 }
 
 extension ActivityKind {
-    /// The low-battery notice: a card below the camera that the pointer can rest on (it stays
-    /// put instead of opening the island) and, while it offers Low Power Mode, click.
+    /// The low-battery notice and the meeting reminder: cards below the camera that the pointer
+    /// can rest on (they stay put instead of opening the island) and click.
     var isNotice: Bool {
-        if case .lowBattery = self { return true }
-        return false
+        switch self {
+        case .lowBattery, .meetingReminder: return true
+        default: return false
+        }
     }
 
     var isClickable: Bool {
-        if case .lowBattery(_, .off) = self { return true }
+        switch self {
+        case .lowBattery(_, .off), .meetingReminder: return true
+        default: return false
+        }
+    }
+
+    /// The meeting reminder stays until one of its buttons is clicked (or the call can no longer
+    /// be joined), wherever the pointer goes.
+    var waitsForAnswer: Bool {
+        if case .meetingReminder = self { return true }
         return false
     }
 
@@ -40,7 +57,7 @@ extension ActivityKind {
     var isLiveLevel: Bool {
         switch self {
         case .volume, .brightness: return true
-        case .charging, .lowBattery, .audioDevice, .taskDue: return false
+        case .charging, .lowBattery, .audioDevice, .taskDue, .meetingReminder: return false
         }
     }
 
@@ -88,6 +105,7 @@ final class ActivityCenter: ObservableObject {
         switch current?.kind {
         case .charging: return 34
         case .lowBattery: return IslandLayout.noticeStageHeight
+        case .meetingReminder: return IslandLayout.reminderStageHeight
         case .volume, .brightness: return 8
         case .audioDevice, .taskDue, nil: return 0
         }
@@ -109,7 +127,10 @@ final class ActivityCenter: ObservableObject {
 
     private func showNext() {
         guard !queue.isEmpty else { return }
-        let next = TransientActivity(kind: queue.removeFirst())
+        let kind = queue.removeFirst()
+        // Asked again: a call may have been answered, or a setting turned off, while it waited.
+        guard isAllowed(kind) else { return showNext() }
+        let next = TransientActivity(kind: kind)
         pointerInside = false
         Motion.perform(next.kind.isNotice ? Motion.notice : Motion.islandGrow) {
             current = next
@@ -121,6 +142,10 @@ final class ActivityCenter: ObservableObject {
         switch kind {
         case .lowBattery(_, .off): return noticeDuration
         case .lowBattery(_, .approving), .lowBattery(_, .requested): return lowPowerWait
+        case .meetingReminder(let meeting):
+            // Until it can no longer be joined.
+            let closes = min(meeting.end, meeting.start.addingTimeInterval(CalendarService.meetingGrace))
+            return max(closes.timeIntervalSinceNow, displayDuration)
         default: return displayDuration
         }
     }
@@ -128,7 +153,7 @@ final class ActivityCenter: ObservableObject {
     /// The pointer moved, in or out of the island. A notice that can be clicked stays while the
     /// pointer is on it, and for a moment after it leaves.
     func pointerMoved(inside: Bool) {
-        guard current?.kind.isClickable == true, inside != pointerInside else { return }
+        guard let kind = current?.kind, kind.isClickable, !kind.waitsForAnswer, inside != pointerInside else { return }
         pointerInside = inside
         if inside {
             pendingWork?.cancel()
@@ -152,6 +177,12 @@ final class ActivityCenter: ObservableObject {
         guard let showing = current, case .lowBattery(let level, let mode) = showing.kind, mode != .on else { return }
         replace(showing, with: .lowBattery(level: level, lowPowerMode: .on))
         schedule(after: displayDuration) { [weak self] in self?.hideCurrent() }
+    }
+
+    /// One of the meeting reminder's buttons was clicked: it leaves.
+    func reminderAnswered() {
+        guard current?.kind.waitsForAnswer == true else { return }
+        hideCurrent()
     }
 
     /// Changes what the activity on screen says, in place (same id, so its view updates rather

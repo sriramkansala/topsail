@@ -30,8 +30,9 @@ pointer to it.
 | <img src="website/images/low-power.png" width="400" alt="Low Power Mode on"> | …and it turns gold. |
 | <img src="website/images/volume.png" width="400" alt="Volume"> | Volume and brightness, in place of the macOS indicators. While Spotify plays on another device (a phone, a speaker, a TV), the volume keys turn that device up and down. |
 
-It also shows headphones and speakers connecting, meetings about to start and Linear issues
-coming due. Each one can be turned off in Settings.
+It also shows headphones and speakers connecting and Linear issues coming due. Before a call
+with a video link, a countdown sits beside the notch; as it starts, a card asks **Join**,
+**Ignore** or **Remind me in 5 min**. Each one can be turned off in Settings.
 
 ## Requirements
 

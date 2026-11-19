@@ -12,6 +12,8 @@ struct TransientActivityView: View {
     let meterHeight: CGFloat
     /// The low-battery notice was clicked.
     var onRequestLowPowerMode: () -> Void = {}
+    /// One of the meeting reminder's buttons was clicked.
+    var onMeetingAnswer: (UpcomingEvent, MeetingAnswer) -> Void = { _, _ in }
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -22,6 +24,8 @@ struct TransientActivityView: View {
         case .lowBattery(let level, let lowPowerMode):
             LowBatteryNotice(level: level, lowPowerMode: lowPowerMode, notchSize: notchSize,
                              onClick: onRequestLowPowerMode)
+        case .meetingReminder(let meeting):
+            MeetingReminderNotice(meeting: meeting, notchSize: notchSize) { onMeetingAnswer(meeting, $0) }
         default:
             wingsAndMeter
         }
@@ -70,8 +74,8 @@ struct TransientActivityView: View {
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.white)
                 .contentTransition(.symbolEffect(.replace))
-        case .charging, .lowBattery:
-            EmptyView()  // ChargingSweep and LowBatteryNotice draw their own.
+        case .charging, .lowBattery, .meetingReminder:
+            EmptyView()  // ChargingSweep and the notices draw their own.
         case .audioDevice(let name):
             icon(Self.audioSymbol(for: name), .white)
         case .taskDue(let title, let overdue):
@@ -103,7 +107,7 @@ struct TransientActivityView: View {
                 .foregroundStyle(.white)
                 .contentTransition(.numericText(value: Double(level)))
                 .animation(reduceMotion ? nil : Motion.base, value: level)
-        case .charging, .lowBattery:
+        case .charging, .lowBattery, .meetingReminder:
             EmptyView()
         case .audioDevice(let name):
             Text(name)
@@ -136,7 +140,7 @@ struct TransientActivityView: View {
         switch activity.kind {
         case .volume(let level, let muted, _): return (Double(level), .white, muted)
         case .brightness(let level): return (Double(level), .white, false)
-        case .charging, .lowBattery, .audioDevice, .taskDue: return nil
+        case .charging, .lowBattery, .audioDevice, .taskDue, .meetingReminder: return nil
         }
     }
 

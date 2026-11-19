@@ -46,7 +46,9 @@ struct SettingsView: View {
                     Toggle("Charging and low battery", isOn: $settings.showChargingActivity)
                 }
                 Toggle("Headphones and speakers", isOn: $settings.showDeviceActivity)
-                Toggle("Meeting reminders", isOn: $settings.showMeetingReminders)
+                Captioned(caption: "A countdown beside the notch, then Join, Ignore or Remind me in 5 min as the call starts.") {
+                    Toggle("Meeting reminders", isOn: $settings.showMeetingReminders)
+                }
                 Toggle("Linear deadlines", isOn: $settings.showTaskReminders)
 
                 Captioned(caption: settings.hideSystemVolumeHUD ? nil : "Appears alongside the system volume indicator.") {
