@@ -13,16 +13,30 @@
   </script>
 </head>
 <body>
-  <header class="site-header">
-    <div class="container">
-      <a class="brand" href="./" aria-label="Clove home"><img src="images/icon.png" alt="" width="28" height="28">Clove</a>
-      <nav class="primary-nav" aria-label="Primary">
-        <a href="./#pages">Features</a>
-        <a href="./#activities">Activities</a>
-        <a href="./#faq">FAQ</a>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+      <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 1 1 9.5 4 6.5 6.5 0 0 0 20 14.5z"/></symbol>
+    </defs>
+  </svg>
+
+  <header class="menubar-header">
+    <div class="bar">
+      <a class="brand" href="./" aria-label="Clove home"><img src="images/icon.png" alt="" width="22" height="22"><span>Clove</span></a>
+      <nav class="notch" aria-label="Primary">
+        <div class="notch-row">
+          <span class="notch-pill" aria-hidden="true"></span>
+          <a href="./#features">Features</a>
+          <a href="./#activities">Activities</a>
+          <a href="./#privacy">Privacy</a>
+          <a href="./#faq">FAQ</a>
+        </div>
       </nav>
-      <div class="header-actions">
-        <a class="pill pill-dark pill-compact" href="https://github.com/sriramkansala/clove">GitHub</a>
+      <div class="bar-actions">
+        <button class="status-item theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark mode">
+          <svg class="sun" aria-hidden="true"><use href="#i-sun"/></svg>
+          <svg class="moon" aria-hidden="true"><use href="#i-moon"/></svg>
+        </button>
       </div>
     </div>
   </header>
@@ -89,5 +103,7 @@
       </div>
     </div>
   </footer>
+
+  <script src="main.js" defer></script>
 </body>
 </html>

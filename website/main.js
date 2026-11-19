@@ -1,99 +1,129 @@
-// Clove website: the demo tabs, the page panels, the rotating headline word, the theme switch,
-// and the download links, which point at the latest release once there is one.
+// Clove website: the demo's pages, the light / dark switch, the notch's section pill, and the
+// download links, which point at the latest release once there is one.
 
 const repo = "sriramkansala/clove";
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-// Demo: the tabs under the before / after panel swap the island on the right.
+// Demo: the segmented control under the big screen swaps the island.
 const demoCaptions = {
-  player: "Move the pointer to the notch: the island opens on what's playing.",
-  calendar: "Your next events, with a Join button when a meeting is about to start.",
-  tasks: "This cycle's Linear issues, grouped by status.",
-  system: "Battery, charger, CPU, memory and more, sampled only while you look.",
-  "low-battery": "When something happens, the island grows beside the notch for a moment.",
+  player: "Music or Spotify, with artwork and controls. Click the track to jump to the app.",
+  calendar: "Your next events today and tomorrow, with a Join button for calls.",
+  reminder: "A call is starting: Join, Ignore, or Remind me in 5 min.",
+  tasks: "This cycle's Linear issues, grouped by status. ⌥ Space dictates a note.",
+  system: "Battery and charger, CPU, memory, network and disk, sampled only while you look.",
+};
+const demoAlt = {
+  player: "The Clove island open below the notch, playing music",
+  calendar: "The island's calendar page with two events",
+  reminder: "A card below the notch: Design review starts in 1 min, with Remind me in 5 min, Ignore and Join",
+  tasks: "The island's tasks page with Linear issues",
+  system: "The island's system page with battery, CPU and memory",
 };
 const demoImage = document.querySelector("[data-demo-image]");
 const demoCaption = document.querySelector("[data-demo-caption]");
 const demoTabs = document.querySelectorAll("[data-demo]");
 
 function showDemo(name) {
+  if (!demoImage) return;
   demoTabs.forEach((tab) => tab.setAttribute("aria-selected", String(tab.dataset.demo === name)));
   const swap = () => {
     demoImage.src = `images/island-${name}.png`;
-    demoImage.alt = `The Clove island: ${demoCaptions[name]}`;
+    demoImage.alt = demoAlt[name];
     demoCaption.textContent = demoCaptions[name];
     demoImage.classList.remove("leaving");
   };
   if (reduceMotion) return swap();
   demoImage.classList.add("leaving");
-  setTimeout(swap, 220);
+  setTimeout(swap, 200);
 }
 
 demoTabs.forEach((tab) => tab.addEventListener("click", () => showDemo(tab.dataset.demo)));
 // Preload the other pages, so a tab never waits on the network.
-Object.keys(demoCaptions).forEach((name) => { new Image().src = `images/island-${name}.png`; });
+if (demoImage) Object.keys(demoCaptions).forEach((name) => { new Image().src = `images/island-${name}.png`; });
 
-// Pages: one panel open at a time.
-const panels = document.querySelectorAll(".panel");
-function openPanel(panel) {
-  panels.forEach((p) => p.setAttribute("aria-expanded", String(p === panel)));
+// Theme: the system's until the switch is used, then the chosen one, remembered.
+const toggle = document.querySelector("[data-theme-toggle]");
+const systemDark = window.matchMedia("(prefers-color-scheme: dark)");
+const currentTheme = () => document.documentElement.dataset.theme || (systemDark.matches ? "dark" : "light");
+function labelToggle() {
+  toggle.setAttribute("aria-label", currentTheme() === "dark" ? "Switch to light mode" : "Switch to dark mode");
 }
-panels.forEach((panel) => {
-  panel.addEventListener("click", () => openPanel(panel));
-  panel.addEventListener("keydown", (event) => {
-    if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openPanel(panel); }
-  });
+toggle.addEventListener("click", () => {
+  const next = currentTheme() === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem("theme", next); } catch (e) {}
+  labelToggle();
+});
+systemDark.addEventListener("change", labelToggle);
+labelToggle();
+
+// The notch: a pill behind the link of the section on screen, travelling between links the way
+// the island's page tabs do.
+const notchRow = document.querySelector(".notch-row");
+const notchLinks = [...notchRow.querySelectorAll("a")];
+// Only links to this page's own sections (the privacy page's point back to the home page).
+const sections = notchLinks.map((link) => {
+  const href = link.getAttribute("href");
+  return href.startsWith("#") ? document.querySelector(href) : null;
 });
 
-// The headline's last words take turns.
-const words = document.querySelectorAll(".rotator span");
-if (words.length > 1 && !reduceMotion) {
-  let current = 0;
-  setInterval(() => {
-    words[current].classList.remove("on");
-    current = (current + 1) % words.length;
-    words[current].classList.add("on");
-  }, 2600);
-}
-
-// Theme: light, dark, or the system's.
-const themeButtons = document.querySelectorAll("[data-theme-choice]");
-function applyTheme(choice) {
-  if (choice === "light" || choice === "dark") {
-    document.documentElement.dataset.theme = choice;
-  } else {
-    delete document.documentElement.dataset.theme;
+function placePill(link) {
+  notchLinks.forEach((l) => l.setAttribute("aria-current", String(l === link)));
+  if (!link) {
+    notchRow.style.setProperty("--pill-o", "0");
+    return;
   }
-  themeButtons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.themeChoice === choice)));
-  try { choice === "system" ? localStorage.removeItem("theme") : localStorage.setItem("theme", choice); } catch (e) {}
+  notchRow.style.setProperty("--pill-x", `${link.offsetLeft}px`);
+  notchRow.style.setProperty("--pill-w", `${link.offsetWidth}px`);
+  notchRow.style.setProperty("--pill-o", "1");
 }
-let savedTheme = "system";
-try { savedTheme = localStorage.getItem("theme") || "system"; } catch (e) {}
-applyTheme(savedTheme);
-themeButtons.forEach((b) => b.addEventListener("click", () => applyTheme(b.dataset.themeChoice)));
 
-// GitHub: the star count in the header, and the download links once a release exists. Both
+function sectionOnScreen() {
+  // The last section whose top has passed a line a third of the way down the window. (The calls
+  // section, between Features and Activities, keeps Features lit.)
+  const line = window.innerHeight / 3;
+  let current = null;
+  sections.forEach((section, index) => {
+    if (section && section.getBoundingClientRect().top <= line) current = notchLinks[index];
+  });
+  return current;
+}
+
+let ticking = false;
+window.addEventListener("scroll", () => {
+  if (ticking) return;
+  ticking = true;
+  requestAnimationFrame(() => { placePill(sectionOnScreen()); ticking = false; });
+}, { passive: true });
+window.addEventListener("resize", () => placePill(sectionOnScreen()));
+document.fonts?.ready.then(() => placePill(sectionOnScreen()));
+placePill(sectionOnScreen());
+
+// GitHub: the star count in the menu bar, and the download links once a release exists. Both
 // are optional; without the API the links keep pointing at the releases page.
-fetch(`https://api.github.com/repos/${repo}`)
+if (document.querySelector("[data-stars-label]")) fetch(`https://api.github.com/repos/${repo}`)
   .then((r) => (r.ok ? r.json() : null))
   .then((info) => {
     // A brand-new repo keeps saying "GitHub" rather than "0 stars".
     if (!info || typeof info.stargazers_count !== "number" || info.stargazers_count === 0) return;
     const label = document.querySelector("[data-stars-label]");
-    label.textContent = `${info.stargazers_count.toLocaleString()} stars`;
+    if (label) label.textContent = info.stargazers_count.toLocaleString();
   })
   .catch(() => {});
 
-fetch(`https://api.github.com/repos/${repo}/releases/latest`)
+// The release list, not /releases/latest, which answers 404 (an error in the console) until the
+// first release exists.
+if (document.querySelector("[data-download-note]")) fetch(`https://api.github.com/repos/${repo}/releases?per_page=5`)
   .then((r) => (r.ok ? r.json() : null))
-  .then((release) => {
+  .then((releases) => {
+    const release = Array.isArray(releases) ? releases.find((r) => !r.draft && !r.prerelease) : null;
     const note = document.querySelector("[data-download-note]");
     const asset = release?.assets?.find((a) => /\.(zip|dmg)$/i.test(a.name));
     if (!asset) {
-      note.textContent = "Free and open source. The first signed build is on its way — star the repo to hear when it lands.";
+      if (note) note.textContent = "Free and open source. The first signed build is on its way — star the repo to hear when it lands.";
       return;
     }
     document.querySelectorAll("[data-download]").forEach((link) => { link.href = asset.browser_download_url; });
-    note.textContent = `Version ${release.tag_name.replace(/^v/, "")}. Free and open source. macOS 26 or later.`;
+    if (note) note.textContent = `Version ${release.tag_name.replace(/^v/, "")}. Free and open source. macOS 26 or later.`;
   })
   .catch(() => {});
