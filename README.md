@@ -19,7 +19,7 @@ pointer to it.
 | <img src="website/images/calendar.png" width="400" alt="Calendar page"> | **Calendar.** Your next events today and tomorrow, with a Join button for Zoom, Meet, Teams, Webex and FaceTime links. |
 | <img src="website/images/tasks.png" width="400" alt="Tasks page"> | **Tasks.** Your Linear issues for the current cycle, grouped by status. Press ⌥ Space to dictate a voice note; the on-device model turns it into issue changes you review before anything is sent. |
 | <img src="website/images/system.png" width="400" alt="System page"> | **System.** Battery, charger and power draw, per-core CPU, memory, GPU, network and free disk space. Sampled only while the page is open. |
-| <img src="website/images/island-clipboard.png" width="400" alt="Clipboard page"> | **Clipboard.** The last 50 things you copied (text, links, images, files), newest first. Click one to copy it again. Kept in memory only; items password managers mark as secret are skipped. Needs **Always Allow** under Privacy & Security › Paste from Other Apps. |
+| <img src="website/images/island-clipboard.png" width="400" alt="Clipboard page"> | **Clipboard.** The last 50 things you copied (text, links, images, files), newest first. Click one to copy it again; pin one to keep it for good. Recent copies stay in memory only; pinned ones are saved on your Mac. Items password managers mark as secret are skipped. Needs **Always Allow** under Privacy & Security › Paste from Other Apps. |
 
 **When something happens**, the island shows it beside the notch for a few seconds:
 

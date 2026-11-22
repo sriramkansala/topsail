@@ -1,61 +1,83 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// The clipboard page: what was copied, newest first, under a small header with Clear. Text shows
-/// its first line, a link its address, a picture a thumbnail and its size, files their icon and
-/// name. Clicking a row puts it back on the clipboard. Until Clove may read the clipboard, one
-/// row asks for that instead.
+/// The clipboard page: pinned items first, then recent copies, newest first, each under a small
+/// header (Clear on the recent one). Text shows its first line, a link its address, a picture a
+/// thumbnail and its size, files their icon and name. Clicking a row puts it back on the
+/// clipboard; the pin that appears under the pointer keeps it forever. Until Clove may read the
+/// clipboard, a row at the top asks for that. The page is never shorter than three rows.
 struct ClipboardPageView: View {
     @ObservedObject var history: ClipboardHistory
 
     /// The row just clicked, which says "Copied" for a moment.
     @State private var justCopied: UUID?
-    @State private var clearHover = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    private var needsSetup: Bool { history.access != .allowed }
+
     var body: some View {
-        if history.access != .allowed {
-            ClipboardSetupView(access: history.access, action: history.requestAccess)
-        } else if history.items.isEmpty {
+        let natural = IslandLayout.clipboardNaturalHeight(setup: needsSetup, pinned: history.pinned.count,
+                                                          recent: history.items.count)
+        if natural == 0 {
             MessageView(symbol: "doc.on.doc", text: "Copy something and it shows up here")
+                .frame(maxHeight: .infinity)
+        } else if natural > IslandLayout.clipboardMaxHeight {
+            ScrollView(.vertical, showsIndicators: false) { sections }
         } else {
-            VStack(alignment: .leading, spacing: IslandLayout.clipboardHeaderGap) {
-                header
-                // Five rows fit; more than that scroll.
-                if history.items.count > IslandLayout.clipboardVisibleRows {
-                    ScrollView(.vertical, showsIndicators: false) { rows }
-                } else {
-                    rows
+            VStack(spacing: 0) {
+                // Asking for access, with nothing to list yet: in the middle of the page.
+                if needsSetup, history.pinned.isEmpty, history.items.isEmpty { Spacer(minLength: 0) }
+                sections
+                Spacer(minLength: 0)
+                // Room left under a short list: say what the pin is for.
+                if history.pinned.isEmpty, !history.items.isEmpty,
+                   IslandLayout.clipboardMinHeight - natural >= IslandLayout.clipboardRowHeight {
+                    Label("Hover an item and pin it to keep it", systemImage: "pin")
+                        .font(.system(size: 11))
+                        .foregroundColor(.white.opacity(0.3))
+                        .frame(height: IslandLayout.clipboardRowHeight)
                 }
             }
         }
     }
 
-    private var rows: some View {
-        VStack(spacing: IslandLayout.clipboardRowSpacing) {
-            ForEach(history.items) { item in
-                ClipboardRow(item: item, justCopied: justCopied == item.id) { copy(item) }
+    private var sections: some View {
+        VStack(alignment: .leading, spacing: IslandLayout.clipboardSectionGap) {
+            if needsSetup {
+                ClipboardSetupView(access: history.access, action: history.requestAccess)
+                    .padding(.horizontal, ClipboardRow.inset)
+            }
+            if !history.pinned.isEmpty {
+                section("Pinned", history.pinned, pinned: true)
+            }
+            if !history.items.isEmpty {
+                section("Recently copied", history.items, pinned: false)
             }
         }
     }
 
-    private var header: some View {
-        HStack {
-            Text("Recently copied")
-                .foregroundColor(.white.opacity(0.45))
-            Spacer()
-            Button(action: { history.clear() }) {
-                Text("Clear")
-                    .foregroundColor(.white.opacity(clearHover ? 0.85 : 0.45))
+    private func section(_ title: String, _ items: [ClipboardItem], pinned: Bool) -> some View {
+        VStack(alignment: .leading, spacing: IslandLayout.clipboardHeaderGap) {
+            HStack {
+                Text(title)
+                    .foregroundColor(.white.opacity(0.45))
+                Spacer()
+                if !pinned {
+                    ClearButton(action: history.clear)
+                }
             }
-            .buttonStyle(.pressable(.normal, hoverWash: false))
-            .onHover { clearHover = $0 }
-            .animation(reduceMotion ? nil : Motion.hover, value: clearHover)
-            .accessibilityHint("Forgets everything copied")
+            .font(.system(size: 11, weight: .semibold))
+            .padding(.horizontal, ClipboardRow.inset)
+            .frame(height: IslandLayout.clipboardHeaderHeight)
+
+            VStack(spacing: IslandLayout.clipboardRowSpacing) {
+                ForEach(items) { item in
+                    ClipboardRow(item: item, pinned: pinned, justCopied: justCopied == item.id,
+                                 copy: { copy(item) },
+                                 togglePin: { togglePin(item, pinned: pinned) })
+                }
+            }
         }
-        .font(.system(size: 11, weight: .semibold))
-        .padding(.horizontal, ClipboardRow.inset)
-        .frame(height: IslandLayout.clipboardHeaderHeight)
     }
 
     private func copy(_ item: ClipboardItem) {
@@ -66,14 +88,43 @@ struct ClipboardPageView: View {
             Motion.perform(reduceMotion ? Motion.instant : Motion.fast) { justCopied = nil }
         }
     }
+
+    private func togglePin(_ item: ClipboardItem, pinned: Bool) {
+        // The row moves between sections on the island's own spring as the page resizes.
+        Motion.perform(Motion.snappy) {
+            if pinned { history.unpin(item) } else { history.pin(item) }
+        }
+    }
 }
 
-/// One copy: what it is on the left, what it says in the middle, how long ago on the right.
-/// Brightens under the pointer; a click copies it again and the time gives way to "Copied".
+/// "Clear" on the recent copies' header: forgets them (pinned items stay).
+private struct ClearButton: View {
+    let action: () -> Void
+
+    @State private var hovering = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        Button(action: action) {
+            Text("Clear")
+                .foregroundColor(.white.opacity(hovering ? 0.85 : 0.45))
+        }
+        .buttonStyle(.pressable(.normal, hoverWash: false))
+        .onHover { hovering = $0 }
+        .animation(reduceMotion ? nil : Motion.hover, value: hovering)
+        .accessibilityHint("Forgets the recent copies; pinned items stay")
+    }
+}
+
+/// One copy: what it is on the left, what it says in the middle, how long ago on the right (a
+/// pin for a pinned one). Brightens under the pointer, where the right side becomes the pin
+/// button; a click anywhere else copies it again and says "Copied".
 private struct ClipboardRow: View {
     let item: ClipboardItem
+    let pinned: Bool
     let justCopied: Bool
-    let action: () -> Void
+    let copy: () -> Void
+    let togglePin: () -> Void
 
     /// Inside the row's highlight, so text lines up with the header.
     static let inset: CGFloat = 4
@@ -82,45 +133,60 @@ private struct ClipboardRow: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 9) {
-                ClipboardThumbnail(content: item.content)
-
-                title
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                ZStack(alignment: .trailing) {
-                    if justCopied {
-                        Label("Copied", systemImage: "checkmark")
-                            .font(.system(size: 10.5, weight: .semibold))
-                            .foregroundColor(.green)
-                            .transition(.opacity)
-                    } else {
-                        TimelineView(.everyMinute) { context in
-                            Text(Self.age(of: item.copiedAt, at: context.date))
-                                .font(.system(size: 10.5).monospacedDigit())
-                                .foregroundColor(.white.opacity(0.4))
-                        }
-                        .transition(.opacity)
-                    }
+        HStack(spacing: 6) {
+            Button(action: copy) {
+                HStack(spacing: 9) {
+                    ClipboardThumbnail(content: item.content)
+                    title
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .fixedSize()
+                .contentShape(Rectangle())
             }
-            .padding(.horizontal, Self.inset)
-            .frame(height: IslandLayout.clipboardRowHeight)
-            .background(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(Color.white.opacity(hovering ? 0.08 : 0))
-            )
-            .contentShape(Rectangle())
+            .buttonStyle(.pressable(.subtle, hoverWash: false))
+            .accessibilityLabel(accessibilityText)
+            .accessibilityHint("Copies it again")
+
+            trailing
+                .frame(minWidth: 22, alignment: .trailing)
         }
-        .buttonStyle(.pressable(.subtle, hoverWash: false))
+        .padding(.horizontal, Self.inset)
+        .frame(height: IslandLayout.clipboardRowHeight)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(Color.white.opacity(hovering ? 0.08 : 0))
+        )
         .onHover { hovering = $0 }
         .animation(reduceMotion ? nil : Motion.hover, value: hovering)
-        .accessibilityLabel(accessibilityText)
-        .accessibilityHint("Copies it again")
+        .animation(reduceMotion ? nil : Motion.fast, value: justCopied)
+    }
+
+    @ViewBuilder private var trailing: some View {
+        ZStack(alignment: .trailing) {
+            if justCopied {
+                Label("Copied", systemImage: "checkmark")
+                    .font(.system(size: 10.5, weight: .semibold))
+                    .foregroundColor(.green)
+                    .transition(.opacity)
+            } else if hovering {
+                PinButton(pinned: pinned, action: togglePin)
+                    .transition(.opacity)
+            } else if pinned {
+                Image(systemName: "pin.fill")
+                    .font(.system(size: 9.5, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.4))
+                    .transition(.opacity)
+            } else {
+                TimelineView(.everyMinute) { context in
+                    Text(Self.age(of: item.copiedAt, at: context.date))
+                        .font(.system(size: 10.5).monospacedDigit())
+                        .foregroundColor(.white.opacity(0.4))
+                }
+                .transition(.opacity)
+            }
+        }
+        .fixedSize()
     }
 
     @ViewBuilder private var title: some View {
@@ -178,6 +244,31 @@ private struct ClipboardRow: View {
         case ..<86_400: return "\(Int(seconds / 3600))h"
         default: return "\(Int(seconds / 86_400))d"
         }
+    }
+}
+
+/// Pins a copy (keeps it forever) or unpins it. Shown on the row under the pointer.
+private struct PinButton: View {
+    let pinned: Bool
+    let action: () -> Void
+
+    @State private var hovering = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: pinned ? "pin.slash" : "pin")
+                .font(.system(size: 10.5, weight: .semibold))
+                .foregroundColor(.white.opacity(hovering ? 1 : 0.6))
+                .frame(width: 22, height: 22)
+                .background(Circle().fill(Color.white.opacity(hovering ? 0.12 : 0)))
+                .contentShape(Circle())
+        }
+        .buttonStyle(.pressable(.normal, hoverWash: false))
+        .onHover { hovering = $0 }
+        .animation(reduceMotion ? nil : Motion.hover, value: hovering)
+        .help(pinned ? "Unpin" : "Keep forever")
+        .accessibilityLabel(pinned ? "Unpin" : "Pin, to keep it forever")
     }
 }
 

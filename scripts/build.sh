@@ -101,8 +101,10 @@ if (( INSTALL )); then
       exit 1
     fi
   fi
-  # Quit only the installed copy; a test build running from build/ is left alone.
+  # Quit the installed copy, and any test build running from build/ (either flavour): two Cloves
+  # draw two islands over the notch, one on top of the other.
   pkill -f "^$DEST/Contents/MacOS/Clove" && sleep 1
+  pkill -f "^$ROOT/build/(Direct/)?Clove.app/Contents/MacOS/Clove" && sleep 1
   rm -rf $DEST
   ditto $APP $DEST
   open $DEST

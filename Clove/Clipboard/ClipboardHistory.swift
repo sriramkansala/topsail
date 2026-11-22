@@ -12,7 +12,7 @@ struct ClipboardItem: Identifiable {
         case files([URL])
     }
 
-    let id = UUID()
+    var id = UUID()
     let content: Content
     let copiedAt: Date
     /// Every type of every pasteboard item, with its data, as copied.
@@ -24,8 +24,9 @@ struct ClipboardItem: Identifiable {
 }
 
 /// What you copy, newest first, while Clove runs. Kept in memory only: nothing is written to
-/// disk or sent anywhere, and the history is gone when Clove quits. Items that password managers
-/// mark as concealed or transient are never kept.
+/// disk or sent anywhere, and the history is gone when Clove quits — except items the user pins,
+/// which are saved in Clove's Application Support folder and kept until unpinned. Items that
+/// password managers mark as concealed or transient are never kept.
 ///
 /// macOS has no notification for copies, so the pasteboard's change count is checked twice a
 /// second; that count is all it takes to show "Copied to clipboard". Reading what was copied needs
@@ -44,7 +45,10 @@ final class ClipboardHistory: ObservableObject {
 
     static let limit = 50
 
+    /// Recent copies, newest first.
     @Published private(set) var items: [ClipboardItem] = []
+    /// Kept forever (on disk), most recently pinned first; never cleared or pushed out.
+    @Published private(set) var pinned: [ClipboardItem] = []
     @Published private(set) var access: Access
     /// Something was copied (by another app; Clove's own copies don't count).
     var onCopy: (() -> Void)?
@@ -82,6 +86,7 @@ final class ClipboardHistory: ObservableObject {
     init() {
         changeCount = pasteboard.changeCount
         access = Self.currentAccess()
+        loadPinned()
     }
 
     func start() {
@@ -95,7 +100,7 @@ final class ClipboardHistory: ObservableObject {
         self.timer = timer
     }
 
-    /// Stops watching and forgets everything.
+    /// Stops watching and forgets the recent copies (pinned ones stay).
     func stop() {
         timer?.invalidate()
         timer = nil
@@ -106,7 +111,8 @@ final class ClipboardHistory: ObservableObject {
         items = []
     }
 
-    /// Puts an item back on the clipboard, as it was copied, and moves it to the top.
+    /// Puts an item back on the clipboard, as it was copied. A recent one moves to the top; a
+    /// pinned one stays where it is.
     func copy(_ item: ClipboardItem) {
         let restored: [NSPasteboardItem] = item.representations.map { types in
             let pasteboardItem = NSPasteboardItem()
@@ -119,8 +125,29 @@ final class ClipboardHistory: ObservableObject {
         pasteboard.writeObjects(restored)
         // Clove's own copy: not a new item, no "Copied" popup.
         changeCount = pasteboard.changeCount
+        guard !pinned.contains(where: { $0.id == item.id }) else { return }
         items.removeAll { $0.id == item.id }
         items.insert(item, at: 0)
+    }
+
+    /// Keeps an item forever: it moves to the pinned list and is saved to disk.
+    func pin(_ item: ClipboardItem) {
+        guard !pinned.contains(where: { $0.id == item.id }) else { return }
+        items.removeAll { $0.id == item.id }
+        pinned.insert(item, at: 0)
+        save(item)
+    }
+
+    /// Back to the recent copies (at the top), and off the disk.
+    func unpin(_ item: ClipboardItem) {
+        guard pinned.contains(where: { $0.id == item.id }) else { return }
+        pinned.removeAll { $0.id == item.id }
+        items.insert(item, at: 0)
+        if let file = Self.file(for: item.id) { try? FileManager.default.removeItem(at: file) }
+    }
+
+    func isPinned(_ item: ClipboardItem) -> Bool {
+        pinned.contains { $0.id == item.id }
     }
 
     func refreshAccess() {
@@ -189,6 +216,8 @@ final class ClipboardHistory: ObservableObject {
             if !dictionary.isEmpty { representations.append(dictionary) }
         }
         guard let (content, fingerprint) = describe(representations) else { return }
+        // Already pinned: it stays there, not twice in the list.
+        guard !pinned.contains(where: { $0.fingerprint == fingerprint }) else { return }
 
         let item = ClipboardItem(content: content, copiedAt: Date(), representations: representations,
                                  fingerprint: fingerprint, byteCount: bytes)
@@ -229,6 +258,62 @@ final class ClipboardHistory: ObservableObject {
             return (.link(url), string.hashValue)
         }
         return (.text(string), string.hashValue)
+    }
+
+    // MARK: Pinned items on disk
+
+    /// One pinned item as saved: everything needed to put it back on the clipboard. What the list
+    /// shows is worked out again on loading.
+    private struct StoredItem: Codable {
+        let id: UUID
+        let copiedAt: Date
+        let pinnedAt: Date
+        let representations: [[String: Data]]
+    }
+
+    /// Application Support/Clove/Pinned (inside the App Store build's container).
+    private static var folder: URL? {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
+            .appendingPathComponent("Clove/Pinned", isDirectory: true)
+    }
+
+    private static func file(for id: UUID) -> URL? {
+        folder?.appendingPathComponent("\(id.uuidString).plist")
+    }
+
+    private func save(_ item: ClipboardItem) {
+        guard let folder = Self.folder, let file = Self.file(for: item.id) else { return }
+        let stored = StoredItem(id: item.id, copiedAt: item.copiedAt, pinnedAt: Date(),
+                                representations: item.representations.map { types in
+                                    Dictionary(uniqueKeysWithValues: types.map { ($0.key.rawValue, $0.value) })
+                                })
+        let encoder = PropertyListEncoder()
+        encoder.outputFormat = .binary
+        do {
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            try encoder.encode(stored).write(to: file, options: .atomic)
+        } catch {
+            NSLog("Clove: could not save a pinned clipboard item: \(error.localizedDescription)")
+        }
+    }
+
+    private func loadPinned() {
+        guard let folder = Self.folder,
+              let files = try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)
+        else { return }
+        let decoder = PropertyListDecoder()
+        let stored = files.filter { $0.pathExtension == "plist" }
+            .compactMap { try? decoder.decode(StoredItem.self, from: Data(contentsOf: $0)) }
+            .sorted { $0.pinnedAt > $1.pinnedAt }
+        pinned = stored.compactMap { stored in
+            let representations = stored.representations.map { types in
+                Dictionary(uniqueKeysWithValues: types.map { (NSPasteboard.PasteboardType($0.key), $0.value) })
+            }
+            guard let (content, fingerprint) = describe(representations) else { return nil }
+            return ClipboardItem(id: stored.id, content: content, copiedAt: stored.copiedAt,
+                                 representations: representations, fingerprint: fingerprint,
+                                 byteCount: representations.reduce(0) { $0 + $1.values.reduce(0) { $0 + $1.count } })
+        }
     }
 
     /// A copy small enough to keep 50 of and draw in a list row: at most 128 pixels a side,

@@ -97,7 +97,7 @@ struct SettingsView: View {
                 Toggle("Battery and performance", isOn: $settings.showSystemPage)
                 VStack(alignment: .leading, spacing: 2) {
                     Toggle("Clipboard history", isOn: $settings.showClipboard)
-                    Text("The last \(ClipboardHistory.limit) things you copied, kept in memory while Clove runs. Never saved or sent; passwords are skipped.")
+                    Text("The last \(ClipboardHistory.limit) things you copied, kept in memory while Clove runs; pin one to keep it on this Mac for good. Never sent anywhere, and passwords are skipped.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                     if settings.showClipboard && clipboard.access != .allowed {

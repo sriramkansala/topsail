@@ -447,9 +447,8 @@ final class NotchViewModel: ObservableObject {
         case .system:
             return IslandLayout.systemPageHeight(hasBattery: system.battery != nil)
         case .clipboard:
-            if clipboard.access != .allowed { return IslandLayout.clipboardSetupHeight }
-            if clipboard.items.isEmpty { return IslandLayout.messageHeight }
-            return IslandLayout.clipboardHeight(items: clipboard.items.count)
+            return IslandLayout.clipboardHeight(setup: clipboard.access != .allowed,
+                                                pinned: clipboard.pinned.count, recent: clipboard.items.count)
         }
     }
 

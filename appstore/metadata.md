@@ -49,7 +49,8 @@ sampled only while you look.
 
 CLIPBOARD
 The last 50 things you copied, text, links, images and files, newest first. Click one to copy it
-again. Kept in memory only, and items that password managers mark as secret are skipped.
+again, or pin it to keep it for good. Recent copies stay in memory; only pinned ones are saved,
+on your Mac. Items that password managers mark as secret are skipped.
 
 LIVE ACTIVITIES
 When something happens, the island shows it for a moment: plugging in, low battery (with a

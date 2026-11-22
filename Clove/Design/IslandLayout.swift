@@ -98,20 +98,35 @@ enum IslandLayout {
     // "Copied to clipboard", under the camera: the notch reaches a little lower and says so.
     static let copiedStageHeight: CGFloat = 24
 
-    // Clipboard page: what was copied, newest first, one row each under a small header; five
-    // rows show, the rest scroll.
+    // Clipboard page: pinned items, then recent copies, one row each under a small header. Never
+    // shorter than three rows, so one copy isn't a sliver; past five rows' height, it scrolls.
     static let clipboardHeaderHeight: CGFloat = 14
     static let clipboardHeaderGap: CGFloat = 6
     static let clipboardRowHeight: CGFloat = 28
     static let clipboardRowSpacing: CGFloat = 2
-    static let clipboardVisibleRows = 5
+    static let clipboardSectionGap: CGFloat = 10
     /// "Remember what you copy" and its button, until Clove may read the clipboard.
     static let clipboardSetupHeight: CGFloat = 40
+    static let clipboardMinHeight: CGFloat = clipboardSection(rows: 3)
+    static let clipboardMaxHeight: CGFloat = clipboardSection(rows: 5)
 
-    static func clipboardHeight(items: Int) -> CGFloat {
-        let rows = CGFloat(min(items, clipboardVisibleRows))
-        return clipboardHeaderHeight + clipboardHeaderGap + rows * clipboardRowHeight
-            + max(0, rows - 1) * clipboardRowSpacing
+    /// A header and `rows` rows; nothing for no rows.
+    static func clipboardSection(rows: Int) -> CGFloat {
+        guard rows > 0 else { return 0 }
+        return clipboardHeaderHeight + clipboardHeaderGap + CGFloat(rows) * clipboardRowHeight
+            + CGFloat(rows - 1) * clipboardRowSpacing
+    }
+
+    /// Everything the page holds, stacked: the setup row, the pinned section, the recent one.
+    static func clipboardNaturalHeight(setup: Bool, pinned: Int, recent: Int) -> CGFloat {
+        let parts = [setup ? clipboardSetupHeight : 0, clipboardSection(rows: pinned), clipboardSection(rows: recent)]
+            .filter { $0 > 0 }
+        return parts.reduce(0, +) + CGFloat(max(0, parts.count - 1)) * clipboardSectionGap
+    }
+
+    static func clipboardHeight(setup: Bool, pinned: Int, recent: Int) -> CGFloat {
+        min(max(clipboardNaturalHeight(setup: setup, pinned: pinned, recent: recent), clipboardMinHeight),
+            clipboardMaxHeight)
     }
 
     // Tasks page: issues grouped under their workflow state, as in Linear's "My issues".
