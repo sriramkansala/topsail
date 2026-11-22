@@ -8,13 +8,26 @@ import CoreGraphics
 enum IslandLayout {
     static let expandedWidth: CGFloat = 400
     /// Minimum width of each side of the notch row when expanded: room for up to four page tabs
-    /// on the left and the mic and gear on the right, none of them under the camera.
+    /// on the left and the mic and gear on the right, none of them under the camera. A fifth tab
+    /// widens it (`expandedWing(tabs:)`).
     static let minimumExpandedWing: CGFloat = 110
 
     static let horizontalPadding: CGFloat = 16
     /// Inside a page tab; the notch row is inset by this much less, so tab icons line up with
     /// the page content below them.
     static let tabPadding: CGFloat = 4
+    /// Every page tab is this wide, so the row's width is known before it is drawn.
+    static let tabWidth: CGFloat = 22
+    static let tabSpacing: CGFloat = 2
+    /// Between the last tab and the camera.
+    static let tabNotchGap: CGFloat = 4
+
+    /// Each side of the open island: the minimum, or wide enough for `tabs` tabs left of the
+    /// camera (four fit the minimum; five need 24 pt more a side).
+    static func expandedWing(tabs: Int) -> CGFloat {
+        let row = CGFloat(tabs) * tabWidth + CGFloat(max(0, tabs - 1)) * tabSpacing
+        return max(minimumExpandedWing, horizontalPadding - tabPadding + row + tabNotchGap)
+    }
     static let contentTopPadding: CGFloat = 6
     static let contentBottomPadding: CGFloat = 16
 
@@ -81,6 +94,25 @@ enum IslandLayout {
     static let deviceInset: CGFloat = 14
     static let deviceGaugeSize: CGFloat = 24
     static let deviceStageHeight: CGFloat = noticeTopGap + deviceTileSize + deviceInset
+
+    // "Copied to clipboard", under the camera: the notch reaches a little lower and says so.
+    static let copiedStageHeight: CGFloat = 24
+
+    // Clipboard page: what was copied, newest first, one row each under a small header; five
+    // rows show, the rest scroll.
+    static let clipboardHeaderHeight: CGFloat = 14
+    static let clipboardHeaderGap: CGFloat = 6
+    static let clipboardRowHeight: CGFloat = 28
+    static let clipboardRowSpacing: CGFloat = 2
+    static let clipboardVisibleRows = 5
+    /// "Remember what you copy" and its button, until Clove may read the clipboard.
+    static let clipboardSetupHeight: CGFloat = 40
+
+    static func clipboardHeight(items: Int) -> CGFloat {
+        let rows = CGFloat(min(items, clipboardVisibleRows))
+        return clipboardHeaderHeight + clipboardHeaderGap + rows * clipboardRowHeight
+            + max(0, rows - 1) * clipboardRowSpacing
+    }
 
     // Tasks page: issues grouped under their workflow state, as in Linear's "My issues".
     static let taskRowHeight: CGFloat = 18

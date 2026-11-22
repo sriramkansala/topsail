@@ -47,10 +47,14 @@ SYSTEM
 Battery and charger, power draw, per-core CPU, memory, GPU, network and free disk space,
 sampled only while you look.
 
+CLIPBOARD
+The last 50 things you copied, text, links, images and files, newest first. Click one to copy it
+again. Kept in memory only, and items that password managers mark as secret are skipped.
+
 LIVE ACTIVITIES
 When something happens, the island shows it for a moment: plugging in, low battery (with a
-shortcut to Low Power Mode), headphones connecting, a meeting about to start, a task coming due,
-and, if you like, the volume in place of the macOS indicator.
+shortcut to Low Power Mode), headphones connecting, "Copied to clipboard", a meeting about to
+start, a task coming due, and, if you like, the volume in place of the macOS indicator.
 
 PRIVATE BY DESIGN
 No account, no ads, no analytics and no server of its own. Your calendar and music never leave

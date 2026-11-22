@@ -4,6 +4,7 @@ struct SettingsView: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var linear: LinearService
     @ObservedObject var calendar: CalendarService
+    @ObservedObject var clipboard: ClipboardHistory
 
     private var versionString: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
@@ -52,6 +53,9 @@ struct SettingsView: View {
                     Toggle("Meeting reminders", isOn: $settings.showMeetingReminders)
                 }
                 Toggle("Linear deadlines", isOn: $settings.showTaskReminders)
+                Captioned(caption: "“Copied to clipboard” under the notch; hover it for what you copied.") {
+                    Toggle("Copying", isOn: $settings.showCopyActivity)
+                }
 
                 Captioned(caption: settings.hideSystemVolumeHUD ? nil : "Appears alongside the system volume indicator.") {
                     Toggle("Volume", isOn: $settings.showVolumeActivity)
@@ -91,6 +95,17 @@ struct SettingsView: View {
                     }
                 }
                 Toggle("Battery and performance", isOn: $settings.showSystemPage)
+                VStack(alignment: .leading, spacing: 2) {
+                    Toggle("Clipboard history", isOn: $settings.showClipboard)
+                    Text("The last \(ClipboardHistory.limit) things you copied, kept in memory while Clove runs. Never saved or sent; passwords are skipped.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    if settings.showClipboard && clipboard.access != .allowed {
+                        PermissionHint(text: "Set Clove to Always Allow under Privacy & Security › Paste from Other Apps",
+                                       button: clipboard.access == .notDetermined ? "Allow…" : "Open System Settings",
+                                       action: clipboard.requestAccess)
+                    }
+                }
             }
 
             LinearSettingsSection(linear: linear)

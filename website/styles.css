@@ -697,6 +697,18 @@ h2.title {
   .pill { height: 44px; font-size: 15px; }
 }
 
+/* Six pages don't fit one row on a phone: two rows of three. */
+@media (max-width: 520px) {
+  .segmented {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    width: 100%;
+    border-radius: 20px;
+    overflow: visible;
+  }
+  .segment { padding: 7px 0; border-radius: 17px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { transition-duration: 0.01ms !important; transition-delay: 0s !important; animation: none !important; }

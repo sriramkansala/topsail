@@ -15,7 +15,8 @@ struct TransientActivityView: View {
     var onRequestLowPowerMode: () -> Void = {}
     /// One of the meeting reminder's buttons was clicked.
     var onMeetingAnswer: (UpcomingEvent, MeetingAnswer) -> Void = { _, _ in }
-    /// What is playing, which a device connecting keeps beside the notch; nil when nothing is.
+    /// What is playing, which a device connecting or a copy keeps beside the notch; nil when
+    /// nothing is.
     var nowPlaying: NowPlayingService? = nil
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -32,6 +33,8 @@ struct TransientActivityView: View {
         case .audioDevice(let name, let battery):
             DeviceConnectedNotice(name: name, battery: battery, notchSize: notchSize, wingWidth: wingWidth,
                                   nowPlaying: nowPlaying)
+        case .copied:
+            CopiedNotice(notchSize: notchSize, wingWidth: wingWidth, nowPlaying: nowPlaying)
         default:
             wingsAndMeter
         }
@@ -80,7 +83,7 @@ struct TransientActivityView: View {
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.white)
                 .contentTransition(.symbolEffect(.replace))
-        case .charging, .lowBattery, .meetingReminder, .audioDevice:
+        case .charging, .lowBattery, .meetingReminder, .audioDevice, .copied:
             EmptyView()  // ChargingSweep and the notices draw their own.
         case .taskDue(let title, let overdue):
             HStack(spacing: 5) {
@@ -111,7 +114,7 @@ struct TransientActivityView: View {
                 .foregroundStyle(.white)
                 .contentTransition(.numericText(value: Double(level)))
                 .animation(reduceMotion ? nil : Motion.base, value: level)
-        case .charging, .lowBattery, .meetingReminder, .audioDevice:
+        case .charging, .lowBattery, .meetingReminder, .audioDevice, .copied:
             EmptyView()
         case .taskDue(_, let overdue):
             value(overdue ? "Overdue" : "Due today", overdue ? .red : .orange)
@@ -138,7 +141,7 @@ struct TransientActivityView: View {
         switch activity.kind {
         case .volume(let level, let muted, _): return (Double(level), .white, muted)
         case .brightness(let level): return (Double(level), .white, false)
-        case .charging, .lowBattery, .audioDevice, .taskDue, .meetingReminder: return nil
+        case .charging, .lowBattery, .audioDevice, .taskDue, .meetingReminder, .copied: return nil
         }
     }
 }

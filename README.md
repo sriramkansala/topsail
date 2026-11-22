@@ -12,13 +12,14 @@ pointer to it.
 
 ## What it does
 
-**When you hover over the notch**, the island opens to one of four pages:
+**When you hover over the notch**, the island opens to one of five pages:
 
 | | |
 |---|---|
 | <img src="website/images/calendar.png" width="400" alt="Calendar page"> | **Calendar.** Your next events today and tomorrow, with a Join button for Zoom, Meet, Teams, Webex and FaceTime links. |
 | <img src="website/images/tasks.png" width="400" alt="Tasks page"> | **Tasks.** Your Linear issues for the current cycle, grouped by status. Press ⌥ Space to dictate a voice note; the on-device model turns it into issue changes you review before anything is sent. |
 | <img src="website/images/system.png" width="400" alt="System page"> | **System.** Battery, charger and power draw, per-core CPU, memory, GPU, network and free disk space. Sampled only while the page is open. |
+| <img src="website/images/island-clipboard.png" width="400" alt="Clipboard page"> | **Clipboard.** The last 50 things you copied (text, links, images, files), newest first. Click one to copy it again. Kept in memory only; items password managers mark as secret are skipped. Needs **Always Allow** under Privacy & Security › Paste from Other Apps. |
 
 **When something happens**, the island shows it beside the notch for a few seconds:
 
@@ -28,6 +29,7 @@ pointer to it.
 | <img src="website/images/charging.png" width="400" alt="Charging"> | Plugging in: a band of gold light falls through the island. |
 | <img src="website/images/low-battery.png" width="400" alt="Low battery notice"> | Low battery at 20 % and 10 %. Click it to turn on Low Power Mode… |
 | <img src="website/images/low-power.png" width="400" alt="Low Power Mode on"> | …and it turns gold. |
+| <img src="website/images/island-copied.png" width="400" alt="Copied to clipboard"> | Copying: the notch reaches a little lower and says "Copied to clipboard". Hover it to open the clipboard page. |
 | <img src="website/images/volume.png" width="400" alt="Volume"> | Volume and brightness, in place of the macOS indicators. While Spotify plays on another device (a phone, a speaker, a TV), the volume keys turn that device up and down. |
 
 It also shows headphones and speakers connecting, in a card under the notch with each earbud's and

@@ -15,6 +15,7 @@ final class NotchViewModel: ObservableObject {
         case calendar
         case tasks
         case system
+        case clipboard
     }
 
     @Published private(set) var state: IslandState = .collapsed
@@ -39,6 +40,7 @@ final class NotchViewModel: ObservableObject {
     let linear: LinearService
     let voice: VoiceNoteController
     let system: SystemMonitor
+    let clipboard: ClipboardHistory
     let settings: AppSettings
     let compactWing: CGFloat = 42
 
@@ -60,13 +62,15 @@ final class NotchViewModel: ObservableObject {
     private var hideActivityWork: DispatchWorkItem?
 
     init(nowPlaying: NowPlayingService, activities: ActivityCenter, calendar: CalendarService,
-         linear: LinearService, voice: VoiceNoteController, system: SystemMonitor, settings: AppSettings) {
+         linear: LinearService, voice: VoiceNoteController, system: SystemMonitor, clipboard: ClipboardHistory,
+         settings: AppSettings) {
         self.nowPlaying = nowPlaying
         self.activities = activities
         self.calendar = calendar
         self.linear = linear
         self.voice = voice
         self.system = system
+        self.clipboard = clipboard
         self.settings = settings
 
         // Only whether a note is running matters here; the note's own updates (waveform levels,
@@ -84,12 +88,14 @@ final class NotchViewModel: ObservableObject {
             .store(in: &cancellables)
 
         // The expanded height follows the page and what it shows.
-        Publishers.Merge5(
+        Publishers.Merge7(
             $page.map { _ in () },
             nowPlaying.$track.map { $0 != nil }.removeDuplicates().map { _ in () },
             calendar.objectWillChange.map { _ in () },
             linear.objectWillChange.map { _ in () },
-            settings.$showCalendar.map { _ in () }
+            settings.$showCalendar.map { _ in () },
+            settings.$showClipboard.map { _ in () },
+            clipboard.objectWillChange.map { _ in () }
         )
         .receive(on: DispatchQueue.main)
         .sink { [weak self] in
@@ -164,7 +170,7 @@ final class NotchViewModel: ObservableObject {
             // A transient activity (charging, device connected) takes priority, then an
             // imminent meeting, then music.
             if activities.current != nil {
-                return CGSize(width: notchSize.width + 2 * activities.wingWidth,
+                return CGSize(width: notchSize.width + 2 * activityWingWidth,
                               height: notchSize.height + activities.meterHeight)
             }
             if showsMeetingActivity {
@@ -177,6 +183,14 @@ final class NotchViewModel: ObservableObject {
         case .expanded:
             return expandedSize
         }
+    }
+
+    /// Each wing of the activity on screen. "Copied to clipboard" grows the notch downward only,
+    /// keeping the narrow music wings if music is showing; every other activity takes the open
+    /// island's width.
+    var activityWingWidth: CGFloat {
+        if activities.current?.kind == .copied { return showsMusicActivity ? compactWing : 0 }
+        return activities.wingWidth
     }
 
     // MARK: - Voice notes
@@ -377,7 +391,8 @@ final class NotchViewModel: ObservableObject {
         if voiceActive {
             return CGSize(width: IslandLayout.voiceWidth, height: notchSize.height + voiceHeight)
         }
-        return CGSize(width: max(IslandLayout.expandedWidth, notchSize.width + 2 * IslandLayout.minimumExpandedWing),
+        let wing = IslandLayout.expandedWing(tabs: showsPageTabs ? availablePages.count : 0)
+        return CGSize(width: max(IslandLayout.expandedWidth, notchSize.width + 2 * wing),
                height: notchSize.height + IslandLayout.contentTopPadding + expandedContentHeight
                    + IslandLayout.contentBottomPadding)
     }
@@ -390,6 +405,7 @@ final class NotchViewModel: ObservableObject {
         if calendarAvailable { pages.append(.calendar) }
         if linear.isConnected { pages.append(.tasks) }
         if settings.showSystemPage { pages.append(.system) }
+        if settings.showClipboard { pages.append(.clipboard) }
         return pages.isEmpty ? [.player] : pages
     }
 
@@ -430,6 +446,10 @@ final class NotchViewModel: ObservableObject {
             return tasksExpanded ? min(height, IslandLayout.expandedTasksMaxHeight) : height
         case .system:
             return IslandLayout.systemPageHeight(hasBattery: system.battery != nil)
+        case .clipboard:
+            if clipboard.access != .allowed { return IslandLayout.clipboardSetupHeight }
+            if clipboard.items.isEmpty { return IslandLayout.messageHeight }
+            return IslandLayout.clipboardHeight(items: clipboard.items.count)
         }
     }
 
@@ -491,7 +511,10 @@ final class NotchViewModel: ObservableObject {
 
     func expand() {
         guard state != .expanded else { return }
-        page = preferredPage
+        // Hovering "Copied to clipboard" opens the history.
+        let fromCopy = activities.current?.kind == .copied && availablePages.contains(.clipboard)
+        page = fromCopy ? .clipboard : preferredPage
+        clipboard.refreshAccess()
         linear.refresh()
         system.start()
         updateContentHeight(animated: false)

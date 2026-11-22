@@ -11,6 +11,7 @@ const demoCaptions = {
   reminder: "A call is starting: Join, Ignore, or Remind me in 5 min.",
   tasks: "This cycle's Linear issues, grouped by status. ⌥ Space dictates a note.",
   system: "Battery and charger, CPU, memory, network and disk, sampled only while you look.",
+  clipboard: "Copy anything and the notch says so; hover it for what you copied. Click one to copy it again.",
 };
 const demoAlt = {
   player: "The Clove island open below the notch, playing music",
@@ -18,6 +19,7 @@ const demoAlt = {
   reminder: "A card below the notch: Design review starts in 1 min, with Remind me in 5 min, Ignore and Join",
   tasks: "The island's tasks page with Linear issues",
   system: "The island's system page with battery, CPU and memory",
+  clipboard: "The island's clipboard page: recent text, a link, an image and files",
 };
 const demoImage = document.querySelector("[data-demo-image]");
 const demoCaption = document.querySelector("[data-demo-caption]");

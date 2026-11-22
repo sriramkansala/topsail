@@ -7,7 +7,7 @@ import SwiftUI
 final class SettingsWindowController: NSWindowController {
     private let settings: AppSettings
 
-    init(settings: AppSettings, linear: LinearService, calendar: CalendarService) {
+    init(settings: AppSettings, linear: LinearService, calendar: CalendarService, clipboard: ClipboardHistory) {
         self.settings = settings
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 420, height: 560),
@@ -17,7 +17,8 @@ final class SettingsWindowController: NSWindowController {
         )
         window.title = "Clove Settings"
         window.isReleasedWhenClosed = false
-        window.contentView = NSHostingView(rootView: SettingsView(settings: settings, linear: linear, calendar: calendar))
+        window.contentView = NSHostingView(rootView: SettingsView(settings: settings, linear: linear, calendar: calendar,
+                                                                    clipboard: clipboard))
         window.center()
         super.init(window: window)
     }

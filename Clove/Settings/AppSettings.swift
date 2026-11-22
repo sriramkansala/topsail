@@ -21,6 +21,10 @@ final class AppSettings: ObservableObject {
     @Published var showTaskReminders: Bool { didSet { save(showTaskReminders, "showTaskReminders") } }
     @Published var showCalendar: Bool { didSet { save(showCalendar, "showCalendar") } }
     @Published var showSystemPage: Bool { didSet { save(showSystemPage, "showSystemPage") } }
+    /// The clipboard page: what you copy, kept in memory while Clove runs.
+    @Published var showClipboard: Bool { didSet { save(showClipboard, "showClipboard") } }
+    /// "Copied to clipboard" under the notch on every copy.
+    @Published var showCopyActivity: Bool { didSet { save(showCopyActivity, "showCopyActivity") } }
     @Published var hapticFeedback: Bool { didSet { save(hapticFeedback, "hapticFeedback") } }
     /// Take over the volume keys so macOS hides its own volume indicator (needs Input Monitoring
     /// and Accessibility).
@@ -46,6 +50,8 @@ final class AppSettings: ObservableObject {
             "showTaskReminders": true,
             "showCalendar": true,
             "showSystemPage": true,
+            "showClipboard": true,
+            "showCopyActivity": true,
             "hapticFeedback": true,
             "hideSystemVolumeHUD": Self.takesOverKeysByDefault,
         ])
@@ -58,6 +64,8 @@ final class AppSettings: ObservableObject {
         showTaskReminders = defaults.bool(forKey: "showTaskReminders")
         showCalendar = defaults.bool(forKey: "showCalendar")
         showSystemPage = defaults.bool(forKey: "showSystemPage")
+        showClipboard = defaults.bool(forKey: "showClipboard")
+        showCopyActivity = defaults.bool(forKey: "showCopyActivity")
         hapticFeedback = defaults.bool(forKey: "hapticFeedback")
         hideSystemVolumeHUD = defaults.bool(forKey: "hideSystemVolumeHUD")
         launchAtLogin = false
@@ -73,6 +81,7 @@ final class AppSettings: ObservableObject {
         case .brightness: return showBrightnessActivity
         case .taskDue: return showTaskReminders
         case .meetingReminder: return showMeetingReminders
+        case .copied: return showCopyActivity
         }
     }
 

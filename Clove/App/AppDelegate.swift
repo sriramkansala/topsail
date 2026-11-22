@@ -7,8 +7,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let settings = AppSettings()
     private let linear = LinearService()
     private let calendar = CalendarService()
+    private let clipboard = ClipboardHistory()
     private lazy var settingsWindowController = SettingsWindowController(settings: settings, linear: linear,
-                                                                         calendar: calendar)
+                                                                         calendar: calendar, clipboard: clipboard)
     private var statusItem: NSStatusItem?
     private var voiceItem: NSMenuItem?
     private var cancellables = Set<AnyCancellable>()
@@ -17,7 +18,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.accessory)
         buildMainMenu()
 
-        let controller = NotchWindowController(settings: settings, linear: linear, calendar: calendar) { [weak self] in
+        let controller = NotchWindowController(settings: settings, linear: linear, calendar: calendar,
+                                               clipboard: clipboard) { [weak self] in
             self?.showSettings()
         }
         windowController = controller
@@ -65,7 +67,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             switch url.host {
             case "settings": showSettings()
             #if DEBUG
-            // Debug builds only: `open clove://preview/low-battery` (or `/charging`, `/meeting`, `/airpods`, `/headphones`) shows that
+            // Debug builds only: `open clove://preview/low-battery` (or `/charging`, `/meeting`, `/airpods`, `/headphones`, `/copied`) shows that
             // activity now, without draining the battery or unplugging.
             case "preview": windowController?.preview(url.lastPathComponent)
             #endif

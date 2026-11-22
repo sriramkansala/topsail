@@ -9,6 +9,7 @@ enum ActivityKind: Equatable {
     case brightness(level: Float)           // display brightness changed (direct build only)
     case taskDue(title: String, overdue: Bool)  // a Linear issue is due today or overdue
     case meetingReminder(UpcomingEvent)    // a call is starting: Join, Ignore or Remind me in 5 min
+    case copied                            // something was copied: "Copied to clipboard" under the camera
 }
 
 /// The meeting reminder's three buttons.
@@ -53,17 +54,18 @@ extension ActivityKind {
         return false
     }
 
-    /// Levels the user is adjusting right now (volume, brightness): shown at once, updated in place.
+    /// The user's own actions, answered right away: levels they are adjusting (volume,
+    /// brightness), shown at once and updated in place, and a copy.
     var isLiveLevel: Bool {
         switch self {
-        case .volume, .brightness: return true
+        case .volume, .brightness, .copied: return true
         case .charging, .lowBattery, .audioDevice, .taskDue, .meetingReminder: return false
         }
     }
 
     func isSameLiveLevel(as other: ActivityKind) -> Bool {
         switch (self, other) {
-        case (.volume, .volume), (.brightness, .brightness): return true
+        case (.volume, .volume), (.brightness, .brightness), (.copied, .copied): return true
         default: return false
         }
     }
@@ -86,6 +88,8 @@ final class ActivityCenter: ObservableObject {
     private var pendingWork: DispatchWorkItem?
     private let displayDuration: TimeInterval = 3
     private let levelDisplayDuration: TimeInterval = 1.5
+    /// "Copied to clipboard": long enough to reach with the pointer, which opens the history.
+    private let copiedDuration: TimeInterval = 2.5
     /// A device connecting: long enough to read each battery.
     private let deviceDuration: TimeInterval = 4
     /// The low-battery notice gives the user time to reach it, and to finish in System Settings.
@@ -109,6 +113,7 @@ final class ActivityCenter: ObservableObject {
         case .lowBattery: return IslandLayout.noticeStageHeight
         case .meetingReminder: return IslandLayout.reminderStageHeight
         case .audioDevice: return IslandLayout.deviceStageHeight
+        case .copied: return IslandLayout.copiedStageHeight
         case .volume, .brightness: return 8
         case .taskDue, nil: return 0
         }
@@ -208,9 +213,10 @@ final class ActivityCenter: ObservableObject {
         }
     }
 
-    /// Volume and brightness changes are the user's own action, so they show immediately and
-    /// update in place while keys are held, instead of queueing one notification per key press.
-    /// An activity they interrupt is shown again afterwards.
+    /// Volume and brightness changes, and copies, are the user's own action, so they show
+    /// immediately and update in place while keys are held (or copies follow each other), instead
+    /// of queueing one notification per key press. An activity they interrupt is shown again
+    /// afterwards.
     private func showLevel(_ kind: ActivityKind) {
         if let showing = current, showing.kind.isSameLiveLevel(as: kind) {
             current = TransientActivity(id: showing.id, kind: kind)  // same id: the view updates, no cross-fade
@@ -224,7 +230,7 @@ final class ActivityCenter: ObservableObject {
                 current = TransientActivity(kind: kind)
             }
         }
-        schedule(after: levelDisplayDuration) { [weak self] in self?.hideCurrent() }
+        schedule(after: kind == .copied ? copiedDuration : levelDisplayDuration) { [weak self] in self?.hideCurrent() }
     }
 
     /// A notice leaves as it came: blurring out while the island closes, on the same spring.

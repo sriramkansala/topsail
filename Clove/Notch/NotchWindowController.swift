@@ -9,12 +9,13 @@ final class NotchWindowController: NSWindowController {
     private let audioMonitor: AudioMonitor
     private let volumeKeys: VolumeKeyInterceptor
     private var activitySubscription: AnyCancellable?
+    private var clipboardSubscription: AnyCancellable?
 
     // The panel never resizes: it must fit the largest island — a voice note in review (560 wide,
     // up to ~700 tall) — plus the ears and the shadow. Its transparent area passes clicks through.
     private static let panelSize = CGSize(width: 700, height: 820)
 
-    init(settings: AppSettings, linear: LinearService, calendar: CalendarService,
+    init(settings: AppSettings, linear: LinearService, calendar: CalendarService, clipboard: ClipboardHistory,
          openSettings: @escaping () -> Void) {
         let nowPlaying = NowPlayingService()
         let activities = ActivityCenter()
@@ -28,7 +29,9 @@ final class NotchWindowController: NSWindowController {
         let batteryMonitor = BatteryMonitor(center: activities)
         let system = SystemMonitor(pluggedInAt: { [weak batteryMonitor] in batteryMonitor?.pluggedInAt })
         let model = NotchViewModel(nowPlaying: nowPlaying, activities: activities, calendar: calendar,
-                                   linear: linear, voice: voice, system: system, settings: settings)
+                                   linear: linear, voice: voice, system: system, clipboard: clipboard,
+                                   settings: settings)
+        clipboard.onCopy = { [weak activities] in activities?.post(.copied) }
         voice.onPresent = { [weak model] in model?.presentVoice() }
         linear.onDue = { [weak activities] issues in
             guard let first = issues.first else { return }
@@ -72,6 +75,13 @@ final class NotchWindowController: NSWindowController {
             guard let self else { return }
             self.updateMouseEvents(state: self.model.state, activity: activity)
         }
+        // Copies are watched while either the history or the "Copied" popup is on.
+        clipboardSubscription = Publishers.CombineLatest(settings.$showClipboard, settings.$showCopyActivity)
+            .sink { [weak clipboard] keepsHistory, announces in
+                guard let clipboard else { return }
+                clipboard.keepsHistory = keepsHistory
+                if keepsHistory || announces { clipboard.start() } else { clipboard.stop() }
+            }
 
         reposition()
         model.startTracking()
@@ -107,6 +117,7 @@ final class NotchWindowController: NSWindowController {
         case "headphones":
             // The App Store build's card: no battery.
             model.activities.post(.audioDevice(name: "Headphones", battery: nil))
+        case "copied": model.activities.post(.copied)
         default: break
         }
     }

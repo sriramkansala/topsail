@@ -19,13 +19,13 @@ struct NotchView: View {
         ZStack(alignment: .top) {
             // Always mounted; its parts enter and leave with the expanded state.
             ExpandedContent(model: model, nowPlaying: nowPlaying, calendar: model.calendar,
-                            linear: model.linear)
+                            linear: model.linear, clipboard: model.clipboard)
 
             if model.state == .collapsed {
                 if let activity = model.activities.current {
                     TransientActivityView(activity: activity,
                                           notchSize: model.notchSize,
-                                          wingWidth: model.activities.wingWidth,
+                                          wingWidth: model.activityWingWidth,
                                           meterHeight: model.activities.meterHeight,
                                           onRequestLowPowerMode: model.requestLowPowerMode,
                                           onMeetingAnswer: model.answerMeeting,
@@ -38,7 +38,7 @@ struct NotchView: View {
                         .id(meeting.id)
                         .transition(.cascade(0, reduceMotion: reduceMotion))
                 } else if model.showsMusicActivity {
-                    CollapsedMusicContent(model: model, nowPlaying: nowPlaying)
+                    CompactMusicWings(nowPlaying: nowPlaying, notchSize: model.notchSize, wingWidth: model.compactWing)
                         .transition(.cascade(0, reduceMotion: reduceMotion))
                 }
             }
@@ -50,29 +50,12 @@ struct NotchView: View {
         .shadow(color: .black.opacity(model.state == .expanded ? 0.35 : 0), radius: 10, y: 4)
     }
 
-    private struct CollapsedMusicContent: View {
-        @ObservedObject var model: NotchViewModel
-        @ObservedObject var nowPlaying: NowPlayingService
-
-        var body: some View {
-            HStack(spacing: 0) {
-                ArtworkView(image: nowPlaying.artwork, size: 22, cornerRadius: 6)
-                    .frame(width: model.compactWing, height: model.notchSize.height)
-
-                Color.clear
-                    .frame(width: model.notchSize.width, height: model.notchSize.height)
-
-                EqualizerView(isPlaying: nowPlaying.isPlaying, color: nowPlaying.accentColor)
-                    .frame(width: model.compactWing, height: model.notchSize.height)
-            }
-        }
-    }
-
     private struct ExpandedContent: View {
         @ObservedObject var model: NotchViewModel
         @ObservedObject var nowPlaying: NowPlayingService
         @ObservedObject var calendar: CalendarService
         @ObservedObject var linear: LinearService
+        @ObservedObject var clipboard: ClipboardHistory
 
         @Environment(\.accessibilityReduceMotion) private var reduceMotion
         @Namespace private var pageNamespace
@@ -102,7 +85,7 @@ struct NotchView: View {
         private var notchRow: some View {
             HStack(spacing: 0) {
                 if model.showsPageTabs {
-                    HStack(spacing: 2) {
+                    HStack(spacing: IslandLayout.tabSpacing) {
                         ForEach(model.availablePages, id: \.self) { page in
                             PageTab(symbol: Self.symbol(for: page), page: page, model: model,
                                     namespace: pageNamespace)
@@ -147,6 +130,9 @@ struct NotchView: View {
                 } else if model.visiblePage == .system {
                     SystemPageView(system: model.system)
                         .transition(.contentMorph(reduceMotion: reduceMotion))
+                } else if model.visiblePage == .clipboard {
+                    ClipboardPageView(history: clipboard)
+                        .transition(.contentMorph(reduceMotion: reduceMotion))
                 } else if nowPlaying.track != nil {
                     ExpandedPlayerView(service: nowPlaying)
                         .transition(.contentMorph(reduceMotion: reduceMotion))
@@ -164,6 +150,7 @@ struct NotchView: View {
             case .calendar: return "calendar"
             case .tasks: return "checklist"
             case .system: return "gauge.with.dots.needle.50percent"
+            case .clipboard: return "doc.on.doc"
             }
         }
     }
@@ -183,7 +170,7 @@ struct NotchView: View {
                 Image(systemName: symbol)
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundColor(isSelected ? .white : .white.opacity(0.45))
-                    .padding(.horizontal, IslandLayout.tabPadding)
+                    .frame(width: IslandLayout.tabWidth)
                     .padding(.vertical, 3)
                     .background {
                         if isSelected {
@@ -196,6 +183,27 @@ struct NotchView: View {
             }
             // Selected items get no hover wash.
             .buttonStyle(.pressable(.normal, hoverWash: !isSelected))
+        }
+    }
+}
+
+/// What is playing, beside the notch on the collapsed island: the artwork in the left wing, the
+/// bars in the right, each centred in its narrow wing.
+struct CompactMusicWings: View {
+    @ObservedObject var nowPlaying: NowPlayingService
+    let notchSize: CGSize
+    let wingWidth: CGFloat
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ArtworkView(image: nowPlaying.artwork, size: 22, cornerRadius: 6)
+                .frame(width: wingWidth, height: notchSize.height)
+
+            Color.clear
+                .frame(width: notchSize.width, height: notchSize.height)
+
+            EqualizerView(isPlaying: nowPlaying.isPlaying, color: nowPlaying.accentColor)
+                .frame(width: wingWidth, height: notchSize.height)
         }
     }
 }
