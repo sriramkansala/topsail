@@ -169,7 +169,7 @@ struct NotchView: View {
                     ExpandedPlayerView(service: nowPlaying)
                         .transition(.contentMorph(reduceMotion: reduceMotion))
                 } else {
-                    MessageView(symbol: "music.note", text: "Nothing playing")
+                    MessageView(symbol: "music.note", text: String(localized: "Nothing playing"))
                         .transition(.contentMorph(reduceMotion: reduceMotion))
                 }
             }

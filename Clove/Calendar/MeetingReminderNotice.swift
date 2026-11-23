@@ -16,12 +16,12 @@ struct MeetingReminderNotice: View {
             VStack(alignment: .leading, spacing: IslandLayout.reminderRowGap) {
                 header
                 HStack(spacing: 8) {
-                    ReminderButton(title: "Remind me in 5 min", symbol: "clock") { onAnswer(.snooze) }
+                    ReminderButton(title: String(localized: "Remind me in 5 min"), symbol: "clock") { onAnswer(.snooze) }
                         .accessibilityHint("Shows this reminder again in five minutes")
                     Spacer(minLength: 8)
-                    ReminderButton(title: "Ignore") { onAnswer(.ignore) }
+                    ReminderButton(title: String(localized: "Ignore")) { onAnswer(.ignore) }
                         .accessibilityHint("No more reminders for this call")
-                    ReminderButton(title: "Join", symbol: "video.fill", tint: .green) { onAnswer(.join) }
+                    ReminderButton(title: String(localized: "Join"), symbol: "video.fill", tint: .green) { onAnswer(.join) }
                         .accessibilityHint("Opens the meeting link")
                 }
             }

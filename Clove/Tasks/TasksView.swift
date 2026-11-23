@@ -12,7 +12,7 @@ struct TasksView: View {
         if case .failed(let message) = linear.status {
             MessageView(symbol: "exclamationmark.triangle", text: message)
         } else if linear.issues.isEmpty {
-            MessageView(symbol: "checkmark.circle", text: "Nothing left this week")
+            MessageView(symbol: "checkmark.circle", text: String(localized: "Nothing left this week"))
         } else if expanded {
             ScrollView(.vertical, showsIndicators: false) {
                 groupsView(TaskGroup.make(from: linear.issues), viewMore: false)

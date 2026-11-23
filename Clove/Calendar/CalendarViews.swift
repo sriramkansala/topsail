@@ -8,7 +8,7 @@ struct CalendarColumnView: View {
         switch calendar.access {
         case .notDetermined:
             Button(action: { calendar.requestAccess() }) {
-                MessageView(symbol: "calendar", text: "Show calendar")
+                MessageView(symbol: "calendar", text: String(localized: "Show calendar"))
             }
             .buttonStyle(.pressable(.subtle))
 

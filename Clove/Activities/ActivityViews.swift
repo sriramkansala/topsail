@@ -143,9 +143,9 @@ struct TransientActivityView: View {
         case .charging, .lowBattery, .meetingReminder, .audioDevice, .copied:
             EmptyView()
         case .taskDue(_, let overdue):
-            value(overdue ? "Overdue" : "Due today", overdue ? .red : .orange)
+            value(overdue ? String(localized: "Overdue") : String(localized: "Due today"), overdue ? .red : .orange)
         case .keepAwake(let on):
-            value(on ? "On" : "Off", on ? Self.awake : .white.opacity(0.5))
+            value(on ? String(localized: "On") : String(localized: "Off"), on ? Self.awake : .white.opacity(0.5))
         case .agentApproval, .notification:
             EmptyView()
         case .agentFinished(_, let project):

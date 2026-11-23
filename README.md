@@ -32,6 +32,12 @@ pointer to it.
 | <img src="website/images/island-copied.png" width="400" alt="Copied to clipboard"> | Copying: the notch reaches a little lower and says "Copied to clipboard". Hover it to open the clipboard page. |
 | <img src="website/images/volume.png" width="400" alt="Volume"> | Volume and brightness, in place of the macOS indicators. While Spotify plays on another device (a phone, a speaker, a TV), the volume keys turn that device up and down. |
 
+**Switched off until you turn them on** (Settings › Features): a file shelf with AirDrop, Apple
+Reminders, Keep Awake and a teleprompter; and, in the direct download, AI coding agents (Claude
+Code, Codex, Cursor and Antigravity: progress, and Approve or Deny, in the notch), other apps'
+notifications, an Apps page (Terminal, Chrome, YouTube) and automatic updates. English, French and
+Spanish.
+
 It also shows headphones and speakers connecting, in a card under the notch with each earbud's and
 the case's battery (in the direct download) while the playing track stays beside the notch, and
 Linear issues coming due. Before a call

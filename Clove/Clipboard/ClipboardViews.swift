@@ -19,7 +19,7 @@ struct ClipboardPageView: View {
         let natural = IslandLayout.clipboardNaturalHeight(setup: needsSetup, pinned: history.pinned.count,
                                                           recent: history.items.count)
         if natural == 0 {
-            MessageView(symbol: "doc.on.doc", text: "Copy something and it shows up here")
+            MessageView(symbol: "doc.on.doc", text: String(localized: "Copy something and it shows up here"))
                 .frame(maxHeight: .infinity)
         } else if natural > IslandLayout.clipboardMaxHeight {
             ScrollView(.vertical, showsIndicators: false) { sections }

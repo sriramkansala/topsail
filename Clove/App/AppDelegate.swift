@@ -118,7 +118,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let menu = NSMenu()
 
         let aboutItem = NSMenuItem(
-            title: "About Clove",
+            title: String(localized: "About Clove"),
             action: #selector(showAbout),
             keyEquivalent: ""
         )
@@ -126,7 +126,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(aboutItem)
 
         let voiceItem = NSMenuItem(
-            title: "Record Voice Note",
+            title: String(localized: "Record Voice Note"),
             action: #selector(recordVoiceNote),
             keyEquivalent: ""
         )
@@ -153,7 +153,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.updateItem = updateItem
 
         let settingsItem = NSMenuItem(
-            title: "Settings…",
+            title: String(localized: "Settings…"),
             action: #selector(showSettings),
             keyEquivalent: ","
         )
@@ -163,7 +163,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(.separator())
 
         let quitItem = NSMenuItem(
-            title: "Quit Clove",
+            title: String(localized: "Quit Clove"),
             action: #selector(NSApplication.terminate(_:)),
             keyEquivalent: "q"
         )
@@ -182,19 +182,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         main.addItem(NSMenuItem())  // the application menu, never shown
 
         let edit = NSMenu(title: "Edit")
-        edit.addItem(withTitle: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
-        edit.addItem(withTitle: "Redo", action: Selector(("redo:")), keyEquivalent: "Z")
+        edit.addItem(withTitle: String(localized: "Undo"), action: Selector(("undo:")), keyEquivalent: "z")
+        edit.addItem(withTitle: String(localized: "Redo"), action: Selector(("redo:")), keyEquivalent: "Z")
         edit.addItem(.separator())
-        edit.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
-        edit.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
-        edit.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
-        edit.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        edit.addItem(withTitle: String(localized: "Cut"), action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        edit.addItem(withTitle: String(localized: "Copy"), action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        edit.addItem(withTitle: String(localized: "Paste"), action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        edit.addItem(withTitle: String(localized: "Select All"), action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
         let editItem = NSMenuItem()
         editItem.submenu = edit
         main.addItem(editItem)
 
         let window = NSMenu(title: "Window")
-        window.addItem(withTitle: "Close", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
+        window.addItem(withTitle: String(localized: "Close"), action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
         let windowItem = NSMenuItem()
         windowItem.submenu = window
         main.addItem(windowItem)

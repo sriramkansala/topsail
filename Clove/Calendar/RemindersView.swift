@@ -49,11 +49,11 @@ struct RemindersView: View {
         switch reminders.access {
         case .notDetermined:
             Button(action: reminders.requestAccess) {
-                MessageView(symbol: "checklist", text: "Show reminders")
+                MessageView(symbol: "checklist", text: String(localized: "Show reminders"))
             }
             .buttonStyle(.pressable(.subtle))
         case .denied:
-            MessageView(symbol: "checklist", text: "Allow Clove under Privacy & Security › Reminders")
+            MessageView(symbol: "checklist", text: String(localized: "Allow Clove under Privacy & Security › Reminders"))
         case .granted:
             VStack(alignment: .leading, spacing: IslandLayout.remindersRowSpacing) {
                 ForEach(reminders.reminders.prefix(IslandLayout.maxReminders)) { item in

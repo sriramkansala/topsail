@@ -78,8 +78,8 @@ private struct GeneralPane: View {
                         )
                     )
                     if settings.launchAtLoginNeedsApproval {
-                        PermissionHint(text: "Allow Clove in System Settings › General › Login Items",
-                                       button: "Open Login Items", action: settings.openLoginItemsSettings)
+                        PermissionHint(text: String(localized: "Allow Clove in System Settings › General › Login Items"),
+                                       button: String(localized: "Open Login Items"), action: settings.openLoginItemsSettings)
                     }
                     if let error = settings.launchAtLoginError {
                         Text(error)
@@ -121,20 +121,20 @@ private struct IslandPane: View {
                 Captioned(caption: SettingsView.deviceNote) {
                     Toggle("Headphones and speakers", isOn: $settings.showDeviceActivity)
                 }
-                Captioned(caption: "A countdown beside the notch, then Join, Ignore or Remind me in 5 min as the call starts.") {
+                Captioned(caption: String(localized: "A countdown beside the notch, then Join, Ignore or Remind me in 5 min as the call starts.")) {
                     Toggle("Meeting reminders", isOn: $settings.showMeetingReminders)
                 }
                 Toggle("Linear deadlines", isOn: $settings.showTaskReminders)
-                Captioned(caption: "“Copied to clipboard” under the notch; hover it for what you copied.") {
+                Captioned(caption: String(localized: "“Copied to clipboard” under the notch; hover it for what you copied.")) {
                     Toggle("Copying", isOn: $settings.showCopyActivity)
                 }
 
-                Captioned(caption: settings.hideSystemVolumeHUD ? nil : "Appears alongside the system volume indicator.") {
+                Captioned(caption: settings.hideSystemVolumeHUD ? nil : String(localized: "Appears alongside the system volume indicator.")) {
                     Toggle("Volume", isOn: $settings.showVolumeActivity)
                 }
 
                 #if DIRECT
-                Captioned(caption: settings.hideSystemVolumeHUD ? nil : "Shown while Clove handles the brightness keys (below).") {
+                Captioned(caption: settings.hideSystemVolumeHUD ? nil : String(localized: "Shown while Clove handles the brightness keys (below).")) {
                     Toggle("Brightness", isOn: $settings.showBrightnessActivity)
                 }
                 #endif
@@ -146,8 +146,8 @@ private struct IslandPane: View {
                         .foregroundColor(.secondary)
 
                     if settings.hideSystemVolumeHUD && !settings.accessibilityGranted {
-                        PermissionHint(text: "Allow Clove under Privacy & Security › Input Monitoring and Accessibility",
-                                       button: "Open System Settings", action: settings.openKeyAccessSettings)
+                        PermissionHint(text: String(localized: "Allow Clove under Privacy & Security › Input Monitoring and Accessibility"),
+                                       button: String(localized: "Open System Settings"), action: settings.openKeyAccessSettings)
                     }
                 }
             }
@@ -157,11 +157,11 @@ private struct IslandPane: View {
                     Toggle("Upcoming events", isOn: $settings.showCalendar)
                     switch calendar.access {
                     case .notDetermined:
-                        PermissionHint(text: "Clove needs access to your calendars",
-                                       button: "Allow…", action: calendar.requestAccess)
+                        PermissionHint(text: String(localized: "Clove needs access to your calendars"),
+                                       button: String(localized: "Allow…"), action: calendar.requestAccess)
                     case .denied:
-                        PermissionHint(text: "Allow Clove under Privacy & Security › Calendars",
-                                       button: "Open System Settings",
+                        PermissionHint(text: String(localized: "Allow Clove under Privacy & Security › Calendars"),
+                                       button: String(localized: "Open System Settings"),
                                        action: { SystemSettings.open("Privacy_Calendars") })
                     case .granted:
                         EmptyView()
@@ -174,8 +174,8 @@ private struct IslandPane: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                     if settings.showClipboard && clipboard.access != .allowed {
-                        PermissionHint(text: "Set Clove to Always Allow under Privacy & Security › Paste from Other Apps",
-                                       button: clipboard.access == .notDetermined ? "Allow…" : "Open System Settings",
+                        PermissionHint(text: String(localized: "Set Clove to Always Allow under Privacy & Security › Paste from Other Apps"),
+                                       button: clipboard.access == .notDetermined ? String(localized: "Allow…") : String(localized: "Open System Settings"),
                                        action: clipboard.requestAccess)
                     }
                 }
@@ -334,10 +334,10 @@ private struct RemindersAccessHint: View {
     var body: some View {
         switch reminders.access {
         case .notDetermined:
-            PermissionHint(text: "Clove needs access to your reminders", button: "Allow…",
+            PermissionHint(text: String(localized: "Clove needs access to your reminders"), button: String(localized: "Allow…"),
                            action: reminders.requestAccess)
         case .denied:
-            PermissionHint(text: "Allow Clove under Privacy & Security › Reminders", button: "Open System Settings",
+            PermissionHint(text: String(localized: "Allow Clove under Privacy & Security › Reminders"), button: String(localized: "Open System Settings"),
                            action: { SystemSettings.open("Privacy_Reminders") })
         case .granted:
             Label("Showing your reminders on the calendar tab", systemImage: "checkmark.circle.fill")
@@ -419,8 +419,8 @@ private struct NotificationsSettingsSection: View {
             if settings.isEnabled(.notifications) {
                 switch mirror.access {
                 case .denied:
-                    PermissionHint(text: "Allow Clove under Privacy & Security › Full Disk Access, then reopen Clove",
-                                   button: "Open System Settings", action: { SystemSettings.open("Privacy_AllFiles") })
+                    PermissionHint(text: String(localized: "Allow Clove under Privacy & Security › Full Disk Access, then reopen Clove"),
+                                   button: String(localized: "Open System Settings"), action: { SystemSettings.open("Privacy_AllFiles") })
                 case .unsupported:
                     Text("This version of macOS keeps its notifications in a way Clove doesn't know yet.")
                         .font(.caption)
@@ -491,7 +491,7 @@ private struct AgentsSettingsSection: View {
                     .font(.caption)
                     .foregroundColor(.red)
             }
-            Captioned(caption: "ls, cat, grep, git status, diff and log, on ordinary files in the project. Hidden files, anything outside the project and names that look like secrets are always asked about.") {
+            Captioned(caption: String(localized: "ls, cat, grep, git status, diff and log, on ordinary files in the project. Hidden files, anything outside the project and names that look like secrets are always asked about.")) {
                 Toggle("Approve read-only commands automatically", isOn: $settings.agentsAutoApprove)
             }
             Toggle("Ask me in the notch before other commands", isOn: $settings.agentsAskInNotch)
@@ -574,15 +574,15 @@ enum SystemSettings {
 
 private extension SettingsView {
     #if DIRECT
-    static let takeoverTitle = "Hide macOS volume and brightness indicators"
-    static let takeoverNote = "Clove handles the volume and brightness keys itself; while Spotify plays on another device, the volume keys control that device. Needs Input Monitoring and Accessibility permission."
-    static let lowBatteryNote = "Clicking the low-battery notice turns on Low Power Mode, through a helper you allow once in Login Items."
-    static let deviceNote = "A card under the notch with each earbud's and the case's battery; what's playing stays beside it. Asks for Bluetooth access the first time."
+    static let takeoverTitle = String(localized: "Hide macOS volume and brightness indicators")
+    static let takeoverNote = String(localized: "Clove handles the volume and brightness keys itself; while Spotify plays on another device, the volume keys control that device. Needs Input Monitoring and Accessibility permission.")
+    static let lowBatteryNote = String(localized: "Clicking the low-battery notice turns on Low Power Mode, through a helper you allow once in Login Items.")
+    static let deviceNote = String(localized: "A card under the notch with each earbud's and the case's battery; what's playing stays beside it. Asks for Bluetooth access the first time.")
     #else
-    static let takeoverTitle = "Hide macOS volume indicator"
-    static let takeoverNote = "Clove handles the volume keys itself; while Spotify plays on another device, they control that device. Needs Input Monitoring and Accessibility permission."
-    static let lowBatteryNote = "Clicking the low-battery notice opens Battery settings, where you can turn on Low Power Mode."
-    static let deviceNote = "A card under the notch with the device's name; what's playing stays beside it."
+    static let takeoverTitle = String(localized: "Hide macOS volume indicator")
+    static let takeoverNote = String(localized: "Clove handles the volume keys itself; while Spotify plays on another device, they control that device. Needs Input Monitoring and Accessibility permission.")
+    static let lowBatteryNote = String(localized: "Clicking the low-battery notice opens Battery settings, where you can turn on Low Power Mode.")
+    static let deviceNote = String(localized: "A card under the notch with the device's name; what's playing stays beside it.")
     #endif
 }
 

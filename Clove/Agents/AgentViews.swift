@@ -50,7 +50,7 @@ struct AgentApprovalNotice: View {
                             .foregroundColor(.white.opacity(0.4))
                     }
                     Spacer(minLength: 8)
-                    ReminderButton(title: "Deny") { onAnswer(false) }
+                    ReminderButton(title: String(localized: "Deny")) { onAnswer(false) }
                         .accessibilityHint("Stops the command")
                     AnswerButton(approval: approval, onAnswer: onAnswer)
                 }
@@ -70,7 +70,7 @@ private struct AnswerButton: View {
 
     var body: some View {
         if approval.isReviewable {
-            ReminderButton(title: "Approve", symbol: "checkmark", tint: .green) { onAnswer(true) }
+            ReminderButton(title: String(localized: "Approve"), symbol: "checkmark", tint: .green) { onAnswer(true) }
                 .accessibilityHint("Lets it go ahead")
         } else {
             ReminderButton(title: String(localized: "Review there")) { onAnswer(nil) }
@@ -256,7 +256,7 @@ private struct ApprovalRow: View {
                     .foregroundColor(.white)
                     .lineLimit(1)
                 Spacer(minLength: 8)
-                ReminderButton(title: "Deny") { answer(false) }
+                ReminderButton(title: String(localized: "Deny")) { answer(false) }
                 AnswerButton(approval: approval, onAnswer: answer)
             }
             Text(approval.isReviewable ? approval.shownDetail
