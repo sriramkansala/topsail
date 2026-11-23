@@ -29,6 +29,7 @@ struct NotchView: View {
                                           meterHeight: model.activities.meterHeight,
                                           onRequestLowPowerMode: model.requestLowPowerMode,
                                           onMeetingAnswer: model.answerMeeting,
+                                          onAgentAnswer: model.answerAgent,
                                           nowPlaying: model.showsMusicActivity ? nowPlaying : nil)
                         .id(activity.id)
                         .transition(activity.kind.isNotice ? .noticeBlur(reduceMotion: reduceMotion)
@@ -36,6 +37,9 @@ struct NotchView: View {
                 } else if model.showsMeetingActivity, let meeting = model.calendar.imminentMeeting {
                     MeetingSoonView(meeting: meeting, notchSize: model.notchSize)
                         .id(meeting.id)
+                        .transition(.cascade(0, reduceMotion: reduceMotion))
+                } else if model.showsAgentActivity, let agent = model.features.agents.workingAgent {
+                    AgentWorkingWings(agent: agent, notchSize: model.notchSize, wingWidth: model.compactWing)
                         .transition(.cascade(0, reduceMotion: reduceMotion))
                 } else if model.showsMusicActivity {
                     CompactMusicWings(nowPlaying: nowPlaying, notchSize: model.notchSize, wingWidth: model.compactWing)
@@ -150,6 +154,10 @@ struct NotchView: View {
                 } else if model.visiblePage == .system {
                     SystemPageView(system: model.system)
                         .transition(.contentMorph(reduceMotion: reduceMotion))
+                } else if model.visiblePage == .agents {
+                    AgentsPageView(hub: model.features.agents,
+                                   connected: AgentKind.allCases.contains(where: AgentHooks.isConnected))
+                        .transition(.contentMorph(reduceMotion: reduceMotion))
                 } else if model.visiblePage == .clipboard {
                     ClipboardTabView(model: model, shelf: model.features.shelf)
                         .transition(.contentMorph(reduceMotion: reduceMotion))
@@ -171,6 +179,7 @@ struct NotchView: View {
             case .tasks: return "checklist"
             case .system: return "gauge.with.dots.needle.50percent"
             case .clipboard: return model.clipboardModes == [.shelf] ? "tray.full" : "doc.on.doc"
+            case .agents: return "sparkles"
             }
         }
     }

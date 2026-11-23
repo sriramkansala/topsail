@@ -82,7 +82,7 @@ struct MeetingReminderNotice: View {
 
 /// One of the reminder's buttons: a quiet capsule, or a filled one for Join. Brightens under the
 /// pointer, sinks when pressed.
-private struct ReminderButton: View {
+struct ReminderButton: View {
     let title: String
     var symbol: String?
     /// The fill of the one button that matters (Join); nil for a quiet one.

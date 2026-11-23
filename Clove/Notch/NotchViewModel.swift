@@ -28,12 +28,15 @@ final class NotchViewModel: ObservableObject {
         case tasks
         case system
         case clipboard
+        case agents
     }
 
     @Published private(set) var state: IslandState = .collapsed
     @Published var notchSize: CGSize = .zero
     @Published var notchRect: CGRect = .zero
     @Published private(set) var showsMusicActivity = false
+    /// An AI agent is working (and the Agents feature is on): its glyph beside the notch.
+    @Published private(set) var showsAgentActivity = false
     /// A meeting with a join link starts soon (or just started) and reminders are on.
     @Published private(set) var showsMeetingActivity = false
     /// The tasks page shows more than two issues after "View more"; reset when the island closes.
@@ -102,6 +105,20 @@ final class NotchViewModel: ObservableObject {
             .sink { [weak self] active in self?.setVoiceActive(active) }
             .store(in: &cancellables)
 
+        // An agent working shows beside the notch: grows in, shrinks out.
+        Publishers.CombineLatest(features.agents.$sessions.map { $0.contains(where: \.isWorking) },
+                                 settings.publisher(for: .agents))
+            .map { $0 && $1 }
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] shows in
+                guard let self, shows != self.showsAgentActivity else { return }
+                Motion.perform(shows ? Motion.islandGrow : Motion.islandShrink) {
+                    self.showsAgentActivity = shows
+                }
+            }
+            .store(in: &cancellables)
+
         features.teleprompter.$isActive
             .removeDuplicates()
             .receive(on: DispatchQueue.main)
@@ -119,6 +136,7 @@ final class NotchViewModel: ObservableObject {
             $clipboardMode.map { _ in () }.eraseToAnyPublisher(),
             $calendarMode.map { _ in () }.eraseToAnyPublisher(),
             features.reminders.objectWillChange.map { _ in () }.eraseToAnyPublisher(),
+            features.agents.objectWillChange.map { _ in () }.eraseToAnyPublisher(),
             nowPlaying.$track.map { $0 != nil }.removeDuplicates().map { _ in () }.eraseToAnyPublisher(),
             calendar.objectWillChange.map { _ in () }.eraseToAnyPublisher(),
             linear.objectWillChange.map { _ in () }.eraseToAnyPublisher(),
@@ -207,6 +225,9 @@ final class NotchViewModel: ObservableObject {
             }
             if showsMeetingActivity {
                 return CGSize(width: notchSize.width + 2 * IslandLayout.activityWing, height: notchSize.height)
+            }
+            if showsAgentActivity {
+                return CGSize(width: notchSize.width + 2 * compactWing, height: notchSize.height)
             }
             if showsMusicActivity {
                 return CGSize(width: notchSize.width + 2 * compactWing, height: notchSize.height)
@@ -472,6 +493,7 @@ final class NotchViewModel: ObservableObject {
         if linear.isConnected { pages.append(.tasks) }
         if settings.showSystemPage { pages.append(.system) }
         if !clipboardModes.isEmpty { pages.append(.clipboard) }
+        if settings.isEnabled(.agents) { pages.append(.agents) }
         return pages.isEmpty ? [.player] : pages
     }
 
@@ -491,6 +513,7 @@ final class NotchViewModel: ObservableObject {
     private var preferredPage: ExpandedPage {
         let pages = availablePages
         if calendar.imminentMeeting != nil, pages.contains(.calendar) { return .calendar }
+        if !features.agents.approvals.isEmpty, pages.contains(.agents) { return .agents }
         if pages.contains(.player) { return .player }
         if pages.contains(.tasks), !linear.issues.isEmpty { return .tasks }
         return pages[0]
@@ -519,6 +542,9 @@ final class NotchViewModel: ObservableObject {
             return tasksExpanded ? min(height, IslandLayout.expandedTasksMaxHeight) : height
         case .system:
             return IslandLayout.systemPageHeight(hasBattery: system.battery != nil)
+        case .agents:
+            return IslandLayout.agentsHeight(approvals: features.agents.approvals.count,
+                                             sessions: features.agents.sessions.count)
         case .clipboard:
             let switchRow = clipboardModes.count > 1 ? IslandLayout.pageSwitchHeight + IslandLayout.pageSwitchGap : 0
             if visibleClipboardMode == .shelf { return switchRow + IslandLayout.shelfHeight }
@@ -655,6 +681,11 @@ final class NotchViewModel: ObservableObject {
             keepAwake.turnOn(keepingDisplayOn: settings.keepAwakeDisplay,
                              for: hours > 0 ? TimeInterval(hours) * 3600 : nil)
         }
+    }
+
+    /// Deny or Approve on an agent's request, from the notch.
+    func answerAgent(_ approval: AgentApproval, approve: Bool?) {
+        features.agents.answer(approval, approve: approve)
     }
 
     /// The 🎙 button in the notch row.

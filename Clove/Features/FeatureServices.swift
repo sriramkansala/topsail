@@ -8,4 +8,5 @@ final class FeatureServices {
     let shelf = ShelfStore()
     let reminders = RemindersService()
     let teleprompter = TeleprompterController()
+    let agents = AgentHub()
 }

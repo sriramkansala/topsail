@@ -15,6 +15,8 @@ struct TransientActivityView: View {
     var onRequestLowPowerMode: () -> Void = {}
     /// One of the meeting reminder's buttons was clicked.
     var onMeetingAnswer: (UpcomingEvent, MeetingAnswer) -> Void = { _, _ in }
+    /// Deny or Approve on an agent's request.
+    var onAgentAnswer: (AgentApproval, Bool?) -> Void = { _, _ in }
     /// What is playing, which a device connecting or a copy keeps beside the notch; nil when
     /// nothing is.
     var nowPlaying: NowPlayingService? = nil
@@ -35,6 +37,8 @@ struct TransientActivityView: View {
                                   nowPlaying: nowPlaying)
         case .copied:
             CopiedNotice(notchSize: notchSize, wingWidth: wingWidth, nowPlaying: nowPlaying)
+        case .agentApproval(let approval):
+            AgentApprovalNotice(approval: approval, notchSize: notchSize) { onAgentAnswer(approval, $0) }
         default:
             wingsAndMeter
         }
@@ -85,6 +89,16 @@ struct TransientActivityView: View {
                 .contentTransition(.symbolEffect(.replace))
         case .charging, .lowBattery, .meetingReminder, .audioDevice, .copied:
             EmptyView()  // ChargingSweep and the notices draw their own.
+        case .agentApproval:
+            EmptyView()
+        case .agentFinished(let agent, _):
+            HStack(spacing: 5) {
+                icon(agent.symbol, agent.color)
+                Text(agent.shortName)
+                    .font(Self.valueFont)
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+            }
         case .keepAwake(let on):
             HStack(spacing: 5) {
                 icon(on ? "cup.and.saucer.fill" : "cup.and.saucer", on ? Self.awake : .white.opacity(0.5))
@@ -128,6 +142,19 @@ struct TransientActivityView: View {
             value(overdue ? "Overdue" : "Due today", overdue ? .red : .orange)
         case .keepAwake(let on):
             value(on ? "On" : "Off", on ? Self.awake : .white.opacity(0.5))
+        case .agentApproval:
+            EmptyView()
+        case .agentFinished(_, let project):
+            HStack(spacing: 4) {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(.green)
+                Text(project.isEmpty ? String(localized: "Done") : project)
+                    .font(Self.valueFont)
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
         }
     }
 
@@ -153,7 +180,8 @@ struct TransientActivityView: View {
         switch activity.kind {
         case .volume(let level, let muted, _): return (Double(level), .white, muted)
         case .brightness(let level): return (Double(level), .white, false)
-        case .charging, .lowBattery, .audioDevice, .taskDue, .meetingReminder, .copied, .keepAwake: return nil
+        case .charging, .lowBattery, .audioDevice, .taskDue, .meetingReminder, .copied, .keepAwake,
+             .agentApproval, .agentFinished: return nil
         }
     }
 }

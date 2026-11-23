@@ -11,6 +11,8 @@ enum ActivityKind: Equatable {
     case meetingReminder(UpcomingEvent)    // a call is starting: Join, Ignore or Remind me in 5 min
     case copied                            // something was copied: "Copied to clipboard" under the camera
     case keepAwake(on: Bool)               // Keep Awake was turned on or off
+    case agentApproval(AgentApproval)      // an AI agent asks before a command: Deny or Approve
+    case agentFinished(agent: AgentKind, project: String)  // an AI agent finished its turn
 }
 
 /// The meeting reminder's three buttons.
@@ -36,14 +38,14 @@ extension ActivityKind {
     /// camera that the pointer can rest on (they stay put instead of opening the island).
     var isNotice: Bool {
         switch self {
-        case .lowBattery, .meetingReminder, .audioDevice: return true
+        case .lowBattery, .meetingReminder, .audioDevice, .agentApproval: return true
         default: return false
         }
     }
 
     var isClickable: Bool {
         switch self {
-        case .lowBattery(_, .off), .meetingReminder: return true
+        case .lowBattery(_, .off), .meetingReminder, .agentApproval: return true
         default: return false
         }
     }
@@ -51,8 +53,10 @@ extension ActivityKind {
     /// The meeting reminder stays until one of its buttons is clicked (or the call can no longer
     /// be joined), wherever the pointer goes.
     var waitsForAnswer: Bool {
-        if case .meetingReminder = self { return true }
-        return false
+        switch self {
+        case .meetingReminder, .agentApproval: return true
+        default: return false
+        }
     }
 
     /// The user's own actions, answered right away: levels they are adjusting (volume,
@@ -60,7 +64,7 @@ extension ActivityKind {
     var isLiveLevel: Bool {
         switch self {
         case .volume, .brightness, .copied, .keepAwake: return true
-        case .charging, .lowBattery, .audioDevice, .taskDue, .meetingReminder: return false
+        case .charging, .lowBattery, .audioDevice, .taskDue, .meetingReminder, .agentApproval, .agentFinished: return false
         }
     }
 
@@ -115,6 +119,8 @@ final class ActivityCenter: ObservableObject {
         case .meetingReminder: return IslandLayout.reminderStageHeight
         case .audioDevice: return IslandLayout.deviceStageHeight
         case .copied: return IslandLayout.copiedStageHeight
+        case .agentApproval: return IslandLayout.approvalStageHeight
+        case .agentFinished: return 0
         case .volume, .brightness: return 8
         case .taskDue, .keepAwake, nil: return 0
         }
@@ -156,6 +162,7 @@ final class ActivityCenter: ObservableObject {
             let closes = min(meeting.end, meeting.start.addingTimeInterval(CalendarService.meetingGrace))
             return max(closes.timeIntervalSinceNow, displayDuration)
         case .audioDevice: return deviceDuration
+        case .agentApproval(let approval): return max(approval.expires.timeIntervalSinceNow, 1)
         default: return displayDuration
         }
     }
@@ -197,6 +204,13 @@ final class ActivityCenter: ObservableObject {
         } else if let index = queue.firstIndex(of: old) {
             queue[index] = new
         }
+    }
+
+    /// Something no longer needs showing (an agent's request answered on the Agents page or
+    /// expired): it leaves the notch, or the queue.
+    func withdraw(_ kind: ActivityKind) {
+        queue.removeAll { $0 == kind }
+        if current?.kind == kind { hideCurrent() }
     }
 
     /// One of the meeting reminder's buttons was clicked: it leaves.

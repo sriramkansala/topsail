@@ -48,7 +48,8 @@ struct SettingsView: View {
                 case .general: GeneralPane(settings: settings)
                 case .island: IslandPane(settings: settings, calendar: calendar, clipboard: clipboard)
                 case .features: FeaturesPane(settings: settings, features: features, open: { pane = $0 })
-                case .integrations: IntegrationsPane(settings: settings, linear: linear)
+                case .integrations: IntegrationsPane(settings: settings, linear: linear, features: features,
+                                                     open: { pane = $0 })
                 }
             }
             .formStyle(.grouped)
@@ -218,6 +219,15 @@ extension FeaturesPane {
         case .reminders:
             RemindersAccessHint(reminders: features.reminders)
                 .padding(.leading, 40)
+        case .agents:
+            HStack {
+                Text("Connect Claude Code, Codex, Cursor or Antigravity in Integrations.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Spacer()
+                Button("Integrations…") { open(.integrations) }
+            }
+            .padding(.leading, 40)
         case .teleprompter:
             VStack(alignment: .leading, spacing: 6) {
                 Text("Script")
@@ -324,18 +334,131 @@ private struct FeatureRow: View {
     }
 }
 
-/// The services Clove connects to: Linear and voice notes so far.
+/// The services and apps Clove connects to.
 private struct IntegrationsPane: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var linear: LinearService
+    let features: FeatureServices
+    let open: (SettingsView.Pane) -> Void
 
     var body: some View {
         Form {
+            #if DIRECT
+            AgentsSettingsSection(settings: settings, hub: features.agents, open: open)
+            #endif
             LinearSettingsSection(linear: linear)
             VoiceSettingsSection(linear: linear)
         }
     }
 }
+
+#if DIRECT
+/// Claude Code, Codex, Cursor and Antigravity: Connect adds Clove's hook to the agent's own
+/// settings (backed up first); what's approved without asking, and how long the notch waits.
+private struct AgentsSettingsSection: View {
+    @ObservedObject var settings: AppSettings
+    @ObservedObject var hub: AgentHub
+    let open: (SettingsView.Pane) -> Void
+
+    /// Bumped after Connect / Disconnect, to re-read the agents' files.
+    @State private var revision = 0
+    @State private var failure: String?
+
+    var body: some View {
+        Section {
+            if !settings.isEnabled(.agents) {
+                HStack {
+                    Text("Turn on AI coding agents to follow them in the notch.")
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Button("Turn On") { settings.setEnabled(.agents, true) }
+                }
+            }
+            ForEach(AgentKind.allCases) { agent in
+                agentRow(agent)
+            }
+            .id(revision)
+            if let failure {
+                Text(failure)
+                    .font(.caption)
+                    .foregroundColor(.red)
+            }
+            if let error = hub.serverError {
+                Text("Clove couldn't listen for agents: \(error)")
+                    .font(.caption)
+                    .foregroundColor(.red)
+            }
+            Captioned(caption: "ls, cat, grep, git status, diff and log, on ordinary files in the project. Hidden files, anything outside the project and names that look like secrets are always asked about.") {
+                Toggle("Approve read-only commands automatically", isOn: $settings.agentsAutoApprove)
+            }
+            Toggle("Ask me in the notch before other commands", isOn: $settings.agentsAskInNotch)
+            Picker("Wait for my answer", selection: $settings.agentsWaitSeconds) {
+                Text("30 seconds").tag(30)
+                Text("1 minute").tag(60)
+                Text("2 minutes").tag(120)
+            }
+            .disabled(!settings.agentsAskInNotch)
+            .onChange(of: settings.agentsWaitSeconds) { _, seconds in
+                // The hooks' own timeouts follow the wait.
+                for agent in AgentKind.allCases where AgentHooks.isConnected(agent) {
+                    try? AgentHooks.connect(agent, waitSeconds: seconds)
+                }
+            }
+        } header: {
+            Text("AI coding agents")
+        } footer: {
+            Text("Connect adds Clove's hook to the agent's own settings file (saving a copy first). If Clove isn't running or you don't answer in time, the agent asks in its own window as usual. Anything too long to show whole is left to the agent's own window. Cursor can only be denied from outside: Approve lets the command go on to Cursor's own rules.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+    }
+
+    @ViewBuilder private func agentRow(_ agent: AgentKind) -> some View {
+        let installed = AgentHooks.isInstalled(agent)
+        let connected = AgentHooks.isConnected(agent)
+        HStack(spacing: 10) {
+            AgentGlyph(agent: agent, size: 26)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(agent.name)
+                Text(connected ? Self.connectedNote(agent) : installed ? String(localized: "Not connected")
+                                                                       : String(localized: "Not found on this Mac"))
+                    .font(.caption)
+                    .foregroundColor(connected ? .green : .secondary)
+            }
+            Spacer()
+            if connected {
+                Button("Disconnect") { run { try AgentHooks.disconnect(agent) } }
+            } else {
+                Button("Connect") {
+                    run { try AgentHooks.connect(agent, waitSeconds: settings.agentsWaitSeconds) }
+                    settings.setEnabled(.agents, true)
+                }
+                .disabled(!installed)
+            }
+        }
+    }
+
+    private func run(_ action: () throws -> Void) {
+        do {
+            try action()
+            failure = nil
+        } catch {
+            failure = error.localizedDescription
+        }
+        revision += 1
+    }
+
+    /// What connecting takes, per agent.
+    static func connectedNote(_ agent: AgentKind) -> String {
+        switch agent {
+        case .claude: return String(localized: "Connected · applies to new sessions")
+        case .codex: return String(localized: "Connected · run /hooks in Codex once to trust it")
+        case .cursor: return String(localized: "Connected · restart Cursor to load it")
+        case .antigravity: return String(localized: "Connected · the CLI runs it; the IDE may not yet")
+        }
+    }
+}
+#endif
 
 /// Opens a pane of System Settings › Privacy & Security.
 enum SystemSettings {

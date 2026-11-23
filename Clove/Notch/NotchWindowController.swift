@@ -23,6 +23,8 @@ final class NotchWindowController: NSWindowController {
         activities.isAllowed = { [weak settings, weak calendar] kind in
             // A call's reminder also has to still be due: not answered, not put off, joinable.
             if case .meetingReminder(let meeting) = kind, calendar?.isReminderDue(meeting) != true { return false }
+            // An agent's request still waiting for an answer.
+            if case .agentApproval(let approval) = kind, features.agents.isPending(approval) != true { return false }
             return settings?.allows(kind) ?? true
         }
         calendar.onReminder = { [weak activities] meeting in activities?.post(.meetingReminder(meeting)) }
@@ -82,6 +84,22 @@ final class NotchWindowController: NSWindowController {
         features.keepAwake.onChange = { [weak activities] on in activities?.post(.keepAwake(on: on)) }
         settings.publisher(for: .keepAwake)
             .sink { [weak features] on in if !on { features?.keepAwake.turnOff() } }
+            .store(in: &featureSubscriptions)
+        let agents = features.agents
+        agents.onApproval = { [weak activities] in activities?.post(.agentApproval($0)) }
+        agents.onApprovalClosed = { [weak activities] in activities?.withdraw(.agentApproval($0)) }
+        agents.onFinished = { [weak activities] session in
+            activities?.post(.agentFinished(agent: session.agent, project: session.project))
+        }
+        settings.publisher(for: .agents)
+            .sink { [weak agents] on in if on { agents?.start() } else { agents?.stop() } }
+            .store(in: &featureSubscriptions)
+        Publishers.CombineLatest3(settings.$agentsAutoApprove, settings.$agentsAskInNotch, settings.$agentsWaitSeconds)
+            .sink { [weak agents] autoApprove, ask, wait in
+                agents?.autoApproveReadOnly = autoApprove
+                agents?.askInNotch = ask
+                agents?.waitSeconds = TimeInterval(wait)
+            }
             .store(in: &featureSubscriptions)
         settings.publisher(for: .reminders)
             .sink { [weak features] on in

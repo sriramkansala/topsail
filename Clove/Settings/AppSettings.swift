@@ -35,6 +35,11 @@ final class AppSettings: ObservableObject {
     @Published var teleprompterScript: String { didSet { defaults.set(teleprompterScript, forKey: "teleprompterScript") } }
     @Published var teleprompterSpeed: Double { didSet { defaults.set(teleprompterSpeed, forKey: "teleprompterSpeed") } }
     @Published var teleprompterFontSize: Double { didSet { defaults.set(teleprompterFontSize, forKey: "teleprompterFontSize") } }
+    /// AI agents: read-only commands are approved without asking; other commands ask in the notch,
+    /// for this long, before the agent asks in its own window.
+    @Published var agentsAutoApprove: Bool { didSet { save(agentsAutoApprove, "agentsAutoApprove") } }
+    @Published var agentsAskInNotch: Bool { didSet { save(agentsAskInNotch, "agentsAskInNotch") } }
+    @Published var agentsWaitSeconds: Int { didSet { defaults.set(agentsWaitSeconds, forKey: "agentsWaitSeconds") } }
     /// Which of the switched-off-by-default features are on (Settings › Features).
     @Published private(set) var features: Set<Feature> = []
     /// Take over the volume keys so macOS hides its own volume indicator (needs Input Monitoring
@@ -66,6 +71,9 @@ final class AppSettings: ObservableObject {
             "hapticFeedback": true,
             "keepAwakeDisplay": false,
             "keepAwakeHours": 0,
+            "agentsAutoApprove": true,
+            "agentsAskInNotch": true,
+            "agentsWaitSeconds": 60,
             "teleprompterScript": "",
             "teleprompterSpeed": 40.0,
             "teleprompterFontSize": 20.0,
@@ -86,6 +94,9 @@ final class AppSettings: ObservableObject {
         hideSystemVolumeHUD = defaults.bool(forKey: "hideSystemVolumeHUD")
         keepAwakeDisplay = defaults.bool(forKey: "keepAwakeDisplay")
         keepAwakeHours = defaults.integer(forKey: "keepAwakeHours")
+        agentsAutoApprove = defaults.bool(forKey: "agentsAutoApprove")
+        agentsAskInNotch = defaults.bool(forKey: "agentsAskInNotch")
+        agentsWaitSeconds = defaults.integer(forKey: "agentsWaitSeconds")
         teleprompterScript = defaults.string(forKey: "teleprompterScript") ?? ""
         teleprompterSpeed = defaults.double(forKey: "teleprompterSpeed")
         teleprompterFontSize = defaults.double(forKey: "teleprompterFontSize")
@@ -125,6 +136,7 @@ final class AppSettings: ObservableObject {
         case .meetingReminder: return showMeetingReminders
         case .copied: return showCopyActivity
         case .keepAwake: return true
+        case .agentApproval, .agentFinished: return isEnabled(.agents)
         }
     }
 

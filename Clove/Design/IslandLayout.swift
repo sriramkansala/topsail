@@ -146,6 +146,33 @@ enum IslandLayout {
     /// The script's first line starts this far below the top edge.
     static let teleprompterLeadIn: CGFloat = 22
 
+    // An agent asking before a command, below the camera: who and where, the command, then a
+    // countdown with Deny and Approve.
+    static let approvalHeaderHeight: CGFloat = 30
+    /// Three lines: what's approved is always shown whole (`AgentApproval.isReviewable`).
+    static let approvalDetailHeight: CGFloat = 44
+    static let approvalGap: CGFloat = 10
+    static let approvalStageHeight: CGFloat = noticeTopGap + approvalHeaderHeight + approvalGap
+        + approvalDetailHeight + 12 + approvalGap + reminderButtonHeight + reminderInset
+
+    // Agents page: requests waiting for an answer, then sessions.
+    static let agentRowHeight: CGFloat = 34
+    static let approvalRowHeight: CGFloat = 80
+    static let agentRowSpacing: CGFloat = 6
+    static let agentsMaxHeight: CGFloat = 4 * agentRowHeight + 3 * agentRowSpacing
+
+    static func agentsNaturalHeight(approvals: Int, sessions: Int) -> CGFloat {
+        let rows = approvals + sessions
+        guard rows > 0 else { return 0 }
+        return CGFloat(approvals) * approvalRowHeight + CGFloat(sessions) * agentRowHeight
+            + CGFloat(rows - 1) * agentRowSpacing
+    }
+
+    static func agentsHeight(approvals: Int, sessions: Int) -> CGFloat {
+        let natural = agentsNaturalHeight(approvals: approvals, sessions: sessions)
+        return natural == 0 ? messageHeight : min(natural, max(agentsMaxHeight, approvalRowHeight))
+    }
+
     // The clipboard tab's Clipboard / Shelf switch, when both are on.
     static let pageSwitchHeight: CGFloat = 22
     static let pageSwitchGap: CGFloat = 8
