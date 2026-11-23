@@ -139,6 +139,13 @@ enum IslandLayout {
         return rows * remindersRowHeight + (rows - 1) * remindersRowSpacing
     }
 
+    // Teleprompter: the open island, wider, holding the script over a row of controls.
+    static let teleprompterWidth: CGFloat = 500
+    static let teleprompterHeight: CGFloat = 168
+    static let teleprompterControlsHeight: CGFloat = 30
+    /// The script's first line starts this far below the top edge.
+    static let teleprompterLeadIn: CGFloat = 22
+
     // The clipboard tab's Clipboard / Shelf switch, when both are on.
     static let pageSwitchHeight: CGFloat = 22
     static let pageSwitchGap: CGFloat = 8

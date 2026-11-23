@@ -31,6 +31,10 @@ final class AppSettings: ObservableObject {
     @Published var keepAwakeDisplay: Bool { didSet { save(keepAwakeDisplay, "keepAwakeDisplay") } }
     /// Keep Awake turns itself off after this many hours; 0 = when turned off.
     @Published var keepAwakeHours: Int { didSet { defaults.set(keepAwakeHours, forKey: "keepAwakeHours") } }
+    /// The teleprompter's script, its speed (points a second) and text size.
+    @Published var teleprompterScript: String { didSet { defaults.set(teleprompterScript, forKey: "teleprompterScript") } }
+    @Published var teleprompterSpeed: Double { didSet { defaults.set(teleprompterSpeed, forKey: "teleprompterSpeed") } }
+    @Published var teleprompterFontSize: Double { didSet { defaults.set(teleprompterFontSize, forKey: "teleprompterFontSize") } }
     /// Which of the switched-off-by-default features are on (Settings › Features).
     @Published private(set) var features: Set<Feature> = []
     /// Take over the volume keys so macOS hides its own volume indicator (needs Input Monitoring
@@ -62,6 +66,9 @@ final class AppSettings: ObservableObject {
             "hapticFeedback": true,
             "keepAwakeDisplay": false,
             "keepAwakeHours": 0,
+            "teleprompterScript": "",
+            "teleprompterSpeed": 40.0,
+            "teleprompterFontSize": 20.0,
             "hideSystemVolumeHUD": Self.takesOverKeysByDefault,
         ])
         showMusicActivity = defaults.bool(forKey: "showMusicActivity")
@@ -79,6 +86,9 @@ final class AppSettings: ObservableObject {
         hideSystemVolumeHUD = defaults.bool(forKey: "hideSystemVolumeHUD")
         keepAwakeDisplay = defaults.bool(forKey: "keepAwakeDisplay")
         keepAwakeHours = defaults.integer(forKey: "keepAwakeHours")
+        teleprompterScript = defaults.string(forKey: "teleprompterScript") ?? ""
+        teleprompterSpeed = defaults.double(forKey: "teleprompterSpeed")
+        teleprompterFontSize = defaults.double(forKey: "teleprompterFontSize")
         launchAtLogin = false
         let stored = UserDefaults.standard
         features = Set(Feature.available.filter { stored.bool(forKey: Self.featureKey($0)) })

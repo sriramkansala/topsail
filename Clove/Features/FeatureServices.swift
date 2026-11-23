@@ -7,4 +7,5 @@ final class FeatureServices {
     let keepAwake = KeepAwake()
     let shelf = ShelfStore()
     let reminders = RemindersService()
+    let teleprompter = TeleprompterController()
 }

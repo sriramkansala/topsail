@@ -40,6 +40,8 @@ final class NotchViewModel: ObservableObject {
     @Published private(set) var tasksExpanded = false
     /// A voice note is in progress: the island holds it, pinned open, sized to its content.
     @Published private(set) var voiceActive = false
+    /// The teleprompter is running: the island holds it, pinned open.
+    @Published private(set) var teleprompterActive = false
     /// Natural height of the voice note's content, reported by `VoiceIslandView`.
     @Published private(set) var voiceHeight: CGFloat = 160
     @Published private(set) var page: ExpandedPage = .player
@@ -98,6 +100,12 @@ final class NotchViewModel: ObservableObject {
             .removeDuplicates()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] active in self?.setVoiceActive(active) }
+            .store(in: &cancellables)
+
+        features.teleprompter.$isActive
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] active in self?.setTeleprompterActive(active) }
             .store(in: &cancellables)
 
         // Views read settings (e.g. whether to show the calendar) through the model.
@@ -244,6 +252,25 @@ final class NotchViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Teleprompter
+
+    /// Starts the script from Settings (the notch row's button, the menu bar, Settings).
+    func startTeleprompter() {
+        guard settings.isEnabled(.teleprompter) else { return }
+        features.teleprompter.start(script: settings.teleprompterScript, speed: settings.teleprompterSpeed)
+    }
+
+    private func setTeleprompterActive(_ active: Bool) {
+        guard active != teleprompterActive else { return }
+        Motion.perform(Motion.gentle) { teleprompterActive = active }
+        if active {
+            if state == .collapsed { expand() }
+            onVoicePresent?()  // takes the keyboard, for Space, arrows and Esc
+        } else if state == .expanded, !expandedActiveZone().contains(NSEvent.mouseLocation) {
+            collapse()
+        }
+    }
+
     var topRadius: CGFloat {
         switch state {
         case .collapsed: return collapsedTopRadius
@@ -325,8 +352,8 @@ final class NotchViewModel: ObservableObject {
                 cancelPendingExpand()
             }
         case .expanded:
-            // A voice note keeps the island open wherever the pointer goes.
-            guard !voiceActive else {
+            // A voice note or the teleprompter keeps the island open wherever the pointer goes.
+            guard !voiceActive, !teleprompterActive else {
                 cancelPendingCollapse()
                 return
             }
@@ -425,6 +452,10 @@ final class NotchViewModel: ObservableObject {
     var expandedSize: CGSize {
         if voiceActive {
             return CGSize(width: IslandLayout.voiceWidth, height: notchSize.height + voiceHeight)
+        }
+        if teleprompterActive {
+            return CGSize(width: max(IslandLayout.teleprompterWidth, notchSize.width + 2 * IslandLayout.minimumExpandedWing),
+                          height: notchSize.height + IslandLayout.teleprompterHeight)
         }
         let wing = IslandLayout.expandedWing(tabs: showsPageTabs ? availablePages.count : 0)
         return CGSize(width: max(IslandLayout.expandedWidth, notchSize.width + 2 * wing),

@@ -14,6 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                                                          features: features)
     private var statusItem: NSStatusItem?
     private var voiceItem: NSMenuItem?
+    private var teleprompterItem: NSMenuItem?
     private var cancellables = Set<AnyCancellable>()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -38,6 +39,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .sink { [weak self] connected in
                 shortcuts.isEnabled = connected
                 self?.voiceItem?.isHidden = !connected
+            }
+            .store(in: &cancellables)
+
+        NotificationCenter.default.publisher(for: .cloveStartTeleprompter)
+            .sink { [weak self] _ in self?.startTeleprompter() }
+            .store(in: &cancellables)
+        settings.publisher(for: .teleprompter)
+            .sink { [weak self] on in
+                self?.teleprompterItem?.isHidden = !on
+                if !on { self?.features.teleprompter.stop() }
             }
             .store(in: &cancellables)
 
@@ -114,6 +125,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(voiceItem)
         self.voiceItem = voiceItem
 
+        let teleprompterItem = NSMenuItem(
+            title: String(localized: "Start Teleprompter"),
+            action: #selector(startTeleprompter),
+            keyEquivalent: ""
+        )
+        teleprompterItem.target = self
+        teleprompterItem.isHidden = !settings.isEnabled(.teleprompter)
+        menu.addItem(teleprompterItem)
+        self.teleprompterItem = teleprompterItem
+
         let settingsItem = NSMenuItem(
             title: "Settings…",
             action: #selector(showSettings),
@@ -162,6 +183,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         main.addItem(windowItem)
 
         NSApp.mainMenu = main
+    }
+
+    @objc private func startTeleprompter() {
+        windowController?.model.startTeleprompter()
     }
 
     @objc private func recordVoiceNote() {

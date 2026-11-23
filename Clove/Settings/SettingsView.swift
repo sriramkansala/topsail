@@ -218,6 +218,44 @@ extension FeaturesPane {
         case .reminders:
             RemindersAccessHint(reminders: features.reminders)
                 .padding(.leading, 40)
+        case .teleprompter:
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Script")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                TextEditor(text: $settings.teleprompterScript)
+                    .font(.system(size: 13))
+                    .frame(height: 140)
+                    .scrollContentBackground(.hidden)
+                    .padding(6)
+                    .background(RoundedRectangle(cornerRadius: 6).fill(Color(nsColor: .textBackgroundColor)))
+                    .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Color.secondary.opacity(0.3)))
+            }
+            .padding(.leading, 40)
+            HStack {
+                Text("Speed")
+                Slider(value: $settings.teleprompterSpeed, in: TeleprompterController.speedRange,
+                       step: TeleprompterController.speedStep)
+                Text("\(Int(settings.teleprompterSpeed))")
+                    .monospacedDigit()
+                    .foregroundColor(.secondary)
+                    .frame(width: 30, alignment: .trailing)
+            }
+            .padding(.leading, 40)
+            Picker("Text size", selection: $settings.teleprompterFontSize) {
+                Text("Small").tag(16.0)
+                Text("Medium").tag(20.0)
+                Text("Large").tag(26.0)
+            }
+            .padding(.leading, 40)
+            HStack {
+                Text("Start it from the island's  \(Image(systemName: "text.alignleft"))  button or the menu bar. Space pauses, ↑ ↓ change speed, Esc closes.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Spacer()
+                Button("Start") { NotificationCenter.default.post(name: .cloveStartTeleprompter, object: nil) }
+            }
+            .padding(.leading, 40)
         case .keepAwake:
             Toggle("Keep the display on too", isOn: $settings.keepAwakeDisplay)
                 .padding(.leading, 40)

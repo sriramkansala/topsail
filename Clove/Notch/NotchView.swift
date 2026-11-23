@@ -63,7 +63,14 @@ struct NotchView: View {
 
         var body: some View {
             VStack(spacing: 0) {
-                if model.state == .expanded && model.voiceActive {
+                if model.state == .expanded && model.teleprompterActive {
+                    // The teleprompter fills the island below the camera, in place of the pages.
+                    Color.clear.frame(height: model.notchSize.height)
+                    TeleprompterView(controller: model.features.teleprompter,
+                                     fontSize: CGFloat(model.settings.teleprompterFontSize))
+                        .environment(\.colorScheme, .dark)
+                        .transition(.cascade(1, reduceMotion: reduceMotion))
+                } else if model.state == .expanded && model.voiceActive {
                     // A voice note fills the island below the camera, in place of the pages.
                     Color.clear.frame(height: model.notchSize.height)
                     VoiceIslandView(controller: model.voice, onHeightChange: model.setVoiceHeight)
@@ -96,6 +103,15 @@ struct NotchView: View {
                 }
                 Spacer(minLength: model.notchSize.width)
                 HStack(spacing: 14) {
+                    if model.settings.isEnabled(.teleprompter) {
+                        Button(action: { model.startTeleprompter() }) {
+                            Image(systemName: "text.alignleft")
+                                .font(.system(size: 12))
+                                .foregroundColor(.white.opacity(0.6))
+                        }
+                        .buttonStyle(.pressable)
+                        .help("Start the teleprompter")
+                    }
                     if model.settings.isEnabled(.keepAwake) {
                         KeepAwakeButton(keepAwake: model.features.keepAwake, action: model.toggleKeepAwake)
                     }
