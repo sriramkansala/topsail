@@ -355,6 +355,17 @@ private struct IntegrationsPane: View {
             #if DIRECT
             AgentsSettingsSection(settings: settings, hub: features.agents, open: open)
             NotificationsSettingsSection(settings: settings, mirror: features.notifications)
+            Section {
+                Toggle("Terminal's last lines", isOn: $settings.appsTerminal)
+                Toggle("Chrome's tabs", isOn: $settings.appsChrome)
+                Toggle("YouTube in Chrome", isOn: $settings.appsYouTube)
+            } header: {
+                Text("Apps")
+            } footer: {
+                Text("Shown on the Apps page while these apps are open, and read only while you look. macOS asks once per app. Private Chrome windows are never read. Playing and pausing YouTube needs View › Developer › Allow JavaScript from Apple Events in Chrome.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
             #endif
             LinearSettingsSection(linear: linear)
             VoiceSettingsSection(linear: linear)

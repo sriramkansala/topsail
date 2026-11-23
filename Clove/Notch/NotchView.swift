@@ -155,6 +155,9 @@ struct NotchView: View {
                 } else if model.visiblePage == .system {
                     SystemPageView(system: model.system)
                         .transition(.contentMorph(reduceMotion: reduceMotion))
+                } else if model.visiblePage == .apps {
+                    AppsPageView(apps: model.features.apps)
+                        .transition(.contentMorph(reduceMotion: reduceMotion))
                 } else if model.visiblePage == .agents {
                     AgentsPageView(hub: model.features.agents,
                                    connected: AgentKind.allCases.contains(where: AgentHooks.isConnected))
@@ -181,6 +184,7 @@ struct NotchView: View {
             case .system: return "gauge.with.dots.needle.50percent"
             case .clipboard: return model.clipboardModes == [.shelf] ? "tray.full" : "doc.on.doc"
             case .agents: return "sparkles"
+            case .apps: return "square.grid.2x2"
             }
         }
     }

@@ -29,6 +29,7 @@ final class NotchViewModel: ObservableObject {
         case system
         case clipboard
         case agents
+        case apps
     }
 
     @Published private(set) var state: IslandState = .collapsed
@@ -494,6 +495,7 @@ final class NotchViewModel: ObservableObject {
         if settings.showSystemPage { pages.append(.system) }
         if !clipboardModes.isEmpty { pages.append(.clipboard) }
         if settings.isEnabled(.agents) { pages.append(.agents) }
+        if settings.isEnabled(.apps) { pages.append(.apps) }
         return pages.isEmpty ? [.player] : pages
     }
 
@@ -542,6 +544,8 @@ final class NotchViewModel: ObservableObject {
             return tasksExpanded ? min(height, IslandLayout.expandedTasksMaxHeight) : height
         case .system:
             return IslandLayout.systemPageHeight(hasBattery: system.battery != nil)
+        case .apps:
+            return IslandLayout.appsHeight
         case .agents:
             return IslandLayout.agentsHeight(approvals: features.agents.approvals.count,
                                              sessions: features.agents.sessions.count)

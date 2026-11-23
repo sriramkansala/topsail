@@ -43,6 +43,10 @@ final class AppSettings: ObservableObject {
     /// Notifications: the apps shown (lower-case bundle identifiers), and whether with their text.
     @Published var notificationApps: Set<String> { didSet { defaults.set(notificationApps.sorted(), forKey: "notificationApps") } }
     @Published var notificationText: Bool { didSet { save(notificationText, "notificationText") } }
+    /// The Apps page's parts.
+    @Published var appsTerminal: Bool { didSet { save(appsTerminal, "appsTerminal") } }
+    @Published var appsChrome: Bool { didSet { save(appsChrome, "appsChrome") } }
+    @Published var appsYouTube: Bool { didSet { save(appsYouTube, "appsYouTube") } }
     /// Which of the switched-off-by-default features are on (Settings › Features).
     @Published private(set) var features: Set<Feature> = []
     /// Take over the volume keys so macOS hides its own volume indicator (needs Input Monitoring
@@ -76,6 +80,9 @@ final class AppSettings: ObservableObject {
             "keepAwakeHours": 0,
             "notificationApps": ["com.apple.mobilesms", "com.apple.mail", "com.tinyspeck.slackmacgap", "com.hnc.discord",
                                  "com.burbn.instagram"],
+            "appsTerminal": true,
+            "appsChrome": true,
+            "appsYouTube": true,
             "notificationText": true,
             "agentsAutoApprove": true,
             "agentsAskInNotch": true,
@@ -101,6 +108,9 @@ final class AppSettings: ObservableObject {
         keepAwakeDisplay = defaults.bool(forKey: "keepAwakeDisplay")
         keepAwakeHours = defaults.integer(forKey: "keepAwakeHours")
         notificationApps = Set(defaults.stringArray(forKey: "notificationApps") ?? [])
+        appsTerminal = defaults.bool(forKey: "appsTerminal")
+        appsChrome = defaults.bool(forKey: "appsChrome")
+        appsYouTube = defaults.bool(forKey: "appsYouTube")
         notificationText = defaults.bool(forKey: "notificationText")
         agentsAutoApprove = defaults.bool(forKey: "agentsAutoApprove")
         agentsAskInNotch = defaults.bool(forKey: "agentsAskInNotch")

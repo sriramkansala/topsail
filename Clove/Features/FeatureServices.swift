@@ -10,4 +10,5 @@ final class FeatureServices {
     let teleprompter = TeleprompterController()
     let agents = AgentHub()
     let notifications = NotificationMirror()
+    let apps = AppModules()
 }

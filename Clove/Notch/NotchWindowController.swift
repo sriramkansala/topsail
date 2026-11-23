@@ -101,6 +101,13 @@ final class NotchWindowController: NSWindowController {
                 agents?.waitSeconds = TimeInterval(wait)
             }
             .store(in: &featureSubscriptions)
+        Publishers.CombineLatest3(settings.$appsTerminal, settings.$appsChrome, settings.$appsYouTube)
+            .sink { [weak apps = features.apps] terminal, chrome, youTube in
+                apps?.showsTerminal = terminal
+                apps?.showsChrome = chrome
+                apps?.showsYouTube = youTube
+            }
+            .store(in: &featureSubscriptions)
         let mirror = features.notifications
         mirror.onNotification = { [weak activities] in activities?.post(.notification($0)) }
         settings.$notificationApps.sink { [weak mirror] in mirror?.apps = $0 }.store(in: &featureSubscriptions)

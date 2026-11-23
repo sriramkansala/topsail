@@ -160,6 +160,9 @@ enum IslandLayout {
     static let notificationHeight: CGFloat = 52
     static let notificationStageHeight: CGFloat = noticeTopGap + notificationHeight + noticeInset
 
+    // Apps page: what other apps show; it scrolls past this.
+    static let appsHeight: CGFloat = 168
+
     // Agents page: requests waiting for an answer, then sessions.
     static let agentRowHeight: CGFloat = 34
     static let approvalRowHeight: CGFloat = 80
