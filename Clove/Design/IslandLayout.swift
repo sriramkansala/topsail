@@ -155,6 +155,11 @@ enum IslandLayout {
     static let approvalStageHeight: CGFloat = noticeTopGap + approvalHeaderHeight + approvalGap
         + approvalDetailHeight + 12 + approvalGap + reminderButtonHeight + reminderInset
 
+    // Another app's notification, below the camera: its icon, who it's from, two lines of text.
+    static let notificationIconSize: CGFloat = 36
+    static let notificationHeight: CGFloat = 52
+    static let notificationStageHeight: CGFloat = noticeTopGap + notificationHeight + noticeInset
+
     // Agents page: requests waiting for an answer, then sessions.
     static let agentRowHeight: CGFloat = 34
     static let approvalRowHeight: CGFloat = 80

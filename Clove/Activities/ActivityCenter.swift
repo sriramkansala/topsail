@@ -13,6 +13,7 @@ enum ActivityKind: Equatable {
     case keepAwake(on: Bool)               // Keep Awake was turned on or off
     case agentApproval(AgentApproval)      // an AI agent asks before a command: Deny or Approve
     case agentFinished(agent: AgentKind, project: String)  // an AI agent finished its turn
+    case notification(MirroredNotification)  // another app's notification
 }
 
 /// The meeting reminder's three buttons.
@@ -38,14 +39,14 @@ extension ActivityKind {
     /// camera that the pointer can rest on (they stay put instead of opening the island).
     var isNotice: Bool {
         switch self {
-        case .lowBattery, .meetingReminder, .audioDevice, .agentApproval: return true
+        case .lowBattery, .meetingReminder, .audioDevice, .agentApproval, .notification: return true
         default: return false
         }
     }
 
     var isClickable: Bool {
         switch self {
-        case .lowBattery(_, .off), .meetingReminder, .agentApproval: return true
+        case .lowBattery(_, .off), .meetingReminder, .agentApproval, .notification: return true
         default: return false
         }
     }
@@ -64,7 +65,8 @@ extension ActivityKind {
     var isLiveLevel: Bool {
         switch self {
         case .volume, .brightness, .copied, .keepAwake: return true
-        case .charging, .lowBattery, .audioDevice, .taskDue, .meetingReminder, .agentApproval, .agentFinished: return false
+        case .charging, .lowBattery, .audioDevice, .taskDue, .meetingReminder, .agentApproval, .agentFinished,
+             .notification: return false
         }
     }
 
@@ -121,6 +123,7 @@ final class ActivityCenter: ObservableObject {
         case .copied: return IslandLayout.copiedStageHeight
         case .agentApproval: return IslandLayout.approvalStageHeight
         case .agentFinished: return 0
+        case .notification: return IslandLayout.notificationStageHeight
         case .volume, .brightness: return 8
         case .taskDue, .keepAwake, nil: return 0
         }
@@ -162,6 +165,7 @@ final class ActivityCenter: ObservableObject {
             let closes = min(meeting.end, meeting.start.addingTimeInterval(CalendarService.meetingGrace))
             return max(closes.timeIntervalSinceNow, displayDuration)
         case .audioDevice: return deviceDuration
+        case .notification: return noticeDuration
         case .agentApproval(let approval): return max(approval.expires.timeIntervalSinceNow, 1)
         default: return displayDuration
         }

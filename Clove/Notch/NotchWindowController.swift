@@ -101,6 +101,12 @@ final class NotchWindowController: NSWindowController {
                 agents?.waitSeconds = TimeInterval(wait)
             }
             .store(in: &featureSubscriptions)
+        let mirror = features.notifications
+        mirror.onNotification = { [weak activities] in activities?.post(.notification($0)) }
+        settings.$notificationApps.sink { [weak mirror] in mirror?.apps = $0 }.store(in: &featureSubscriptions)
+        settings.publisher(for: .notifications)
+            .sink { [weak mirror] on in if on { mirror?.start() } else { mirror?.stop() } }
+            .store(in: &featureSubscriptions)
         settings.publisher(for: .reminders)
             .sink { [weak features] on in
                 if on { features?.reminders.start() } else { features?.reminders.stop() }

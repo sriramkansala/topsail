@@ -15,6 +15,8 @@ struct TransientActivityView: View {
     var onRequestLowPowerMode: () -> Void = {}
     /// One of the meeting reminder's buttons was clicked.
     var onMeetingAnswer: (UpcomingEvent, MeetingAnswer) -> Void = { _, _ in }
+    /// Whether notifications show their text, or only who they're from.
+    var showsNotificationText = true
     /// Deny or Approve on an agent's request.
     var onAgentAnswer: (AgentApproval, Bool?) -> Void = { _, _ in }
     /// What is playing, which a device connecting or a copy keeps beside the notch; nil when
@@ -39,6 +41,8 @@ struct TransientActivityView: View {
             CopiedNotice(notchSize: notchSize, wingWidth: wingWidth, nowPlaying: nowPlaying)
         case .agentApproval(let approval):
             AgentApprovalNotice(approval: approval, notchSize: notchSize) { onAgentAnswer(approval, $0) }
+        case .notification(let notification):
+            NotificationNotice(notification: notification, showsText: showsNotificationText, notchSize: notchSize)
         default:
             wingsAndMeter
         }
@@ -89,7 +93,7 @@ struct TransientActivityView: View {
                 .contentTransition(.symbolEffect(.replace))
         case .charging, .lowBattery, .meetingReminder, .audioDevice, .copied:
             EmptyView()  // ChargingSweep and the notices draw their own.
-        case .agentApproval:
+        case .agentApproval, .notification:
             EmptyView()
         case .agentFinished(let agent, _):
             HStack(spacing: 5) {
@@ -142,7 +146,7 @@ struct TransientActivityView: View {
             value(overdue ? "Overdue" : "Due today", overdue ? .red : .orange)
         case .keepAwake(let on):
             value(on ? "On" : "Off", on ? Self.awake : .white.opacity(0.5))
-        case .agentApproval:
+        case .agentApproval, .notification:
             EmptyView()
         case .agentFinished(_, let project):
             HStack(spacing: 4) {
@@ -181,7 +185,7 @@ struct TransientActivityView: View {
         case .volume(let level, let muted, _): return (Double(level), .white, muted)
         case .brightness(let level): return (Double(level), .white, false)
         case .charging, .lowBattery, .audioDevice, .taskDue, .meetingReminder, .copied, .keepAwake,
-             .agentApproval, .agentFinished: return nil
+             .agentApproval, .agentFinished, .notification: return nil
         }
     }
 }

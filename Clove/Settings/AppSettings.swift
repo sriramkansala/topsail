@@ -40,6 +40,9 @@ final class AppSettings: ObservableObject {
     @Published var agentsAutoApprove: Bool { didSet { save(agentsAutoApprove, "agentsAutoApprove") } }
     @Published var agentsAskInNotch: Bool { didSet { save(agentsAskInNotch, "agentsAskInNotch") } }
     @Published var agentsWaitSeconds: Int { didSet { defaults.set(agentsWaitSeconds, forKey: "agentsWaitSeconds") } }
+    /// Notifications: the apps shown (lower-case bundle identifiers), and whether with their text.
+    @Published var notificationApps: Set<String> { didSet { defaults.set(notificationApps.sorted(), forKey: "notificationApps") } }
+    @Published var notificationText: Bool { didSet { save(notificationText, "notificationText") } }
     /// Which of the switched-off-by-default features are on (Settings › Features).
     @Published private(set) var features: Set<Feature> = []
     /// Take over the volume keys so macOS hides its own volume indicator (needs Input Monitoring
@@ -71,6 +74,9 @@ final class AppSettings: ObservableObject {
             "hapticFeedback": true,
             "keepAwakeDisplay": false,
             "keepAwakeHours": 0,
+            "notificationApps": ["com.apple.mobilesms", "com.apple.mail", "com.tinyspeck.slackmacgap", "com.hnc.discord",
+                                 "com.burbn.instagram"],
+            "notificationText": true,
             "agentsAutoApprove": true,
             "agentsAskInNotch": true,
             "agentsWaitSeconds": 60,
@@ -94,6 +100,8 @@ final class AppSettings: ObservableObject {
         hideSystemVolumeHUD = defaults.bool(forKey: "hideSystemVolumeHUD")
         keepAwakeDisplay = defaults.bool(forKey: "keepAwakeDisplay")
         keepAwakeHours = defaults.integer(forKey: "keepAwakeHours")
+        notificationApps = Set(defaults.stringArray(forKey: "notificationApps") ?? [])
+        notificationText = defaults.bool(forKey: "notificationText")
         agentsAutoApprove = defaults.bool(forKey: "agentsAutoApprove")
         agentsAskInNotch = defaults.bool(forKey: "agentsAskInNotch")
         agentsWaitSeconds = defaults.integer(forKey: "agentsWaitSeconds")
@@ -137,6 +145,8 @@ final class AppSettings: ObservableObject {
         case .copied: return showCopyActivity
         case .keepAwake: return true
         case .agentApproval, .agentFinished: return isEnabled(.agents)
+        case .notification(let notification):
+            return isEnabled(.notifications) && notificationApps.contains(notification.bundleID.lowercased())
         }
     }
 

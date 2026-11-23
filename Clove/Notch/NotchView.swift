@@ -29,6 +29,7 @@ struct NotchView: View {
                                           meterHeight: model.activities.meterHeight,
                                           onRequestLowPowerMode: model.requestLowPowerMode,
                                           onMeetingAnswer: model.answerMeeting,
+                                          showsNotificationText: model.settings.notificationText,
                                           onAgentAnswer: model.answerAgent,
                                           nowPlaying: model.showsMusicActivity ? nowPlaying : nil)
                         .id(activity.id)

@@ -9,4 +9,5 @@ final class FeatureServices {
     let reminders = RemindersService()
     let teleprompter = TeleprompterController()
     let agents = AgentHub()
+    let notifications = NotificationMirror()
 }

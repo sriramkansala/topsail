@@ -219,6 +219,15 @@ extension FeaturesPane {
         case .reminders:
             RemindersAccessHint(reminders: features.reminders)
                 .padding(.leading, 40)
+        case .notifications:
+            HStack {
+                Text("Choose apps, and allow Full Disk Access, in Integrations.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Spacer()
+                Button("Integrations…") { open(.integrations) }
+            }
+            .padding(.leading, 40)
         case .agents:
             HStack {
                 Text("Connect Claude Code, Codex, Cursor or Antigravity in Integrations.")
@@ -345,6 +354,7 @@ private struct IntegrationsPane: View {
         Form {
             #if DIRECT
             AgentsSettingsSection(settings: settings, hub: features.agents, open: open)
+            NotificationsSettingsSection(settings: settings, mirror: features.notifications)
             #endif
             LinearSettingsSection(linear: linear)
             VoiceSettingsSection(linear: linear)
@@ -353,6 +363,53 @@ private struct IntegrationsPane: View {
 }
 
 #if DIRECT
+/// Which apps' notifications slide out of the notch, and the access that takes.
+private struct NotificationsSettingsSection: View {
+    @ObservedObject var settings: AppSettings
+    @ObservedObject var mirror: NotificationMirror
+
+    var body: some View {
+        Section {
+            if settings.isEnabled(.notifications) {
+                switch mirror.access {
+                case .denied:
+                    PermissionHint(text: "Allow Clove under Privacy & Security › Full Disk Access, then reopen Clove",
+                                   button: "Open System Settings", action: { SystemSettings.open("Privacy_AllFiles") })
+                case .unsupported:
+                    Text("This version of macOS keeps its notifications in a way Clove doesn't know yet.")
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                case .granted, .unknown:
+                    EmptyView()
+                }
+                ForEach(NotificationMirror.installedApps, id: \.self) { app in
+                    Toggle(NotificationMirror.name(of: app), isOn: Binding(
+                        get: { settings.notificationApps.contains(app.lowercased()) },
+                        set: { on in
+                            if on { settings.notificationApps.insert(app.lowercased()) }
+                            else { settings.notificationApps.remove(app.lowercased()) }
+                        }
+                    ))
+                }
+                Toggle("Show what they say", isOn: $settings.notificationText)
+            } else {
+                HStack {
+                    Text("Turn on Notifications to choose apps.")
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Button("Turn On") { settings.setEnabled(.notifications, true) }
+                }
+            }
+        } header: {
+            Text("Notifications")
+        } footer: {
+            Text("Clove reads Notification Center's own list on this Mac, only while this is on. Nothing is kept or sent. They also show during a Focus. Full Disk Access is broad: leave this off if you'd rather not grant it.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+    }
+}
+
 /// Claude Code, Codex, Cursor and Antigravity: Connect adds Clove's hook to the agent's own
 /// settings (backed up first); what's approved without asking, and how long the notch waits.
 private struct AgentsSettingsSection: View {
