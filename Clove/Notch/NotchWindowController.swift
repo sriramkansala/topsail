@@ -10,13 +10,14 @@ final class NotchWindowController: NSWindowController {
     private let volumeKeys: VolumeKeyInterceptor
     private var activitySubscription: AnyCancellable?
     private var clipboardSubscription: AnyCancellable?
+    private var featureSubscriptions = Set<AnyCancellable>()
 
     // The panel never resizes: it must fit the largest island — a voice note in review (560 wide,
     // up to ~700 tall) — plus the ears and the shadow. Its transparent area passes clicks through.
     private static let panelSize = CGSize(width: 700, height: 820)
 
     init(settings: AppSettings, linear: LinearService, calendar: CalendarService, clipboard: ClipboardHistory,
-         openSettings: @escaping () -> Void) {
+         features: FeatureServices, openSettings: @escaping () -> Void) {
         let nowPlaying = NowPlayingService()
         let activities = ActivityCenter()
         activities.isAllowed = { [weak settings, weak calendar] kind in
@@ -30,7 +31,7 @@ final class NotchWindowController: NSWindowController {
         let system = SystemMonitor(pluggedInAt: { [weak batteryMonitor] in batteryMonitor?.pluggedInAt })
         let model = NotchViewModel(nowPlaying: nowPlaying, activities: activities, calendar: calendar,
                                    linear: linear, voice: voice, system: system, clipboard: clipboard,
-                                   settings: settings)
+                                   features: features, settings: settings)
         clipboard.onCopy = { [weak activities] in activities?.post(.copied) }
         voice.onPresent = { [weak model] in model?.presentVoice() }
         linear.onDue = { [weak activities] issues in
@@ -75,6 +76,12 @@ final class NotchWindowController: NSWindowController {
             guard let self else { return }
             self.updateMouseEvents(state: self.model.state, activity: activity)
         }
+        // Switched-off-by-default features: each service stops when its feature is turned off.
+        features.keepAwake.onChange = { [weak activities] on in activities?.post(.keepAwake(on: on)) }
+        settings.publisher(for: .keepAwake)
+            .sink { [weak features] on in if !on { features?.keepAwake.turnOff() } }
+            .store(in: &featureSubscriptions)
+
         // Copies are watched while either the history or the "Copied" popup is on.
         clipboardSubscription = Publishers.CombineLatest(settings.$showClipboard, settings.$showCopyActivity)
             .sink { [weak clipboard] keepsHistory, announces in

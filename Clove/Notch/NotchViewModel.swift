@@ -41,6 +41,7 @@ final class NotchViewModel: ObservableObject {
     let voice: VoiceNoteController
     let system: SystemMonitor
     let clipboard: ClipboardHistory
+    let features: FeatureServices
     let settings: AppSettings
     let compactWing: CGFloat = 42
 
@@ -63,7 +64,7 @@ final class NotchViewModel: ObservableObject {
 
     init(nowPlaying: NowPlayingService, activities: ActivityCenter, calendar: CalendarService,
          linear: LinearService, voice: VoiceNoteController, system: SystemMonitor, clipboard: ClipboardHistory,
-         settings: AppSettings) {
+         features: FeatureServices, settings: AppSettings) {
         self.nowPlaying = nowPlaying
         self.activities = activities
         self.calendar = calendar
@@ -71,6 +72,7 @@ final class NotchViewModel: ObservableObject {
         self.voice = voice
         self.system = system
         self.clipboard = clipboard
+        self.features = features
         self.settings = settings
 
         // Only whether a note is running matters here; the note's own updates (waveform levels,
@@ -501,6 +503,18 @@ final class NotchViewModel: ObservableObject {
         case .snooze: calendar.snooze(meeting)
         }
         activities.reminderAnswered()
+    }
+
+    /// The ☕ button in the notch row: on for the chosen time (Settings), or off.
+    func toggleKeepAwake() {
+        let keepAwake = features.keepAwake
+        if keepAwake.isOn {
+            keepAwake.turnOff()
+        } else {
+            let hours = settings.keepAwakeHours
+            keepAwake.turnOn(keepingDisplayOn: settings.keepAwakeDisplay,
+                             for: hours > 0 ? TimeInterval(hours) * 3600 : nil)
+        }
     }
 
     /// The 🎙 button in the notch row.

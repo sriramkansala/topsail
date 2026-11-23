@@ -95,6 +95,9 @@ struct NotchView: View {
                 }
                 Spacer(minLength: model.notchSize.width)
                 HStack(spacing: 14) {
+                    if model.settings.isEnabled(.keepAwake) {
+                        KeepAwakeButton(keepAwake: model.features.keepAwake, action: model.toggleKeepAwake)
+                    }
                     if model.linear.isConnected {
                         Button(action: { model.toggleVoice() }) {
                             Image(systemName: "mic.fill")
@@ -205,5 +208,23 @@ struct CompactMusicWings: View {
             EqualizerView(isPlaying: nowPlaying.isPlaying, color: nowPlaying.accentColor)
                 .frame(width: wingWidth, height: notchSize.height)
         }
+    }
+}
+
+/// ☕ in the notch row: Keep Awake, amber while it's on.
+private struct KeepAwakeButton: View {
+    @ObservedObject var keepAwake: KeepAwake
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: keepAwake.isOn ? "cup.and.saucer.fill" : "cup.and.saucer")
+                .font(.system(size: 12))
+                .foregroundColor(keepAwake.isOn ? TransientActivityView.awake : .white.opacity(0.6))
+                .contentTransition(.symbolEffect(.replace))
+        }
+        .buttonStyle(.pressable)
+        .help(keepAwake.isOn ? "Keep Awake is on: click to let your Mac sleep" : "Keep Awake: stop your Mac sleeping")
+        .accessibilityLabel(keepAwake.isOn ? "Keep Awake, on" : "Keep Awake, off")
     }
 }

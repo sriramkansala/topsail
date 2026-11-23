@@ -1,10 +1,65 @@
 import SwiftUI
 
+/// Settings: a sidebar of panes, as in System Settings. General, the island's activities and
+/// pages, the switched-off-by-default features, and the integrations they connect to.
 struct SettingsView: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var linear: LinearService
     @ObservedObject var calendar: CalendarService
     @ObservedObject var clipboard: ClipboardHistory
+    let features: FeatureServices
+
+    enum Pane: String, CaseIterable, Identifiable {
+        case general, island, features, integrations
+
+        var id: String { rawValue }
+
+        var title: LocalizedStringKey {
+            switch self {
+            case .general: return "General"
+            case .island: return "Island"
+            case .features: return "Features"
+            case .integrations: return "Integrations"
+            }
+        }
+
+        var symbol: String {
+            switch self {
+            case .general: return "gearshape"
+            case .island: return "capsule.portrait"
+            case .features: return "square.stack.3d.up"
+            case .integrations: return "puzzlepiece.extension"
+            }
+        }
+    }
+
+    @State private var pane: Pane? = .general
+
+    var body: some View {
+        NavigationSplitView {
+            List(Pane.allCases, selection: $pane) { pane in
+                Label(pane.title, systemImage: pane.symbol)
+                    .tag(pane)
+            }
+            .navigationSplitViewColumnWidth(170)
+        } detail: {
+            Group {
+                switch pane ?? .general {
+                case .general: GeneralPane(settings: settings)
+                case .island: IslandPane(settings: settings, calendar: calendar, clipboard: clipboard)
+                case .features: FeaturesPane(settings: settings, features: features, open: { pane = $0 })
+                case .integrations: IntegrationsPane(settings: settings, linear: linear)
+                }
+            }
+            .formStyle(.grouped)
+        }
+        .frame(width: 700, height: 580)
+    }
+}
+
+/// Launch at login, haptics, and where to find Clove.
+private struct GeneralPane: View {
+    @ObservedObject var settings: AppSettings
 
     private var versionString: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
@@ -33,20 +88,36 @@ struct SettingsView: View {
                 }
 
                 Toggle("Haptic feedback", isOn: $settings.hapticFeedback)
-            } header: {
-                Text("General")
             } footer: {
-                Text("Clove lives in the notch: move the pointer there to open it. These settings are also in the menu bar.")
+                Text("Clove lives in the notch: move the pointer there to open it. Settings is also in the menu bar.")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
 
+            Section {
+                Text("Clove \(versionString)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+            }
+        }
+    }
+}
+
+/// What the island shows by itself (live activities) and the pages it opens to.
+private struct IslandPane: View {
+    @ObservedObject var settings: AppSettings
+    @ObservedObject var calendar: CalendarService
+    @ObservedObject var clipboard: ClipboardHistory
+
+    var body: some View {
+        Form {
             Section("Live activities") {
                 Toggle("Now playing", isOn: $settings.showMusicActivity)
-                Captioned(caption: Self.lowBatteryNote) {
+                Captioned(caption: SettingsView.lowBatteryNote) {
                     Toggle("Charging and low battery", isOn: $settings.showChargingActivity)
                 }
-                Captioned(caption: Self.deviceNote) {
+                Captioned(caption: SettingsView.deviceNote) {
                     Toggle("Headphones and speakers", isOn: $settings.showDeviceActivity)
                 }
                 Captioned(caption: "A countdown beside the notch, then Join, Ignore or Remind me in 5 min as the call starts.") {
@@ -68,8 +139,8 @@ struct SettingsView: View {
                 #endif
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Toggle(Self.takeoverTitle, isOn: $settings.hideSystemVolumeHUD)
-                    Text(Self.takeoverNote)
+                    Toggle(SettingsView.takeoverTitle, isOn: $settings.hideSystemVolumeHUD)
+                    Text(SettingsView.takeoverNote)
                         .font(.caption)
                         .foregroundColor(.secondary)
 
@@ -80,7 +151,7 @@ struct SettingsView: View {
                 }
             }
 
-            Section("Expanded view") {
+            Section("Pages") {
                 VStack(alignment: .leading, spacing: 2) {
                     Toggle("Upcoming events", isOn: $settings.showCalendar)
                     switch calendar.access {
@@ -89,7 +160,8 @@ struct SettingsView: View {
                                        button: "Allow…", action: calendar.requestAccess)
                     case .denied:
                         PermissionHint(text: "Allow Clove under Privacy & Security › Calendars",
-                                       button: "Open System Settings", action: Self.openCalendarSettings)
+                                       button: "Open System Settings",
+                                       action: { SystemSettings.open("Privacy_Calendars") })
                     case .granted:
                         EmptyView()
                     }
@@ -107,24 +179,107 @@ struct SettingsView: View {
                     }
                 }
             }
+        }
+    }
+}
 
-            LinearSettingsSection(linear: linear)
+/// Every switched-off-by-default feature, with what it does; turning one on may ask for a
+/// permission or point to its integration.
+private struct FeaturesPane: View {
+    @ObservedObject var settings: AppSettings
+    let features: FeatureServices
+    let open: (SettingsView.Pane) -> Void
 
-            VoiceSettingsSection(linear: linear)
-
+    var body: some View {
+        Form {
             Section {
-                Text("Clove \(versionString)")
+                ForEach(Feature.available) { feature in
+                    FeatureRow(feature: feature, isOn: Binding(
+                        get: { settings.isEnabled(feature) },
+                        set: { settings.setEnabled(feature, $0) }
+                    ))
+                    if settings.isEnabled(feature) {
+                        options(for: feature)
+                    }
+                }
+            } footer: {
+                Text("New features start switched off. Each one asks for any permission it needs when you turn it on.")
                     .font(.caption)
                     .foregroundColor(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
             }
         }
-        .formStyle(.grouped)
-        .frame(width: 420, height: 560)
     }
+}
 
-    private static func openCalendarSettings() {
-        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars") {
+extension FeaturesPane {
+    /// What a feature that's on can be set to, under its row.
+    @ViewBuilder func options(for feature: Feature) -> some View {
+        switch feature {
+        case .keepAwake:
+            Toggle("Keep the display on too", isOn: $settings.keepAwakeDisplay)
+                .padding(.leading, 40)
+            Picker("Turn off after", selection: $settings.keepAwakeHours) {
+                Text("Never").tag(0)
+                Text("1 hour").tag(1)
+                Text("2 hours").tag(2)
+                Text("4 hours").tag(4)
+                Text("8 hours").tag(8)
+            }
+            .padding(.leading, 40)
+        default:
+            EmptyView()
+        }
+    }
+}
+
+/// One feature: its symbol, name and what it does, and its switch.
+private struct FeatureRow: View {
+    let feature: Feature
+    @Binding var isOn: Bool
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                .fill(Color.accentColor.opacity(isOn ? 1 : 0.15))
+                .overlay {
+                    Image(systemName: feature.symbol)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(isOn ? .white : .accentColor)
+                }
+                .frame(width: 28, height: 28)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(feature.title)
+                Text(feature.summary)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 12)
+            Toggle(feature.title, isOn: $isOn)
+                .labelsHidden()
+                .toggleStyle(.switch)
+        }
+        .padding(.vertical, 2)
+    }
+}
+
+/// The services Clove connects to: Linear and voice notes so far.
+private struct IntegrationsPane: View {
+    @ObservedObject var settings: AppSettings
+    @ObservedObject var linear: LinearService
+
+    var body: some View {
+        Form {
+            LinearSettingsSection(linear: linear)
+            VoiceSettingsSection(linear: linear)
+        }
+    }
+}
+
+/// Opens a pane of System Settings › Privacy & Security.
+enum SystemSettings {
+    static func open(_ anchor: String) {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?\(anchor)") {
             NSWorkspace.shared.open(url)
         }
     }
@@ -145,7 +300,7 @@ private extension SettingsView {
 }
 
 /// A control with an optional caption under it, in one row.
-private struct Captioned<Content: View>: View {
+struct Captioned<Content: View>: View {
     let caption: String?
     @ViewBuilder let content: Content
 
@@ -162,7 +317,7 @@ private struct Captioned<Content: View>: View {
 }
 
 /// Something Clove is missing a permission for, and the button that fixes it.
-private struct PermissionHint: View {
+struct PermissionHint: View {
     let text: String
     let button: String
     let action: () -> Void

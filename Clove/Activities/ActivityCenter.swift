@@ -10,6 +10,7 @@ enum ActivityKind: Equatable {
     case taskDue(title: String, overdue: Bool)  // a Linear issue is due today or overdue
     case meetingReminder(UpcomingEvent)    // a call is starting: Join, Ignore or Remind me in 5 min
     case copied                            // something was copied: "Copied to clipboard" under the camera
+    case keepAwake(on: Bool)               // Keep Awake was turned on or off
 }
 
 /// The meeting reminder's three buttons.
@@ -58,14 +59,14 @@ extension ActivityKind {
     /// brightness), shown at once and updated in place, and a copy.
     var isLiveLevel: Bool {
         switch self {
-        case .volume, .brightness, .copied: return true
+        case .volume, .brightness, .copied, .keepAwake: return true
         case .charging, .lowBattery, .audioDevice, .taskDue, .meetingReminder: return false
         }
     }
 
     func isSameLiveLevel(as other: ActivityKind) -> Bool {
         switch (self, other) {
-        case (.volume, .volume), (.brightness, .brightness), (.copied, .copied): return true
+        case (.volume, .volume), (.brightness, .brightness), (.copied, .copied), (.keepAwake, .keepAwake): return true
         default: return false
         }
     }
@@ -115,7 +116,7 @@ final class ActivityCenter: ObservableObject {
         case .audioDevice: return IslandLayout.deviceStageHeight
         case .copied: return IslandLayout.copiedStageHeight
         case .volume, .brightness: return 8
-        case .taskDue, nil: return 0
+        case .taskDue, .keepAwake, nil: return 0
         }
     }
 

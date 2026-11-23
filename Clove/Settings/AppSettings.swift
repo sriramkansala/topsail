@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import CoreGraphics
 import ServiceManagement
 
@@ -26,6 +27,12 @@ final class AppSettings: ObservableObject {
     /// "Copied to clipboard" under the notch on every copy.
     @Published var showCopyActivity: Bool { didSet { save(showCopyActivity, "showCopyActivity") } }
     @Published var hapticFeedback: Bool { didSet { save(hapticFeedback, "hapticFeedback") } }
+    /// Keep Awake also keeps the display on.
+    @Published var keepAwakeDisplay: Bool { didSet { save(keepAwakeDisplay, "keepAwakeDisplay") } }
+    /// Keep Awake turns itself off after this many hours; 0 = when turned off.
+    @Published var keepAwakeHours: Int { didSet { defaults.set(keepAwakeHours, forKey: "keepAwakeHours") } }
+    /// Which of the switched-off-by-default features are on (Settings › Features).
+    @Published private(set) var features: Set<Feature> = []
     /// Take over the volume keys so macOS hides its own volume indicator (needs Input Monitoring
     /// and Accessibility).
     @Published var hideSystemVolumeHUD: Bool { didSet { save(hideSystemVolumeHUD, "hideSystemVolumeHUD") } }
@@ -53,6 +60,8 @@ final class AppSettings: ObservableObject {
             "showClipboard": true,
             "showCopyActivity": true,
             "hapticFeedback": true,
+            "keepAwakeDisplay": false,
+            "keepAwakeHours": 0,
             "hideSystemVolumeHUD": Self.takesOverKeysByDefault,
         ])
         showMusicActivity = defaults.bool(forKey: "showMusicActivity")
@@ -68,9 +77,32 @@ final class AppSettings: ObservableObject {
         showCopyActivity = defaults.bool(forKey: "showCopyActivity")
         hapticFeedback = defaults.bool(forKey: "hapticFeedback")
         hideSystemVolumeHUD = defaults.bool(forKey: "hideSystemVolumeHUD")
+        keepAwakeDisplay = defaults.bool(forKey: "keepAwakeDisplay")
+        keepAwakeHours = defaults.integer(forKey: "keepAwakeHours")
         launchAtLogin = false
+        let stored = UserDefaults.standard
+        features = Set(Feature.available.filter { stored.bool(forKey: Self.featureKey($0)) })
         readLaunchAtLogin()
     }
+
+    // MARK: Features
+
+    func isEnabled(_ feature: Feature) -> Bool {
+        features.contains(feature)
+    }
+
+    func setEnabled(_ feature: Feature, _ enabled: Bool) {
+        guard Feature.available.contains(feature), enabled != isEnabled(feature) else { return }
+        if enabled { features.insert(feature) } else { features.remove(feature) }
+        defaults.set(enabled, forKey: Self.featureKey(feature))
+    }
+
+    /// Whether `feature` is on, now and whenever it changes.
+    func publisher(for feature: Feature) -> AnyPublisher<Bool, Never> {
+        $features.map { $0.contains(feature) }.removeDuplicates().eraseToAnyPublisher()
+    }
+
+    private static func featureKey(_ feature: Feature) -> String { "feature.\(feature.rawValue)" }
 
     /// Whether an activity of this kind should be shown at all.
     func allows(_ kind: ActivityKind) -> Bool {
@@ -82,6 +114,7 @@ final class AppSettings: ObservableObject {
         case .taskDue: return showTaskReminders
         case .meetingReminder: return showMeetingReminders
         case .copied: return showCopyActivity
+        case .keepAwake: return true
         }
     }
 

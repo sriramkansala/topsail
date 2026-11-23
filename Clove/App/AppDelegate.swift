@@ -8,8 +8,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let linear = LinearService()
     private let calendar = CalendarService()
     private let clipboard = ClipboardHistory()
+    private let features = FeatureServices()
     private lazy var settingsWindowController = SettingsWindowController(settings: settings, linear: linear,
-                                                                         calendar: calendar, clipboard: clipboard)
+                                                                         calendar: calendar, clipboard: clipboard,
+                                                                         features: features)
     private var statusItem: NSStatusItem?
     private var voiceItem: NSMenuItem?
     private var cancellables = Set<AnyCancellable>()
@@ -19,7 +21,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         buildMainMenu()
 
         let controller = NotchWindowController(settings: settings, linear: linear, calendar: calendar,
-                                               clipboard: clipboard) { [weak self] in
+                                               clipboard: clipboard, features: features) { [weak self] in
             self?.showSettings()
         }
         windowController = controller
@@ -80,6 +82,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         windowController?.model.stopTracking()
+        features.keepAwake.turnOff()
     }
 
     private func buildStatusItem() {

@@ -85,6 +85,14 @@ struct TransientActivityView: View {
                 .contentTransition(.symbolEffect(.replace))
         case .charging, .lowBattery, .meetingReminder, .audioDevice, .copied:
             EmptyView()  // ChargingSweep and the notices draw their own.
+        case .keepAwake(let on):
+            HStack(spacing: 5) {
+                icon(on ? "cup.and.saucer.fill" : "cup.and.saucer", on ? Self.awake : .white.opacity(0.5))
+                Text("Keep Awake")
+                    .font(Self.valueFont)
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+            }
         case .taskDue(let title, let overdue):
             HStack(spacing: 5) {
                 icon("checklist", overdue ? .red : .orange)
@@ -118,10 +126,14 @@ struct TransientActivityView: View {
             EmptyView()
         case .taskDue(_, let overdue):
             value(overdue ? "Overdue" : "Due today", overdue ? .red : .orange)
+        case .keepAwake(let on):
+            value(on ? "On" : "Off", on ? Self.awake : .white.opacity(0.5))
         }
     }
 
     private static let valueFont = Font.system(size: 12, weight: .semibold).monospacedDigit()
+    /// Keep Awake's warm amber.
+    static let awake = Color(red: 1, green: 0.74, blue: 0.3)
 
     private func icon(_ name: String, _ color: Color) -> some View {
         Image(systemName: name)
@@ -141,7 +153,7 @@ struct TransientActivityView: View {
         switch activity.kind {
         case .volume(let level, let muted, _): return (Double(level), .white, muted)
         case .brightness(let level): return (Double(level), .white, false)
-        case .charging, .lowBattery, .audioDevice, .taskDue, .meetingReminder, .copied: return nil
+        case .charging, .lowBattery, .audioDevice, .taskDue, .meetingReminder, .copied, .keepAwake: return nil
         }
     }
 }
