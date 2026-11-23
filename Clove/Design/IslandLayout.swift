@@ -129,6 +129,16 @@ enum IslandLayout {
             clipboardMaxHeight)
     }
 
+    // Apple Reminders, on the calendar tab: a row each (up to four), then a row to add one.
+    static let remindersRowHeight: CGFloat = 22
+    static let remindersRowSpacing: CGFloat = 4
+    static let maxReminders = 4
+
+    static func remindersHeight(count: Int) -> CGFloat {
+        let rows = CGFloat(min(count, maxReminders) + 1)
+        return rows * remindersRowHeight + (rows - 1) * remindersRowSpacing
+    }
+
     // The clipboard tab's Clipboard / Shelf switch, when both are on.
     static let pageSwitchHeight: CGFloat = 22
     static let pageSwitchGap: CGFloat = 8

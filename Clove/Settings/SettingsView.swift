@@ -215,6 +215,9 @@ extension FeaturesPane {
     /// What a feature that's on can be set to, under its row.
     @ViewBuilder func options(for feature: Feature) -> some View {
         switch feature {
+        case .reminders:
+            RemindersAccessHint(reminders: features.reminders)
+                .padding(.leading, 40)
         case .keepAwake:
             Toggle("Keep the display on too", isOn: $settings.keepAwakeDisplay)
                 .padding(.leading, 40)
@@ -228,6 +231,26 @@ extension FeaturesPane {
             .padding(.leading, 40)
         default:
             EmptyView()
+        }
+    }
+}
+
+/// Reminders needs access to the Reminders app's lists.
+private struct RemindersAccessHint: View {
+    @ObservedObject var reminders: RemindersService
+
+    var body: some View {
+        switch reminders.access {
+        case .notDetermined:
+            PermissionHint(text: "Clove needs access to your reminders", button: "Allow…",
+                           action: reminders.requestAccess)
+        case .denied:
+            PermissionHint(text: "Allow Clove under Privacy & Security › Reminders", button: "Open System Settings",
+                           action: { SystemSettings.open("Privacy_Reminders") })
+        case .granted:
+            Label("Showing your reminders on the calendar tab", systemImage: "checkmark.circle.fill")
+                .font(.caption)
+                .foregroundColor(.secondary)
         }
     }
 }

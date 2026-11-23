@@ -70,6 +70,8 @@ final class NotchWindowController: NSWindowController {
             self.updateMouseEvents(state: state, activity: activities.current)
             if state == .expanded {
                 calendar.refresh()
+            } else {
+                self.giveUpKeyboard()
             }
         }
         activitySubscription = activities.$current.sink { [weak self] activity in
@@ -80,6 +82,11 @@ final class NotchWindowController: NSWindowController {
         features.keepAwake.onChange = { [weak activities] on in activities?.post(.keepAwake(on: on)) }
         settings.publisher(for: .keepAwake)
             .sink { [weak features] on in if !on { features?.keepAwake.turnOff() } }
+            .store(in: &featureSubscriptions)
+        settings.publisher(for: .reminders)
+            .sink { [weak features] on in
+                if on { features?.reminders.start() } else { features?.reminders.stop() }
+            }
             .store(in: &featureSubscriptions)
 
         // Copies are watched while either the history or the "Copied" popup is on.
@@ -97,6 +104,15 @@ final class NotchWindowController: NSWindowController {
     @available(*, unavailable)
     required init?(coder: NSCoder) {
         fatalError("init(coder:) is not supported")
+    }
+
+    /// Typing in the island (a reminder, a voice note's rename) made the panel key; once the
+    /// island closes, keystrokes must go back to the app the user is in, not to Clove. Ordering
+    /// the panel out and in drops key status without activating anything.
+    private func giveUpKeyboard() {
+        guard let window, window.isKeyWindow else { return }
+        window.orderOut(nil)
+        window.orderFrontRegardless()
     }
 
     /// A collapsed island lets clicks through to the menu bar, unless it is showing a notice that

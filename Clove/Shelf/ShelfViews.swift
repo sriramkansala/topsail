@@ -11,17 +11,15 @@ struct ClipboardTabView: View {
     var body: some View {
         VStack(spacing: IslandLayout.pageSwitchGap) {
             if model.clipboardModes.count > 1 {
-                HStack(spacing: 2) {
-                    ModeButton(title: "Clipboard", count: nil, selected: model.visibleClipboardMode == .clipboard) {
+                PageSwitch(options: [
+                    .init(title: "Clipboard", selected: model.visibleClipboardMode == .clipboard) {
                         model.showClipboardMode(.clipboard)
-                    }
-                    ModeButton(title: "Shelf", count: shelf.items.isEmpty ? nil : shelf.items.count,
-                               selected: model.visibleClipboardMode == .shelf) {
+                    },
+                    .init(title: "Shelf", count: shelf.items.isEmpty ? nil : shelf.items.count,
+                          selected: model.visibleClipboardMode == .shelf) {
                         model.showClipboardMode(.shelf)
-                    }
-                    Spacer()
-                }
-                .frame(height: IslandLayout.pageSwitchHeight)
+                    },
+                ])
             }
             ZStack(alignment: .top) {
                 if model.visibleClipboardMode == .shelf {
@@ -34,33 +32,6 @@ struct ClipboardTabView: View {
             }
             .frame(maxHeight: .infinity, alignment: .top)
         }
-    }
-}
-
-/// One side of the Clipboard / Shelf switch: a quiet capsule, lit when selected.
-private struct ModeButton: View {
-    let title: LocalizedStringKey
-    let count: Int?
-    let selected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 4) {
-                Text(title)
-                if let count {
-                    Text("\(count)")
-                        .foregroundColor(.white.opacity(0.45))
-                }
-            }
-            .font(.system(size: 11, weight: .semibold))
-            .foregroundColor(selected ? .white : .white.opacity(0.5))
-            .padding(.horizontal, 10)
-            .frame(height: IslandLayout.pageSwitchHeight)
-            .background(Capsule().fill(Color.white.opacity(selected ? 0.14 : 0)))
-            .contentShape(Capsule())
-        }
-        .buttonStyle(.pressable(.normal, hoverWash: !selected))
     }
 }
 

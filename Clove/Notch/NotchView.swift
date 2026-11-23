@@ -126,7 +126,7 @@ struct NotchView: View {
         private var page: some View {
             ZStack(alignment: .top) {
                 if model.visiblePage == .calendar {
-                    CalendarColumnView(calendar: calendar)
+                    CalendarTabView(model: model, calendar: calendar, reminders: model.features.reminders)
                         .transition(.contentMorph(reduceMotion: reduceMotion))
                 } else if model.visiblePage == .tasks {
                     TasksView(linear: linear, expanded: model.tasksExpanded, onViewMore: model.showMoreTasks)

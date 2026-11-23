@@ -9,6 +9,12 @@ final class NotchViewModel: ObservableObject {
         case expanded
     }
 
+    /// The calendar tab's two halves.
+    enum CalendarMode {
+        case events
+        case reminders
+    }
+
     /// The clipboard tab's two halves.
     enum ClipboardMode {
         case clipboard
@@ -38,6 +44,7 @@ final class NotchViewModel: ObservableObject {
     @Published private(set) var voiceHeight: CGFloat = 160
     @Published private(set) var page: ExpandedPage = .player
     @Published private(set) var clipboardMode: ClipboardMode = .clipboard
+    @Published private(set) var calendarMode: CalendarMode = .events
     /// Files are being dragged over the open island: the shelf lights up to take them.
     @Published private(set) var shelfTargeted = false
     /// Height of the page below the notch row; the expanded island hugs it.
@@ -102,6 +109,8 @@ final class NotchViewModel: ObservableObject {
         let changes: [AnyPublisher<Void, Never>] = [
             $page.map { _ in () }.eraseToAnyPublisher(),
             $clipboardMode.map { _ in () }.eraseToAnyPublisher(),
+            $calendarMode.map { _ in () }.eraseToAnyPublisher(),
+            features.reminders.objectWillChange.map { _ in () }.eraseToAnyPublisher(),
             nowPlaying.$track.map { $0 != nil }.removeDuplicates().map { _ in () }.eraseToAnyPublisher(),
             calendar.objectWillChange.map { _ in () }.eraseToAnyPublisher(),
             linear.objectWillChange.map { _ in () }.eraseToAnyPublisher(),
@@ -428,7 +437,7 @@ final class NotchViewModel: ObservableObject {
     var availablePages: [ExpandedPage] {
         var pages: [ExpandedPage] = []
         if nowPlaying.track != nil { pages.append(.player) }
-        if calendarAvailable { pages.append(.calendar) }
+        if !calendarModes.isEmpty { pages.append(.calendar) }
         if linear.isConnected { pages.append(.tasks) }
         if settings.showSystemPage { pages.append(.system) }
         if !clipboardModes.isEmpty { pages.append(.clipboard) }
@@ -461,9 +470,16 @@ final class NotchViewModel: ObservableObject {
         case .player:
             return nowPlaying.track != nil ? IslandLayout.playerHeight : IslandLayout.messageHeight
         case .calendar:
-            return calendar.access == .granted
+            let switchRow = calendarModes.count > 1 ? IslandLayout.pageSwitchHeight + IslandLayout.pageSwitchGap : 0
+            if visibleCalendarMode == .reminders {
+                let reminders = features.reminders
+                return switchRow + (reminders.access == .granted
+                    ? IslandLayout.remindersHeight(count: reminders.reminders.count)
+                    : IslandLayout.messageHeight)
+            }
+            return switchRow + (calendar.access == .granted
                 ? IslandLayout.calendarHeight(events: calendar.events.count)
-                : IslandLayout.messageHeight
+                : IslandLayout.messageHeight)
         case .tasks:
             if case .failed = linear.status { return IslandLayout.messageHeight }
             let groups = TaskGroup.make(from: linear.issues,
@@ -503,6 +519,24 @@ final class NotchViewModel: ObservableObject {
         Motion.perform(Motion.snappy) {
             self.page = page
         }
+    }
+
+    // MARK: - Calendar tab and reminders
+
+    /// The calendar tab's halves that are on: events (Settings › Island) and reminders
+    /// (Settings › Features).
+    var calendarModes: [CalendarMode] {
+        (calendarAvailable ? [.events] : []) + (settings.isEnabled(.reminders) ? [.reminders] : [])
+    }
+
+    var visibleCalendarMode: CalendarMode {
+        let modes = calendarModes
+        return modes.contains(calendarMode) ? calendarMode : (modes.first ?? .events)
+    }
+
+    func showCalendarMode(_ mode: CalendarMode) {
+        guard mode != visibleCalendarMode else { return }
+        Motion.perform(Motion.snappy) { calendarMode = mode }
     }
 
     // MARK: - Clipboard tab and shelf
@@ -606,6 +640,7 @@ final class NotchViewModel: ObservableObject {
         if fromCopy { clipboardMode = .clipboard }
         if fromDrag { clipboardMode = .shelf }
         features.shelf.pruneMissing()
+        features.reminders.refresh()
         clipboard.refreshAccess()
         linear.refresh()
         system.start()
