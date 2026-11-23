@@ -15,6 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
     private var voiceItem: NSMenuItem?
     private var teleprompterItem: NSMenuItem?
+    private var updateItem: NSMenuItem?
     private var cancellables = Set<AnyCancellable>()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -42,6 +43,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             .store(in: &cancellables)
 
+        settings.publisher(for: .autoUpdates)
+            .sink { [weak self] on in if on { self?.features.updater.start() } else { self?.features.updater.stop() } }
+            .store(in: &cancellables)
+        features.updater.$state
+            .sink { [weak self] state in
+                if case .ready = state { self?.updateItem?.isHidden = false } else { self?.updateItem?.isHidden = true }
+            }
+            .store(in: &cancellables)
         NotificationCenter.default.publisher(for: .cloveStartTeleprompter)
             .sink { [weak self] _ in self?.startTeleprompter() }
             .store(in: &cancellables)
@@ -94,6 +103,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         windowController?.model.stopTracking()
         features.keepAwake.turnOff()
+        if settings.isEnabled(.autoUpdates) { features.updater.installIfReady() }
     }
 
     private func buildStatusItem() {
@@ -134,6 +144,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         teleprompterItem.isHidden = !settings.isEnabled(.teleprompter)
         menu.addItem(teleprompterItem)
         self.teleprompterItem = teleprompterItem
+
+        let updateItem = NSMenuItem(title: String(localized: "Restart to Update"), action: #selector(restartToUpdate),
+                                    keyEquivalent: "")
+        updateItem.target = self
+        updateItem.isHidden = true
+        menu.addItem(updateItem)
+        self.updateItem = updateItem
 
         let settingsItem = NSMenuItem(
             title: "Settings…",
@@ -183,6 +200,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         main.addItem(windowItem)
 
         NSApp.mainMenu = main
+    }
+
+    @objc private func restartToUpdate() {
+        features.updater.restartToUpdate()
     }
 
     @objc private func startTeleprompter() {

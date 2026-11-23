@@ -219,6 +219,9 @@ extension FeaturesPane {
         case .reminders:
             RemindersAccessHint(reminders: features.reminders)
                 .padding(.leading, 40)
+        case .autoUpdates:
+            UpdateStatus(updater: features.updater)
+                .padding(.leading, 40)
         case .notifications:
             HStack {
                 Text("Choose apps, and allow Full Disk Access, in Integrations.")
@@ -288,6 +291,38 @@ extension FeaturesPane {
             .padding(.leading, 40)
         default:
             EmptyView()
+        }
+    }
+}
+
+/// Where automatic updates stand.
+private struct UpdateStatus: View {
+    @ObservedObject var updater: Updater
+
+    var body: some View {
+        HStack {
+            Text(text)
+                .font(.caption)
+                .foregroundColor(.secondary)
+            Spacer()
+            if case .ready = updater.state {
+                Button("Restart to Update") { updater.restartToUpdate() }
+            } else {
+                Button("Check Now") { updater.check() }
+                    .disabled(updater.state == .checking || updater.state == .developmentBuild)
+            }
+        }
+    }
+
+    private var text: String {
+        switch updater.state {
+        case .idle: return ""
+        case .checking: return String(localized: "Checking…")
+        case .upToDate: return String(localized: "Clove is up to date.")
+        case .downloading(let version): return String(localized: "Downloading Clove \(version)…")
+        case .ready(let version): return String(localized: "Clove \(version) installs when Clove quits.")
+        case .failed(let message): return message
+        case .developmentBuild: return String(localized: "This is a development build, which doesn't update itself.")
         }
     }
 }

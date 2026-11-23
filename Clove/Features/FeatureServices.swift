@@ -11,4 +11,5 @@ final class FeatureServices {
     let agents = AgentHub()
     let notifications = NotificationMirror()
     let apps = AppModules()
+    let updater = Updater()
 }
