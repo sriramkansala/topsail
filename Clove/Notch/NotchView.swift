@@ -47,6 +47,7 @@ struct NotchView: View {
         .frame(width: model.islandSize.width + 2 * model.topRadius, height: model.islandSize.height)
         .background(NotchShape(topRadius: model.topRadius, bottomRadius: model.bottomRadius).fill(Color.black))
         .clipShape(NotchShape(topRadius: model.topRadius, bottomRadius: model.bottomRadius))
+        .modifier(ShelfDrop(model: model))
         .shadow(color: .black.opacity(model.state == .expanded ? 0.35 : 0), radius: 10, y: 4)
     }
 
@@ -87,7 +88,7 @@ struct NotchView: View {
                 if model.showsPageTabs {
                     HStack(spacing: IslandLayout.tabSpacing) {
                         ForEach(model.availablePages, id: \.self) { page in
-                            PageTab(symbol: Self.symbol(for: page), page: page, model: model,
+                            PageTab(symbol: Self.symbol(for: page, model: model), page: page, model: model,
                                     namespace: pageNamespace)
                         }
                     }
@@ -134,7 +135,7 @@ struct NotchView: View {
                     SystemPageView(system: model.system)
                         .transition(.contentMorph(reduceMotion: reduceMotion))
                 } else if model.visiblePage == .clipboard {
-                    ClipboardPageView(history: clipboard)
+                    ClipboardTabView(model: model, shelf: model.features.shelf)
                         .transition(.contentMorph(reduceMotion: reduceMotion))
                 } else if nowPlaying.track != nil {
                     ExpandedPlayerView(service: nowPlaying)
@@ -147,13 +148,13 @@ struct NotchView: View {
             .frame(maxWidth: .infinity)
         }
 
-        private static func symbol(for page: NotchViewModel.ExpandedPage) -> String {
+        private static func symbol(for page: NotchViewModel.ExpandedPage, model: NotchViewModel) -> String {
             switch page {
             case .player: return "music.note"
             case .calendar: return "calendar"
             case .tasks: return "checklist"
             case .system: return "gauge.with.dots.needle.50percent"
-            case .clipboard: return "doc.on.doc"
+            case .clipboard: return model.clipboardModes == [.shelf] ? "tray.full" : "doc.on.doc"
             }
         }
     }
@@ -226,5 +227,42 @@ private struct KeepAwakeButton: View {
         .buttonStyle(.pressable)
         .help(keepAwake.isOn ? "Keep Awake is on: click to let your Mac sleep" : "Keep Awake: stop your Mac sleeping")
         .accessibilityLabel(keepAwake.isOn ? "Keep Awake, on" : "Keep Awake, off")
+    }
+}
+
+/// The open island takes files dropped anywhere on it, for the shelf (when the shelf is on).
+private struct ShelfDrop: ViewModifier {
+    @ObservedObject var model: NotchViewModel
+
+    func body(content: Content) -> some View {
+        if model.state == .expanded && model.clipboardModes.contains(.shelf) {
+            content.onDrop(of: [.fileURL], isTargeted: Binding(get: { model.shelfTargeted },
+                                                               set: { model.setShelfTargeted($0) })) { providers in
+                load(providers)
+                return true
+            }
+        } else {
+            content
+        }
+    }
+
+    private func load(_ providers: [NSItemProvider]) {
+        let group = DispatchGroup()
+        var urls: [URL] = []
+        let lock = NSLock()
+        for provider in providers where provider.canLoadObject(ofClass: URL.self) {
+            group.enter()
+            _ = provider.loadObject(ofClass: URL.self) { url, _ in
+                if let url, url.isFileURL {
+                    lock.lock(); urls.append(url); lock.unlock()
+                }
+                group.leave()
+            }
+        }
+        group.notify(queue: .main) {
+            MainActor.assumeIsolated {
+                model.shelfDropped(urls)
+            }
+        }
     }
 }

@@ -5,4 +5,5 @@ import Foundation
 @MainActor
 final class FeatureServices {
     let keepAwake = KeepAwake()
+    let shelf = ShelfStore()
 }

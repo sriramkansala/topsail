@@ -9,6 +9,12 @@ final class NotchViewModel: ObservableObject {
         case expanded
     }
 
+    /// The clipboard tab's two halves.
+    enum ClipboardMode {
+        case clipboard
+        case shelf
+    }
+
     /// What the expanded island shows; only one page at a time.
     enum ExpandedPage {
         case player
@@ -31,6 +37,9 @@ final class NotchViewModel: ObservableObject {
     /// Natural height of the voice note's content, reported by `VoiceIslandView`.
     @Published private(set) var voiceHeight: CGFloat = 160
     @Published private(set) var page: ExpandedPage = .player
+    @Published private(set) var clipboardMode: ClipboardMode = .clipboard
+    /// Files are being dragged over the open island: the shelf lights up to take them.
+    @Published private(set) var shelfTargeted = false
     /// Height of the page below the notch row; the expanded island hugs it.
     @Published private(set) var expandedContentHeight: CGFloat = IslandLayout.messageHeight
 
@@ -90,15 +99,19 @@ final class NotchViewModel: ObservableObject {
             .store(in: &cancellables)
 
         // The expanded height follows the page and what it shows.
-        Publishers.Merge7(
-            $page.map { _ in () },
-            nowPlaying.$track.map { $0 != nil }.removeDuplicates().map { _ in () },
-            calendar.objectWillChange.map { _ in () },
-            linear.objectWillChange.map { _ in () },
-            settings.$showCalendar.map { _ in () },
-            settings.$showClipboard.map { _ in () },
-            clipboard.objectWillChange.map { _ in () }
-        )
+        let changes: [AnyPublisher<Void, Never>] = [
+            $page.map { _ in () }.eraseToAnyPublisher(),
+            $clipboardMode.map { _ in () }.eraseToAnyPublisher(),
+            nowPlaying.$track.map { $0 != nil }.removeDuplicates().map { _ in () }.eraseToAnyPublisher(),
+            calendar.objectWillChange.map { _ in () }.eraseToAnyPublisher(),
+            linear.objectWillChange.map { _ in () }.eraseToAnyPublisher(),
+            settings.$showCalendar.map { _ in () }.eraseToAnyPublisher(),
+            settings.$showClipboard.map { _ in () }.eraseToAnyPublisher(),
+            settings.$features.map { _ in () }.eraseToAnyPublisher(),
+            clipboard.objectWillChange.map { _ in () }.eraseToAnyPublisher(),
+            features.shelf.objectWillChange.map { _ in () }.eraseToAnyPublisher(),
+        ]
+        Publishers.MergeMany(changes)
         .receive(on: DispatchQueue.main)
         .sink { [weak self] in
             self?.objectWillChange.send()
@@ -244,17 +257,20 @@ final class NotchViewModel: ObservableObject {
     func startTracking() {
         guard globalMonitor == nil, localMonitor == nil else { return }
 
-        let events: NSEvent.EventTypeMask = [.mouseMoved, .leftMouseDragged]
+        // Mouse-down only marks where a drag would start (for the shelf).
+        let events: NSEvent.EventTypeMask = [.mouseMoved, .leftMouseDragged, .leftMouseDown]
 
-        globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: events) { [weak self] _ in
+        globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: events) { [weak self] event in
+            let isDown = event.type == .leftMouseDown
             MainActor.assumeIsolated {
-                self?.handleMouse(at: NSEvent.mouseLocation)
+                self?.handle(isDown: isDown)
             }
         }
 
         localMonitor = NSEvent.addLocalMonitorForEvents(matching: events) { [weak self] event in
+            let isDown = event.type == .leftMouseDown
             MainActor.assumeIsolated {
-                self?.handleMouse(at: NSEvent.mouseLocation)
+                self?.handle(isDown: isDown)
             }
             return event
         }
@@ -273,6 +289,14 @@ final class NotchViewModel: ObservableObject {
         pendingExpand = nil
         pendingCollapse?.cancel()
         pendingCollapse = nil
+    }
+
+    private func handle(isDown: Bool) {
+        if isDown {
+            dragChangeCount = NSPasteboard(name: .drag).changeCount
+        } else {
+            handleMouse(at: NSEvent.mouseLocation)
+        }
     }
 
     private func handleMouse(at location: CGPoint) {
@@ -407,7 +431,7 @@ final class NotchViewModel: ObservableObject {
         if calendarAvailable { pages.append(.calendar) }
         if linear.isConnected { pages.append(.tasks) }
         if settings.showSystemPage { pages.append(.system) }
-        if settings.showClipboard { pages.append(.clipboard) }
+        if !clipboardModes.isEmpty { pages.append(.clipboard) }
         return pages.isEmpty ? [.player] : pages
     }
 
@@ -449,8 +473,10 @@ final class NotchViewModel: ObservableObject {
         case .system:
             return IslandLayout.systemPageHeight(hasBattery: system.battery != nil)
         case .clipboard:
-            return IslandLayout.clipboardHeight(setup: clipboard.access != .allowed,
-                                                pinned: clipboard.pinned.count, recent: clipboard.items.count)
+            let switchRow = clipboardModes.count > 1 ? IslandLayout.pageSwitchHeight + IslandLayout.pageSwitchGap : 0
+            if visibleClipboardMode == .shelf { return switchRow + IslandLayout.shelfHeight }
+            return switchRow + IslandLayout.clipboardHeight(setup: clipboard.access != .allowed,
+                                                            pinned: clipboard.pinned.count, recent: clipboard.items.count)
         }
     }
 
@@ -477,6 +503,55 @@ final class NotchViewModel: ObservableObject {
         Motion.perform(Motion.snappy) {
             self.page = page
         }
+    }
+
+    // MARK: - Clipboard tab and shelf
+
+    /// The clipboard tab's halves that are on: the history (Settings › Island) and the shelf
+    /// (Settings › Features).
+    var clipboardModes: [ClipboardMode] {
+        (settings.showClipboard ? [.clipboard] : []) + (settings.isEnabled(.shelf) ? [.shelf] : [])
+    }
+
+    var visibleClipboardMode: ClipboardMode {
+        let modes = clipboardModes
+        return modes.contains(clipboardMode) ? clipboardMode : (modes.first ?? .clipboard)
+    }
+
+    func showClipboardMode(_ mode: ClipboardMode) {
+        guard mode != visibleClipboardMode else { return }
+        Motion.perform(Motion.snappy) { clipboardMode = mode }
+    }
+
+    /// Files dragged over (or off) the open island: the shelf comes forward to take them.
+    func setShelfTargeted(_ targeted: Bool) {
+        guard targeted != shelfTargeted else { return }
+        shelfTargeted = targeted
+        guard targeted, clipboardModes.contains(.shelf) else { return }
+        Motion.perform(Motion.snappy) {
+            page = .clipboard
+            clipboardMode = .shelf
+        }
+    }
+
+    func shelfDropped(_ urls: [URL]) {
+        shelfTargeted = false
+        features.shelf.add(urls)
+        Motion.perform(Motion.snappy) {
+            page = .clipboard
+            clipboardMode = .shelf
+        }
+    }
+
+    /// The drag pasteboard's count when the mouse last went down, so a drag that started since
+    /// can be told from what an old drag left behind.
+    private var dragChangeCount = NSPasteboard(name: .drag).changeCount
+
+    /// Files are being dragged right now (and the shelf is on).
+    private var isDraggingFiles: Bool {
+        guard settings.isEnabled(.shelf), NSEvent.pressedMouseButtons & 1 != 0 else { return false }
+        let pasteboard = NSPasteboard(name: .drag)
+        return pasteboard.changeCount != dragChangeCount && pasteboard.types?.contains(.fileURL) == true
     }
 
     /// "View more" on the tasks page: the list grows in place while the island stays open.
@@ -524,9 +599,13 @@ final class NotchViewModel: ObservableObject {
 
     func expand() {
         guard state != .expanded else { return }
-        // Hovering "Copied to clipboard" opens the history.
-        let fromCopy = activities.current?.kind == .copied && availablePages.contains(.clipboard)
-        page = fromCopy ? .clipboard : preferredPage
+        // Hovering "Copied to clipboard" opens the history; files dragged to the notch, the shelf.
+        let fromCopy = activities.current?.kind == .copied && clipboardModes.contains(.clipboard)
+        let fromDrag = isDraggingFiles
+        page = fromCopy || fromDrag ? .clipboard : preferredPage
+        if fromCopy { clipboardMode = .clipboard }
+        if fromDrag { clipboardMode = .shelf }
+        features.shelf.pruneMissing()
         clipboard.refreshAccess()
         linear.refresh()
         system.start()

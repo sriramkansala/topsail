@@ -129,6 +129,17 @@ enum IslandLayout {
             clipboardMaxHeight)
     }
 
+    // The clipboard tab's Clipboard / Shelf switch, when both are on.
+    static let pageSwitchHeight: CGFloat = 22
+    static let pageSwitchGap: CGFloat = 8
+
+    // File shelf: a row of tiles (thumbnail over name) under a header; four fit, more scroll.
+    static let shelfThumbnailSize: CGFloat = 48
+    static let shelfTileWidth: CGFloat = 76
+    static let shelfTileHeight: CGFloat = 88
+    static let shelfVisibleTiles = 4
+    static let shelfHeight: CGFloat = clipboardHeaderHeight + clipboardHeaderGap + shelfTileHeight
+
     // Tasks page: issues grouped under their workflow state, as in Linear's "My issues".
     static let taskRowHeight: CGFloat = 18
     static let taskHeaderHeight: CGFloat = 14
