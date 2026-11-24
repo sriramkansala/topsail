@@ -201,7 +201,8 @@ private struct SessionRow: View {
                 .buttonStyle(.pressable)
                 .help("Clear")
             } else {
-                TimelineView(.everyMinute) { context in
+                // Ticks on the session's own minutes, not the clock's, which run up to a minute behind it.
+                TimelineView(.periodic(from: session.since, by: 60)) { context in
                     Text(Self.age(from: session.since, to: context.date))
                         .font(.system(size: 10.5).monospacedDigit())
                         .foregroundColor(.white.opacity(0.4))
@@ -235,7 +236,8 @@ private struct SessionRow: View {
     }
 
     static func age(from date: Date, to now: Date) -> String {
-        let minutes = Int(now.timeIntervalSince(date) / 60)
+        // Ticks land on whole minutes; a hair under one must not read as the one before.
+        let minutes = Int((now.timeIntervalSince(date) + 0.5) / 60)
         if minutes < 1 { return String(localized: "now") }
         if minutes < 60 { return "\(minutes)m" }
         return "\(minutes / 60)h"

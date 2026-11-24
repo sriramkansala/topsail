@@ -178,7 +178,8 @@ private struct ClipboardRow: View {
                     .foregroundColor(.white.opacity(0.4))
                     .transition(.opacity)
             } else {
-                TimelineView(.everyMinute) { context in
+                // Ticks on the copy's own minutes, not the clock's, which run up to a minute behind it.
+                TimelineView(.periodic(from: item.copiedAt, by: 60)) { context in
                     Text(Self.age(of: item.copiedAt, at: context.date))
                         .font(.system(size: 10.5).monospacedDigit())
                         .foregroundColor(.white.opacity(0.4))
@@ -237,7 +238,8 @@ private struct ClipboardRow: View {
     }
 
     static func age(of date: Date, at now: Date) -> String {
-        let seconds = max(0, now.timeIntervalSince(date))
+        // Ticks land on whole minutes; a hair under one must not read as the one before.
+        let seconds = max(0, now.timeIntervalSince(date) + 0.5)
         switch seconds {
         case ..<60: return "now"
         case ..<3600: return "\(Int(seconds / 60))m"

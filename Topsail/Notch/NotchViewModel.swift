@@ -138,6 +138,7 @@ final class NotchViewModel: ObservableObject {
             $calendarMode.map { _ in () }.eraseToAnyPublisher(),
             features.reminders.objectWillChange.map { _ in () }.eraseToAnyPublisher(),
             features.agents.objectWillChange.map { _ in () }.eraseToAnyPublisher(),
+            features.apps.objectWillChange.map { _ in () }.eraseToAnyPublisher(),
             nowPlaying.$track.map { $0 != nil }.removeDuplicates().map { _ in () }.eraseToAnyPublisher(),
             calendar.objectWillChange.map { _ in () }.eraseToAnyPublisher(),
             linear.objectWillChange.map { _ in () }.eraseToAnyPublisher(),
@@ -545,7 +546,7 @@ final class NotchViewModel: ObservableObject {
         case .system:
             return IslandLayout.systemPageHeight(hasBattery: system.battery != nil)
         case .apps:
-            return IslandLayout.appsHeight
+            return features.apps.needsRoom ? IslandLayout.appsHeight : IslandLayout.messageHeight
         case .agents:
             return IslandLayout.agentsHeight(approvals: features.agents.approvals.count,
                                              sessions: features.agents.sessions.count)
@@ -710,6 +711,7 @@ final class NotchViewModel: ObservableObject {
         clipboard.refreshAccess()
         linear.refresh()
         system.start()
+        if settings.isEnabled(.apps) { features.apps.noteOpenApps() }
         updateContentHeight(animated: false)
         cancelPendingExpand()
         Motion.perform(Motion.islandGrow) {

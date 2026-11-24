@@ -33,6 +33,8 @@ final class AppModules: ObservableObject {
     @Published private(set) var problem: String?
     @Published private(set) var terminalOpen = false
     @Published private(set) var chromeOpen = false
+    /// The apps have answered since the page came on screen.
+    @Published private(set) var loaded = false
 
     var showsTerminal = true
     var showsChrome = true
@@ -44,6 +46,7 @@ final class AppModules: ObservableObject {
     static let visibleTabs = 4
 
     private var timer: Timer?
+    private var awaiting = 0
 
     /// The front window's active tab, then the newest others (Chrome numbers tabs as they open).
     var listedTabs: [Tab] {
@@ -57,10 +60,29 @@ final class AppModules: ObservableObject {
 
     var isEmpty: Bool { terminal == nil && listedTabs.isEmpty && video == nil }
 
+    private var asksTerminal: Bool { showsTerminal && terminalOpen }
+    private var asksChrome: Bool { (showsChrome || showsYouTube) && chromeOpen }
+
+    /// Whether the page needs its full height: something to show, or an open app yet to answer.
+    /// Otherwise it's a one-line message.
+    var needsRoom: Bool {
+        !isEmpty || problem != nil || (!loaded && (asksTerminal || asksChrome))
+    }
+
+    /// Which of the apps are open, before the island sizes the page.
+    func noteOpenApps() {
+        let running = Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier))
+        let terminal = running.contains(Self.terminalID), chrome = running.contains(Self.chromeID)
+        if terminal != terminalOpen { terminalOpen = terminal }
+        if chrome != chromeOpen { chromeOpen = chrome }
+    }
+
     /// The page came on (or went off) screen.
     func setVisible(_ visible: Bool) {
         timer?.invalidate()
         timer = nil
+        awaiting = 0
+        loaded = false
         guard visible else {
             terminal = nil
             tabs = []
@@ -78,30 +100,37 @@ final class AppModules: ObservableObject {
     private func refresh() {
         #if DIRECT
         // Only apps already open: asking one that isn't would launch it.
-        let running = Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier))
-        terminalOpen = running.contains(Self.terminalID)
-        chromeOpen = running.contains(Self.chromeID)
-        if showsTerminal, terminalOpen {
+        noteOpenApps()
+        if asksTerminal {
+            awaiting += 1
             AppleScriptRunner.run(Self.terminalScript) { [weak self] outcome in
                 self?.report(outcome, app: "Terminal")
                 guard self?.timer != nil else { return }
                 let value = outcome.descriptor?.stringValue.flatMap(Self.parseTerminal)
                 if self?.terminal != value { self?.terminal = value }
+                self?.answered()
             }
         } else if terminal != nil {
             terminal = nil
         }
-        if showsChrome || showsYouTube, chromeOpen {
+        if asksChrome {
+            awaiting += 1
             AppleScriptRunner.run(Self.chromeScript) { [weak self] outcome in
                 self?.report(outcome, app: "Chrome")
                 guard self?.timer != nil else { return }
                 let value = Self.parseTabs(Self.rows(outcome.descriptor))
                 if self?.tabs != value { self?.tabs = value }
+                self?.answered()
             }
         } else if !tabs.isEmpty {
             tabs = []
         }
         #endif
+    }
+
+    private func answered() {
+        awaiting = max(0, awaiting - 1)
+        if awaiting == 0, !loaded { loaded = true }
     }
 
     func show(_ tab: Tab) {
