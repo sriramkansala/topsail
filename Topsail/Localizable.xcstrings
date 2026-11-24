@@ -4234,6 +4234,278 @@
           }
         }
       }
+    },
+    "How Topsail opens and responds.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cómo se abre y responde Topsail."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comment Topsail s’ouvre et réagit."
+          }
+        }
+      }
+    },
+    "What shows up in the notch, and the pages it opens to.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lo que aparece en el notch y las páginas que abre."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce qui apparaît dans l’encoche, et les pages sur lesquelles elle s’ouvre."
+          }
+        }
+      }
+    },
+    "The apps and services Topsail connects to.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las apps y los servicios a los que se conecta Topsail."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les apps et services auxquels Topsail se connecte."
+          }
+        }
+      }
+    },
+    "A light tap on the trackpad as the island opens.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un leve toque en el trackpad al abrirse la isla."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un léger retour du trackpad quand l’îlot s’ouvre."
+          }
+        }
+      }
+    },
+    "About": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Acerca de"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "À propos"
+          }
+        }
+      }
+    },
+    "Version %@": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Versión %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version %@"
+          }
+        }
+      }
+    },
+    "Website": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sitio web"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Site web"
+          }
+        }
+      }
+    },
+    "Report a Problem": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Informar de un problema"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signaler un problème"
+          }
+        }
+      }
+    },
+    "Sound and brightness": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonido y brillo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Son et luminosité"
+          }
+        }
+      }
+    },
+    "Sound": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonido"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Son"
+          }
+        }
+      }
+    },
+    "In the island": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En la isla"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dans l’îlot"
+          }
+        }
+      }
+    },
+    "With other apps": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Con otras apps"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avec d’autres apps"
+          }
+        }
+      }
+    },
+    "Updates": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actualizaciones"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mises à jour"
+          }
+        }
+      }
+    },
+    "A card under the notch with the device's name; what's playing stays beside it.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una tarjeta bajo el notch con el nombre del dispositivo; lo que suena sigue al lado."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une carte sous l’encoche avec le nom de l’appareil ; la lecture en cours reste à côté."
+          }
+        }
+      }
+    },
+    "Clicking the low-battery notice opens Battery settings, where you can turn on Low Power Mode.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Al hacer clic en el aviso de batería baja se abren los ajustes de Batería, donde puedes activar el modo de bajo consumo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un clic sur l’avis de batterie faible ouvre les réglages Batterie, où vous pouvez activer le mode économie d’énergie."
+          }
+        }
+      }
+    },
+    "Hide macOS volume indicator": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ocultar el indicador de volumen de macOS"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Masquer l’indicateur de volume de macOS"
+          }
+        }
+      }
+    },
+    "Topsail handles the volume keys itself; while Spotify plays on another device, they control that device. Needs Input Monitoring and Accessibility permission.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Topsail gestiona las teclas de volumen; mientras Spotify suena en otro dispositivo, controlan ese dispositivo. Necesita los permisos de Monitorización de entrada y Accesibilidad."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Topsail gère lui-même les touches de volume ; quand Spotify joue sur un autre appareil, elles contrôlent cet appareil. Nécessite les autorisations Surveillance de l’entrée et Accessibilité."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

@@ -11,15 +11,29 @@ final class SettingsWindowController: NSWindowController {
          features: FeatureServices) {
         self.settings = settings
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 700, height: 580),
-            styleMask: [.titled, .closable],
+            contentRect: NSRect(origin: .zero, size: SettingsStyle.windowSize),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
         window.title = "Topsail Settings"
         window.isReleasedWhenClosed = false
-        window.contentView = NSHostingView(rootView: SettingsView(settings: settings, linear: linear, calendar: calendar,
-                                                                    clipboard: clipboard, features: features))
+        // The sidebar and the page run under the title bar; the empty toolbar sets the close button
+        // in, clear of the sidebar's corner, and gives the window its larger corners.
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
+        window.titlebarSeparatorStyle = .none
+        window.toolbar = NSToolbar()
+        window.toolbarStyle = .unified
+        let host = NSHostingView(rootView: SettingsView(settings: settings, linear: linear, calendar: calendar,
+                                                          clipboard: clipboard, features: features))
+        // The window sizes the view, not the other way round.
+        host.sizingOptions = []
+        window.contentView = host
+        // Taller or shorter, never wider.
+        window.contentMinSize = CGSize(width: SettingsStyle.windowSize.width, height: SettingsStyle.minimumHeight)
+        window.contentMaxSize = CGSize(width: SettingsStyle.windowSize.width, height: SettingsStyle.maximumHeight)
+        window.setContentSize(SettingsStyle.windowSize)
         window.center()
         super.init(window: window)
     }

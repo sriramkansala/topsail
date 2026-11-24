@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Settings: a sidebar of panes, as in System Settings. General, the island's activities and
+/// Settings: a floating sidebar of panes beside the one chosen. General, the island's activities and
 /// pages, the switched-off-by-default features, and the integrations they connect to.
 struct SettingsView: View {
     @ObservedObject var settings: AppSettings
@@ -26,84 +26,105 @@ struct SettingsView: View {
         var symbol: String {
             switch self {
             case .general: return "gearshape"
-            case .island: return "capsule.portrait"
-            case .features: return "square.stack.3d.up"
+            case .island: return "rectangle.topthird.inset.filled"
+            case .features: return "switch.2"
             case .integrations: return "puzzlepiece.extension"
             }
         }
     }
 
-    @State private var pane: Pane? = .general
+    @State private var pane: Pane = .general
 
     var body: some View {
-        NavigationSplitView {
-            List(Pane.allCases, selection: $pane) { pane in
-                Label(pane.title, systemImage: pane.symbol)
-                    .tag(pane)
-            }
-            .navigationSplitViewColumnWidth(170)
-        } detail: {
+        HStack(spacing: 0) {
+            SettingsSidebar(pane: $pane)
             Group {
-                switch pane ?? .general {
+                switch pane {
                 case .general: GeneralPane(settings: settings)
                 case .island: IslandPane(settings: settings, calendar: calendar, clipboard: clipboard)
                 case .features: FeaturesPane(settings: settings, features: features, open: { pane = $0 })
-                case .integrations: IntegrationsPane(settings: settings, linear: linear, features: features,
-                                                     open: { pane = $0 })
+                case .integrations: IntegrationsPane(settings: settings, linear: linear, features: features)
                 }
             }
-            .formStyle(.grouped)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(width: 700, height: 580)
+        .background(SettingsStyle.background)
+        .ignoresSafeArea()
+        .frame(minWidth: SettingsStyle.windowSize.width, maxWidth: SettingsStyle.windowSize.width,
+               minHeight: SettingsStyle.minimumHeight, maxHeight: SettingsStyle.maximumHeight)
     }
 }
 
-/// Launch at login, haptics, and where to find Topsail.
+// MARK: - General
+
+/// Launch at login, haptics, and about Topsail.
 private struct GeneralPane: View {
     @ObservedObject var settings: AppSettings
 
-    private var versionString: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
-    }
-
     var body: some View {
-        Form {
-            Section {
-                VStack(alignment: .leading, spacing: 2) {
-                    Toggle(
-                        "Launch at login",
-                        isOn: Binding(
-                            get: { settings.launchAtLogin },
-                            set: { settings.setLaunchAtLogin($0) }
-                        )
-                    )
+        SettingsPage(title: "General", detail: "How Topsail opens and responds.") {
+            SettingsSection(note: "Topsail lives in the notch: move the pointer there to open it. Settings is also in the menu bar.") {
+                SettingsGroup {
+                    SettingsToggle("Launch at login", isOn: Binding(
+                        get: { settings.launchAtLogin },
+                        set: { settings.setLaunchAtLogin($0) }
+                    ))
                     if settings.launchAtLoginNeedsApproval {
-                        PermissionHint(text: String(localized: "Allow Topsail in System Settings › General › Login Items"),
-                                       button: String(localized: "Open Login Items"), action: settings.openLoginItemsSettings)
+                        SettingsCallout(text: String(localized: "Allow Topsail in System Settings › General › Login Items"),
+                                        button: String(localized: "Open Login Items"), action: settings.openLoginItemsSettings)
                     }
                     if let error = settings.launchAtLoginError {
-                        Text(error)
-                            .font(.caption)
-                            .foregroundColor(.red)
+                        SettingsNote(text: Text(error), color: SettingsStyle.destructive)
+                            .padding(.top, -SettingsStyle.rowVertical)
                     }
                 }
-
-                Toggle("Haptic feedback", isOn: $settings.hapticFeedback)
-            } footer: {
-                Text("Topsail lives in the notch: move the pointer there to open it. Settings is also in the menu bar.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                SettingsToggle("Haptic feedback", detail: String(localized: "A light tap on the trackpad as the island opens."),
+                               isOn: $settings.hapticFeedback)
             }
 
-            Section {
-                Text("Topsail \(versionString)")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
+            SettingsSection("About") {
+                AboutRow()
             }
         }
     }
 }
+
+/// The app's icon, name and version, and where it lives.
+private struct AboutRow: View {
+    private static let website = URL(string: "https://sriramkansala.github.io/topsail/")!
+    private static let repository = URL(string: "https://github.com/sriramkansala/topsail")!
+    private static let issues = URL(string: "https://github.com/sriramkansala/topsail/issues")!
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: SettingsStyle.rowHorizontal) {
+            HStack(spacing: SettingsStyle.rowHorizontal) {
+                Image(nsImage: NSApp.applicationIconImage)
+                    .resizable()
+                    .frame(width: 52, height: 52)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: SettingsStyle.textGap) {
+                    Text(verbatim: "Topsail")
+                        .font(SettingsStyle.title)
+                        .foregroundStyle(SettingsStyle.foreground)
+                    Text("Version \(SettingsView.version)")
+                        .font(SettingsStyle.caption)
+                        .foregroundStyle(SettingsStyle.muted)
+                        .textSelection(.enabled)
+                }
+            }
+            HStack(spacing: 8) {
+                Button("Website") { NSWorkspace.shared.open(Self.website) }
+                Button { NSWorkspace.shared.open(Self.repository) } label: { Text(verbatim: "GitHub") }
+                Button("Report a Problem") { NSWorkspace.shared.open(Self.issues) }
+            }
+            .buttonStyle(.settings)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(SettingsStyle.rowHorizontal)
+    }
+}
+
+// MARK: - Island
 
 /// What the island shows by itself (live activities) and the pages it opens to.
 private struct IslandPane: View {
@@ -112,77 +133,70 @@ private struct IslandPane: View {
     @ObservedObject var clipboard: ClipboardHistory
 
     var body: some View {
-        Form {
-            Section("Live activities") {
-                Toggle("Now playing", isOn: $settings.showMusicActivity)
-                Captioned(caption: SettingsView.lowBatteryNote) {
-                    Toggle("Charging and low battery", isOn: $settings.showChargingActivity)
-                }
-                Captioned(caption: SettingsView.deviceNote) {
-                    Toggle("Headphones and speakers", isOn: $settings.showDeviceActivity)
-                }
-                Captioned(caption: String(localized: "A countdown beside the notch, then Join, Ignore or Remind me in 5 min as the call starts.")) {
-                    Toggle("Meeting reminders", isOn: $settings.showMeetingReminders)
-                }
-                Toggle("Linear deadlines", isOn: $settings.showTaskReminders)
-                Captioned(caption: String(localized: "“Copied to clipboard” under the notch; hover it for what you copied.")) {
-                    Toggle("Copying", isOn: $settings.showCopyActivity)
-                }
+        SettingsPage(title: "Island", detail: "What shows up in the notch, and the pages it opens to.") {
+            SettingsSection("Live activities") {
+                SettingsToggle("Now playing", isOn: $settings.showMusicActivity)
+                SettingsToggle("Charging and low battery", detail: SettingsView.lowBatteryNote, isOn: $settings.showChargingActivity)
+                SettingsToggle("Headphones and speakers", detail: SettingsView.deviceNote, isOn: $settings.showDeviceActivity)
+                SettingsToggle("Meeting reminders",
+                               detail: String(localized: "A countdown beside the notch, then Join, Ignore or Remind me in 5 min as the call starts."),
+                               isOn: $settings.showMeetingReminders)
+                SettingsToggle("Linear deadlines", isOn: $settings.showTaskReminders)
+                SettingsToggle("Copying", detail: String(localized: "“Copied to clipboard” under the notch; hover it for what you copied."),
+                               isOn: $settings.showCopyActivity)
+            }
 
-                Captioned(caption: settings.hideSystemVolumeHUD ? nil : String(localized: "Appears alongside the system volume indicator.")) {
-                    Toggle("Volume", isOn: $settings.showVolumeActivity)
-                }
-
+            SettingsSection(SettingsView.soundTitle) {
+                SettingsToggle("Volume",
+                               detail: settings.hideSystemVolumeHUD ? nil : String(localized: "Appears alongside the system volume indicator."),
+                               isOn: $settings.showVolumeActivity)
                 #if DIRECT
-                Captioned(caption: settings.hideSystemVolumeHUD ? nil : String(localized: "Shown while Topsail handles the brightness keys (below).")) {
-                    Toggle("Brightness", isOn: $settings.showBrightnessActivity)
-                }
+                SettingsToggle("Brightness",
+                               detail: settings.hideSystemVolumeHUD ? nil : String(localized: "Shown while Topsail handles the brightness keys (below)."),
+                               isOn: $settings.showBrightnessActivity)
                 #endif
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Toggle(SettingsView.takeoverTitle, isOn: $settings.hideSystemVolumeHUD)
-                    Text(SettingsView.takeoverNote)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-
+                SettingsGroup {
+                    SettingsToggle(Text(SettingsView.takeoverTitle), detail: Text(SettingsView.takeoverNote),
+                                   isOn: $settings.hideSystemVolumeHUD, icon: { EmptyView() })
                     if settings.hideSystemVolumeHUD && !settings.accessibilityGranted {
-                        PermissionHint(text: String(localized: "Allow Topsail under Privacy & Security › Input Monitoring and Accessibility"),
-                                       button: String(localized: "Open System Settings"), action: settings.openKeyAccessSettings)
+                        SettingsCallout(text: String(localized: "Allow Topsail under Privacy & Security › Input Monitoring and Accessibility"),
+                                        button: String(localized: "Open System Settings"), action: settings.openKeyAccessSettings)
                     }
                 }
             }
 
-            Section("Pages") {
-                VStack(alignment: .leading, spacing: 2) {
-                    Toggle("Upcoming events", isOn: $settings.showCalendar)
+            SettingsSection("Pages") {
+                SettingsGroup {
+                    SettingsToggle("Upcoming events", isOn: $settings.showCalendar)
                     switch calendar.access {
                     case .notDetermined:
-                        PermissionHint(text: String(localized: "Topsail needs access to your calendars"),
-                                       button: String(localized: "Allow…"), action: calendar.requestAccess)
+                        SettingsCallout(text: String(localized: "Topsail needs access to your calendars"),
+                                        button: String(localized: "Allow…"), action: calendar.requestAccess)
                     case .denied:
-                        PermissionHint(text: String(localized: "Allow Topsail under Privacy & Security › Calendars"),
-                                       button: String(localized: "Open System Settings"),
-                                       action: { SystemSettings.open("Privacy_Calendars") })
+                        SettingsCallout(text: String(localized: "Allow Topsail under Privacy & Security › Calendars"),
+                                        button: String(localized: "Open System Settings"),
+                                        action: { SystemSettings.open("Privacy_Calendars") })
                     case .granted:
                         EmptyView()
                     }
                 }
-                Toggle("Battery and performance", isOn: $settings.showSystemPage)
-                VStack(alignment: .leading, spacing: 2) {
-                    Toggle("Clipboard history", isOn: $settings.showClipboard)
-                    Text("The last \(ClipboardHistory.limit) things you copied, kept in memory while Topsail runs; pin one to keep it on this Mac for good. Never sent anywhere, and passwords are skipped.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                SettingsToggle("Battery and performance", isOn: $settings.showSystemPage)
+                SettingsGroup {
+                    SettingsToggle("Clipboard history",
+                                   detail: String(localized: "The last \(ClipboardHistory.limit) things you copied, kept in memory while Topsail runs; pin one to keep it on this Mac for good. Never sent anywhere, and passwords are skipped."),
+                                   isOn: $settings.showClipboard)
                     if settings.showClipboard && clipboard.access != .allowed {
-                        PermissionHint(text: String(localized: "Set Topsail to Always Allow under Privacy & Security › Paste from Other Apps"),
-                                       button: clipboard.access == .notDetermined ? String(localized: "Allow…") : String(localized: "Open System Settings"),
-                                       action: clipboard.requestAccess)
+                        SettingsCallout(text: String(localized: "Set Topsail to Always Allow under Privacy & Security › Paste from Other Apps"),
+                                        button: clipboard.access == .notDetermined ? String(localized: "Allow…") : String(localized: "Open System Settings"),
+                                        action: clipboard.requestAccess)
                     }
                 }
             }
         }
     }
 }
+
+// MARK: - Features
 
 /// Every switched-off-by-default feature, with what it does; turning one on may ask for a
 /// permission or point to its integration.
@@ -192,21 +206,30 @@ private struct FeaturesPane: View {
     let open: (SettingsView.Pane) -> Void
 
     var body: some View {
-        Form {
-            Section {
-                ForEach(Feature.available) { feature in
-                    FeatureRow(feature: feature, isOn: Binding(
-                        get: { settings.isEnabled(feature) },
-                        set: { settings.setEnabled(feature, $0) }
-                    ))
-                    if settings.isEnabled(feature) {
-                        options(for: feature)
+        SettingsPage(title: "Features",
+                     detail: "New features start switched off. Each one asks for any permission it needs when you turn it on.") {
+            section("In the island", [.shelf, .reminders, .keepAwake, .teleprompter])
+            section("With other apps", [.agents, .notifications, .apps])
+            section("Updates", [.autoUpdates])
+        }
+    }
+
+    @ViewBuilder private func section(_ title: LocalizedStringKey, _ group: [Feature]) -> some View {
+        let offered = group.filter(Feature.available.contains)
+        if !offered.isEmpty {
+            SettingsSection(title) {
+                ForEach(offered) { feature in
+                    SettingsGroup {
+                        SettingsToggle(Text(feature.title), detail: Text(feature.summary), isOn: Binding(
+                            get: { settings.isEnabled(feature) },
+                            set: { on in Motion.perform(Motion.fluidSlow) { settings.setEnabled(feature, on) } }
+                        ), icon: { SettingsGlyph(symbol: feature.symbol, lit: settings.isEnabled(feature)) })
+                        if settings.isEnabled(feature) {
+                            options(for: feature)
+                                .transition(.opacity)
+                        }
                     }
                 }
-            } footer: {
-                Text("New features start switched off. Each one asks for any permission it needs when you turn it on.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
             }
         }
     }
@@ -218,79 +241,76 @@ extension FeaturesPane {
         switch feature {
         case .reminders:
             RemindersAccessHint(reminders: features.reminders)
-                .padding(.leading, 40)
         case .autoUpdates:
-            UpdateStatus(updater: features.updater)
-                .padding(.leading, 40)
+            SettingsPanel { UpdateStatus(updater: features.updater) }
         case .notifications:
-            HStack {
-                Text("Choose apps, and allow Full Disk Access, in Integrations.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                Spacer()
-                Button("Integrations…") { open(.integrations) }
+            SettingsPanel {
+                SettingsHintRow(text: Text("Choose apps, and allow Full Disk Access, in Integrations.")) {
+                    Button("Integrations…") { open(.integrations) }
+                        .buttonStyle(.settings)
+                }
             }
-            .padding(.leading, 40)
         case .agents:
-            HStack {
-                Text("Connect Claude Code, Codex, Cursor or Antigravity in Integrations.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                Spacer()
-                Button("Integrations…") { open(.integrations) }
+            SettingsPanel {
+                SettingsHintRow(text: Text("Connect Claude Code, Codex, Cursor or Antigravity in Integrations.")) {
+                    Button("Integrations…") { open(.integrations) }
+                        .buttonStyle(.settings)
+                }
             }
-            .padding(.leading, 40)
         case .teleprompter:
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Script")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                TextEditor(text: $settings.teleprompterScript)
-                    .font(.system(size: 13))
-                    .frame(height: 140)
-                    .scrollContentBackground(.hidden)
-                    .padding(6)
-                    .background(RoundedRectangle(cornerRadius: 6).fill(Color(nsColor: .textBackgroundColor)))
-                    .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Color.secondary.opacity(0.3)))
-            }
-            .padding(.leading, 40)
-            HStack {
-                Text("Speed")
-                Slider(value: $settings.teleprompterSpeed, in: TeleprompterController.speedRange,
-                       step: TeleprompterController.speedStep)
-                Text("\(Int(settings.teleprompterSpeed))")
-                    .monospacedDigit()
-                    .foregroundColor(.secondary)
-                    .frame(width: 30, alignment: .trailing)
-            }
-            .padding(.leading, 40)
-            Picker("Text size", selection: $settings.teleprompterFontSize) {
-                Text("Small").tag(16.0)
-                Text("Medium").tag(20.0)
-                Text("Large").tag(26.0)
-            }
-            .padding(.leading, 40)
-            HStack {
-                Text("Start it from the island's  \(Image(systemName: "text.alignleft"))  button or the menu bar. Space pauses, ↑ ↓ change speed, Esc closes.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                Spacer()
-                Button("Start") { NotificationCenter.default.post(name: .topsailStartTeleprompter, object: nil) }
-            }
-            .padding(.leading, 40)
+            TeleprompterOptions(settings: settings)
         case .keepAwake:
-            Toggle("Keep the display on too", isOn: $settings.keepAwakeDisplay)
-                .padding(.leading, 40)
-            Picker("Turn off after", selection: $settings.keepAwakeHours) {
-                Text("Never").tag(0)
-                Text("1 hour").tag(1)
-                Text("2 hours").tag(2)
-                Text("4 hours").tag(4)
-                Text("8 hours").tag(8)
+            SettingsPanel {
+                SettingsToggle("Keep the display on too", isOn: $settings.keepAwakeDisplay)
+                SettingsRow(Text("Turn off after")) {
+                    SettingsSelect(label: "Turn off after", selection: $settings.keepAwakeHours,
+                                   options: [.init("Never", 0), .init("1 hour", 1), .init("2 hours", 2),
+                                             .init("4 hours", 4), .init("8 hours", 8)])
+                }
             }
-            .padding(.leading, 40)
         default:
             EmptyView()
+        }
+    }
+}
+
+/// The script, how fast and how large it runs, and how to start it.
+private struct TeleprompterOptions: View {
+    @ObservedObject var settings: AppSettings
+
+    var body: some View {
+        SettingsPanel {
+            VStack(alignment: .leading, spacing: SettingsStyle.headingGap) {
+                Text("Script")
+                    .font(SettingsStyle.body)
+                    .foregroundStyle(SettingsStyle.foreground)
+                SettingsTextEditor(label: "Script", text: $settings.teleprompterScript, height: 112)
+            }
+            .padding(SettingsStyle.rowVertical)
+            SettingsRow(Text("Speed")) {
+                HStack(spacing: 8) {
+                    // Rounded here rather than with `step`, which draws a tick for every one.
+                    Slider(value: Binding(
+                        get: { settings.teleprompterSpeed },
+                        set: { settings.teleprompterSpeed = ($0 / TeleprompterController.speedStep).rounded() * TeleprompterController.speedStep }
+                    ), in: TeleprompterController.speedRange) { Text("Speed") }
+                        .labelsHidden()
+                        .controlSize(.small)
+                        .frame(width: 160)
+                    Text(verbatim: "\(Int(settings.teleprompterSpeed))")
+                        .font(SettingsStyle.control.monospacedDigit())
+                        .foregroundStyle(SettingsStyle.muted)
+                        .frame(width: 28, alignment: .trailing)
+                }
+            }
+            SettingsRow(Text("Text size")) {
+                SettingsSelect(label: "Text size", selection: $settings.teleprompterFontSize,
+                               options: [.init("Small", 16.0), .init("Medium", 20.0), .init("Large", 26.0)])
+            }
+            SettingsHintRow(text: Text("Start it from the island's  \(Image(systemName: "text.alignleft"))  button or the menu bar. Space pauses, ↑ ↓ change speed, Esc closes.")) {
+                Button("Start") { NotificationCenter.default.post(name: .topsailStartTeleprompter, object: nil) }
+                    .buttonStyle(.settings)
+            }
         }
     }
 }
@@ -300,15 +320,13 @@ private struct UpdateStatus: View {
     @ObservedObject var updater: Updater
 
     var body: some View {
-        HStack {
-            Text(text)
-                .font(.caption)
-                .foregroundColor(.secondary)
-            Spacer()
+        SettingsHintRow(text: Text(text)) {
             if case .ready = updater.state {
                 Button("Restart to Update") { updater.restartToUpdate() }
+                    .buttonStyle(.settings(.primary))
             } else {
                 Button("Check Now") { updater.check() }
+                    .buttonStyle(.settings)
                     .disabled(updater.state == .checking || updater.state == .developmentBuild)
             }
         }
@@ -316,7 +334,7 @@ private struct UpdateStatus: View {
 
     private var text: String {
         switch updater.state {
-        case .idle: return ""
+        case .idle: return String(localized: "Version \(SettingsView.version)")
         case .checking: return String(localized: "Checking…")
         case .upToDate: return String(localized: "Topsail is up to date.")
         case .downloading(let version): return String(localized: "Downloading Topsail \(version)…")
@@ -334,72 +352,45 @@ private struct RemindersAccessHint: View {
     var body: some View {
         switch reminders.access {
         case .notDetermined:
-            PermissionHint(text: String(localized: "Topsail needs access to your reminders"), button: String(localized: "Allow…"),
-                           action: reminders.requestAccess)
+            SettingsCallout(text: String(localized: "Topsail needs access to your reminders"), button: String(localized: "Allow…"),
+                            indented: true, action: reminders.requestAccess)
         case .denied:
-            PermissionHint(text: String(localized: "Allow Topsail under Privacy & Security › Reminders"), button: String(localized: "Open System Settings"),
-                           action: { SystemSettings.open("Privacy_Reminders") })
+            SettingsCallout(text: String(localized: "Allow Topsail under Privacy & Security › Reminders"), button: String(localized: "Open System Settings"),
+                            indented: true, action: { SystemSettings.open("Privacy_Reminders") })
         case .granted:
-            Label("Showing your reminders on the calendar tab", systemImage: "checkmark.circle.fill")
-                .font(.caption)
-                .foregroundColor(.secondary)
-        }
-    }
-}
-
-/// One feature: its symbol, name and what it does, and its switch.
-private struct FeatureRow: View {
-    let feature: Feature
-    @Binding var isOn: Bool
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            RoundedRectangle(cornerRadius: 7, style: .continuous)
-                .fill(Color.accentColor.opacity(isOn ? 1 : 0.15))
-                .overlay {
-                    Image(systemName: feature.symbol)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(isOn ? .white : .accentColor)
+            SettingsPanel {
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(SettingsStyle.success)
+                        .accessibilityHidden(true)
+                    Text("Showing your reminders on the calendar tab")
+                        .foregroundStyle(SettingsStyle.muted)
+                    Spacer(minLength: 0)
                 }
-                .frame(width: 28, height: 28)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(feature.title)
-                Text(feature.summary)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                .font(SettingsStyle.caption)
+                .padding(SettingsStyle.rowVertical)
             }
-            Spacer(minLength: 12)
-            Toggle(feature.title, isOn: $isOn)
-                .labelsHidden()
-                .toggleStyle(.switch)
         }
-        .padding(.vertical, 2)
     }
 }
+
+// MARK: - Integrations
 
 /// The services and apps Topsail connects to.
 private struct IntegrationsPane: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var linear: LinearService
     let features: FeatureServices
-    let open: (SettingsView.Pane) -> Void
 
     var body: some View {
-        Form {
+        SettingsPage(title: "Integrations", detail: "The apps and services Topsail connects to.") {
             #if DIRECT
-            AgentsSettingsSection(settings: settings, hub: features.agents, open: open)
+            AgentsSettingsSection(settings: settings, hub: features.agents)
             NotificationsSettingsSection(settings: settings, mirror: features.notifications)
-            Section {
-                Toggle("Terminal's last lines", isOn: $settings.appsTerminal)
-                Toggle("Chrome's tabs", isOn: $settings.appsChrome)
-                Toggle("YouTube in Chrome", isOn: $settings.appsYouTube)
-            } header: {
-                Text("Apps")
-            } footer: {
-                Text("Shown on the Apps page while these apps are open, and read only while you look. macOS asks once per app. Private Chrome windows are never read. Playing and pausing YouTube needs View › Developer › Allow JavaScript from Apple Events in Chrome.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+            SettingsSection("Apps", note: "Shown on the Apps page while these apps are open, and read only while you look. macOS asks once per app. Private Chrome windows are never read. Playing and pausing YouTube needs View › Developer › Allow JavaScript from Apple Events in Chrome.") {
+                SettingsToggle("Terminal's last lines", isOn: $settings.appsTerminal)
+                SettingsToggle("Chrome's tabs", isOn: $settings.appsChrome)
+                SettingsToggle("YouTube in Chrome", isOn: $settings.appsYouTube)
             }
             #endif
             LinearSettingsSection(linear: linear)
@@ -415,43 +406,35 @@ private struct NotificationsSettingsSection: View {
     @ObservedObject var mirror: NotificationMirror
 
     var body: some View {
-        Section {
+        SettingsSection("Notifications", note: "Topsail reads Notification Center's own list on this Mac, only while this is on. Nothing is kept or sent. They also show during a Focus. Full Disk Access is broad: leave this off if you'd rather not grant it.") {
             if settings.isEnabled(.notifications) {
                 switch mirror.access {
                 case .denied:
-                    PermissionHint(text: String(localized: "Allow Topsail under Privacy & Security › Full Disk Access, then reopen Topsail"),
-                                   button: String(localized: "Open System Settings"), action: { SystemSettings.open("Privacy_AllFiles") })
+                    SettingsCallout(text: String(localized: "Allow Topsail under Privacy & Security › Full Disk Access, then reopen Topsail"),
+                                    button: String(localized: "Open System Settings"), action: { SystemSettings.open("Privacy_AllFiles") })
+                        .padding(.top, SettingsStyle.rowHorizontal)
                 case .unsupported:
-                    Text("This version of macOS keeps its notifications in a way Topsail doesn't know yet.")
-                        .font(.caption)
-                        .foregroundColor(.orange)
+                    SettingsNote(text: Text("This version of macOS keeps its notifications in a way Topsail doesn't know yet."),
+                                 color: SettingsStyle.warning)
                 case .granted, .unknown:
                     EmptyView()
                 }
                 ForEach(NotificationMirror.installedApps, id: \.self) { app in
-                    Toggle(NotificationMirror.name(of: app), isOn: Binding(
+                    SettingsToggle(Text(NotificationMirror.name(of: app)), isOn: Binding(
                         get: { settings.notificationApps.contains(app.lowercased()) },
                         set: { on in
                             if on { settings.notificationApps.insert(app.lowercased()) }
                             else { settings.notificationApps.remove(app.lowercased()) }
                         }
-                    ))
+                    ), icon: { SettingsAppIcon(bundleID: app) })
                 }
-                Toggle("Show what they say", isOn: $settings.notificationText)
+                SettingsToggle("Show what they say", isOn: $settings.notificationText)
             } else {
-                HStack {
-                    Text("Turn on Notifications to choose apps.")
-                        .foregroundColor(.secondary)
-                    Spacer()
+                SettingsRow(Text("Turn on Notifications to choose apps.").foregroundStyle(SettingsStyle.muted)) {
                     Button("Turn On") { settings.setEnabled(.notifications, true) }
+                        .buttonStyle(.settings)
                 }
             }
-        } header: {
-            Text("Notifications")
-        } footer: {
-            Text("Topsail reads Notification Center's own list on this Mac, only while this is on. Nothing is kept or sent. They also show during a Focus. Full Disk Access is broad: leave this off if you'd rather not grant it.")
-                .font(.caption)
-                .foregroundColor(.secondary)
         }
     }
 }
@@ -461,44 +444,35 @@ private struct NotificationsSettingsSection: View {
 private struct AgentsSettingsSection: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var hub: AgentHub
-    let open: (SettingsView.Pane) -> Void
 
     /// Bumped after Connect / Disconnect, to re-read the agents' files.
     @State private var revision = 0
     @State private var failure: String?
 
     var body: some View {
-        Section {
+        SettingsSection("AI coding agents", note: "Connect adds Topsail's hook to the agent's own settings file (saving a copy first). If Topsail isn't running or you don't answer in time, the agent asks in its own window as usual. Anything too long to show whole is left to the agent's own window. Cursor can only be denied from outside: Approve lets the command go on to Cursor's own rules.") {
             if !settings.isEnabled(.agents) {
-                HStack {
-                    Text("Turn on AI coding agents to follow them in the notch.")
-                        .foregroundColor(.secondary)
-                    Spacer()
+                SettingsRow(Text("Turn on AI coding agents to follow them in the notch.").foregroundStyle(SettingsStyle.muted)) {
                     Button("Turn On") { settings.setEnabled(.agents, true) }
+                        .buttonStyle(.settings)
                 }
             }
             ForEach(AgentKind.allCases) { agent in
-                agentRow(agent)
+                agentRow(agent, revision: revision)
             }
-            .id(revision)
             if let failure {
-                Text(failure)
-                    .font(.caption)
-                    .foregroundColor(.red)
+                SettingsNote(text: Text(failure), color: SettingsStyle.destructive)
             }
             if let error = hub.serverError {
-                Text("Topsail couldn't listen for agents: \(error)")
-                    .font(.caption)
-                    .foregroundColor(.red)
+                SettingsNote(text: Text("Topsail couldn't listen for agents: \(error)"), color: SettingsStyle.destructive)
             }
-            Captioned(caption: String(localized: "ls, cat, grep, git status, diff and log, on ordinary files in the project. Hidden files, anything outside the project and names that look like secrets are always asked about.")) {
-                Toggle("Approve read-only commands automatically", isOn: $settings.agentsAutoApprove)
-            }
-            Toggle("Ask me in the notch before other commands", isOn: $settings.agentsAskInNotch)
-            Picker("Wait for my answer", selection: $settings.agentsWaitSeconds) {
-                Text("30 seconds").tag(30)
-                Text("1 minute").tag(60)
-                Text("2 minutes").tag(120)
+            SettingsToggle("Approve read-only commands automatically",
+                           detail: String(localized: "ls, cat, grep, git status, diff and log, on ordinary files in the project. Hidden files, anything outside the project and names that look like secrets are always asked about."),
+                           isOn: $settings.agentsAutoApprove)
+            SettingsToggle("Ask me in the notch before other commands", isOn: $settings.agentsAskInNotch)
+            SettingsRow(Text("Wait for my answer")) {
+                SettingsSelect(label: "Wait for my answer", selection: $settings.agentsWaitSeconds,
+                               options: [.init("30 seconds", 30), .init("1 minute", 60), .init("2 minutes", 120)])
             }
             .disabled(!settings.agentsAskInNotch)
             .onChange(of: settings.agentsWaitSeconds) { _, seconds in
@@ -507,35 +481,26 @@ private struct AgentsSettingsSection: View {
                     try? AgentHooks.connect(agent, waitSeconds: seconds)
                 }
             }
-        } header: {
-            Text("AI coding agents")
-        } footer: {
-            Text("Connect adds Topsail's hook to the agent's own settings file (saving a copy first). If Topsail isn't running or you don't answer in time, the agent asks in its own window as usual. Anything too long to show whole is left to the agent's own window. Cursor can only be denied from outside: Approve lets the command go on to Cursor's own rules.")
-                .font(.caption)
-                .foregroundColor(.secondary)
         }
     }
 
-    @ViewBuilder private func agentRow(_ agent: AgentKind) -> some View {
+    private func agentRow(_ agent: AgentKind, revision: Int) -> some View {
         let installed = AgentHooks.isInstalled(agent)
         let connected = AgentHooks.isConnected(agent)
-        HStack(spacing: 10) {
-            AgentGlyph(agent: agent, size: 26)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(agent.name)
-                Text(connected ? Self.connectedNote(agent) : installed ? String(localized: "Not connected")
-                                                                       : String(localized: "Not found on this Mac"))
-                    .font(.caption)
-                    .foregroundColor(connected ? .green : .secondary)
-            }
-            Spacer()
+        return SettingsRow(Text(agent.name),
+                           detail: Text(connected ? Self.connectedNote(agent) : installed ? String(localized: "Not connected")
+                                                                                          : String(localized: "Not found on this Mac")),
+                           status: connected ? SettingsStyle.success : nil,
+                           icon: { AgentGlyph(agent: agent, size: SettingsStyle.iconSize) }) {
             if connected {
                 Button("Disconnect") { run { try AgentHooks.disconnect(agent) } }
+                    .buttonStyle(.settings)
             } else {
                 Button("Connect") {
                     run { try AgentHooks.connect(agent, waitSeconds: settings.agentsWaitSeconds) }
                     settings.setEnabled(.agents, true)
                 }
+                .buttonStyle(.settings)
                 .disabled(!installed)
             }
         }
@@ -573,52 +538,23 @@ enum SystemSettings {
 }
 
 private extension SettingsView {
+    static var version: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
+    }
+
     #if DIRECT
+    static let soundTitle: LocalizedStringKey = "Sound and brightness"
     static let takeoverTitle = String(localized: "Hide macOS volume and brightness indicators")
     static let takeoverNote = String(localized: "Topsail handles the volume and brightness keys itself; while Spotify plays on another device, the volume keys control that device. Needs Input Monitoring and Accessibility permission.")
     static let lowBatteryNote = String(localized: "Clicking the low-battery notice turns on Low Power Mode, through a helper you allow once in Login Items.")
     static let deviceNote = String(localized: "A card under the notch with each earbud's and the case's battery; what's playing stays beside it. Asks for Bluetooth access the first time.")
     #else
+    static let soundTitle: LocalizedStringKey = "Sound"
     static let takeoverTitle = String(localized: "Hide macOS volume indicator")
     static let takeoverNote = String(localized: "Topsail handles the volume keys itself; while Spotify plays on another device, they control that device. Needs Input Monitoring and Accessibility permission.")
     static let lowBatteryNote = String(localized: "Clicking the low-battery notice opens Battery settings, where you can turn on Low Power Mode.")
     static let deviceNote = String(localized: "A card under the notch with the device's name; what's playing stays beside it.")
     #endif
-}
-
-/// A control with an optional caption under it, in one row.
-struct Captioned<Content: View>: View {
-    let caption: String?
-    @ViewBuilder let content: Content
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            content
-            if let caption {
-                Text(caption)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-        }
-    }
-}
-
-/// Something Topsail is missing a permission for, and the button that fixes it.
-struct PermissionHint: View {
-    let text: String
-    let button: String
-    let action: () -> Void
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Text(text)
-                .font(.caption)
-                .foregroundColor(.orange)
-            Spacer()
-            Button(button, action: action)
-                .controlSize(.small)
-        }
-    }
 }
 
 /// Connect a Linear account with a personal API key. The key is checked with Linear before it
@@ -628,48 +564,45 @@ private struct LinearSettingsSection: View {
     @State private var draftKey = ""
 
     var body: some View {
-        Section {
+        SettingsSection("Linear", note: "Shows your issues in the current cycle (all your open issues if your team has no cycle running), and a reminder when one is due today or overdue. Create a key in Linear under Settings › Security & access › Personal API keys. It is stored in your keychain.") {
             switch linear.status {
             case .connected:
-                HStack {
-                    Label("Connected", systemImage: "checkmark.circle.fill")
-                        .foregroundColor(.green)
-                    Spacer()
+                SettingsRow(Text("Connected"), icon: {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(SettingsStyle.success)
+                        .accessibilityHidden(true)
+                }) {
                     Button("Disconnect") { linear.disconnect() }
+                        .buttonStyle(.settings)
                 }
             case .connecting:
-                HStack(spacing: 8) {
+                SettingsRow(Text("Checking the key with Linear…").foregroundStyle(SettingsStyle.muted)) {
                     ProgressView().controlSize(.small)
-                    Text("Checking the key with Linear…")
-                        .foregroundColor(.secondary)
                 }
             case .notConnected, .failed:
-                HStack {
-                    SecureField("Personal API key", text: $draftKey)
-                        .textFieldStyle(.roundedBorder)
-                        .onSubmit(connect)
-                    Button("Connect", action: connect)
-                        .disabled(draftKey.trimmingCharacters(in: .whitespaces).isEmpty)
-                }
-                if case .failed(let message) = linear.status {
-                    HStack(spacing: 8) {
-                        Text(message)
-                            .font(.caption)
-                            .foregroundColor(.red)
-                        if linear.apiKey != nil {
-                            Spacer()
-                            Button("Disconnect") { linear.disconnect() }
-                                .controlSize(.small)
+                SettingsGroup {
+                    SettingsRow(Text("Personal API key")) {
+                        HStack(spacing: 8) {
+                            SettingsSecureField(label: "Personal API key", text: $draftKey, onSubmit: connect)
+                                .frame(width: 220)
+                            Button("Connect", action: connect)
+                                .buttonStyle(.settings(.primary))
+                                .disabled(draftKey.trimmingCharacters(in: .whitespaces).isEmpty)
+                        }
+                    }
+                    if case .failed(let message) = linear.status {
+                        HStack(spacing: 8) {
+                            SettingsNote(text: Text(message), color: SettingsStyle.destructive)
+                            if linear.apiKey != nil {
+                                Button("Disconnect") { linear.disconnect() }
+                                    .buttonStyle(.settings(.ghost))
+                                    .padding(.trailing, SettingsStyle.rowHorizontal)
+                            }
                         }
                     }
                 }
             }
-        } header: {
-            Text("Linear")
-        } footer: {
-            Text("Shows your issues in the current cycle (all your open issues if your team has no cycle running), and a reminder when one is due today or overdue. Create a key in Linear under Settings › Security & access › Personal API keys. It is stored in your keychain.")
-                .font(.caption)
-                .foregroundColor(.secondary)
         }
     }
 
@@ -686,31 +619,20 @@ private struct VoiceSettingsSection: View {
     @ObservedObject private var shortcuts = VoiceShortcutManager.shared
 
     var body: some View {
-        Section {
-            Picker("Shortcut", selection: $shortcuts.shortcut) {
-                ForEach(VoiceShortcut.allCases) { shortcut in
-                    Text(shortcut.title).tag(shortcut)
-                }
+        SettingsSection("Voice notes", note: "Press the shortcut or 🎙 in the island, say what changed, then press it again (or ⏎). Transcription and understanding run on this Mac with Apple Intelligence; you review every change in the island before it is sent to Linear. Needs a Linear key with write access.") {
+            SettingsRow(Text("Shortcut"), detail: detail, status: linear.isConnected && detail != nil ? SettingsStyle.warning : nil) {
+                SettingsSelect(label: "Shortcut", selection: $shortcuts.shortcut,
+                               options: VoiceShortcut.allCases.map { .init(LocalizedStringKey($0.title), $0) })
             }
-            if !linear.isConnected {
-                Text("Connect Linear above to use voice notes.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            } else if let reason = VoicePlanner.unavailableReason {
-                Text(reason)
-                    .font(.caption)
-                    .foregroundColor(.orange)
-            } else if shortcuts.isTaken {
-                Text("Another app already uses \(shortcuts.shortcut.title). Turn it off there or pick a different shortcut.")
-                    .font(.caption)
-                    .foregroundColor(.orange)
-            }
-        } header: {
-            Text("Voice notes")
-        } footer: {
-            Text("Press the shortcut or 🎙 in the island, say what changed, then press it again (or ⏎). Transcription and understanding run on this Mac with Apple Intelligence; you review every change in the island before it is sent to Linear. Needs a Linear key with write access.")
-                .font(.caption)
-                .foregroundColor(.secondary)
         }
+    }
+
+    private var detail: Text? {
+        if !linear.isConnected { return Text("Connect Linear above to use voice notes.") }
+        if let reason = VoicePlanner.unavailableReason { return Text(reason) }
+        if shortcuts.isTaken {
+            return Text("Another app already uses \(shortcuts.shortcut.title). Turn it off there or pick a different shortcut.")
+        }
+        return nil
     }
 }

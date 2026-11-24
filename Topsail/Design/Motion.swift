@@ -86,6 +86,17 @@ enum Motion {
     /// Layout and size, where any overshoot would read as a bounce.
     static let gentle = Animation.interpolatingSpring(mass: 1, stiffness: 260, damping: 34)
 
+    // MARK: Settings (Fluid Functionalism's three tiers: the bigger the thing that moves, the slower)
+
+    /// Hover, fades, focus rings.
+    static let fluidFast = Animation.spring(duration: 0.08, bounce: 0)
+    /// Short travel that lands exactly: a switch's thumb, the sidebar's selection.
+    static let fluidModerate = Animation.spring(duration: 0.16, bounce: 0)
+    /// Large surfaces: a feature's options opening.
+    static let fluidSlow = Animation.spring(duration: 0.24, bounce: 0.12)
+    /// Leaving: a plain tween, a tier quicker than arriving.
+    static let fluidExit = Animation.easeOut(duration: 0.06)
+
     // MARK: The island
 
     /// The island growing: the container moves now; content cascades in beneath it.
