@@ -1,0 +1,40 @@
+import AppKit
+import SwiftUI
+
+/// The settings window. Topsail is an agent app with no Dock icon, so the app is activated
+/// explicitly to bring the window in front of other apps.
+@MainActor
+final class SettingsWindowController: NSWindowController {
+    private let settings: AppSettings
+
+    init(settings: AppSettings, linear: LinearService, calendar: CalendarService, clipboard: ClipboardHistory,
+         features: FeatureServices) {
+        self.settings = settings
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 700, height: 580),
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "Topsail Settings"
+        window.isReleasedWhenClosed = false
+        window.contentView = NSHostingView(rootView: SettingsView(settings: settings, linear: linear, calendar: calendar,
+                                                                    clipboard: clipboard, features: features))
+        window.center()
+        super.init(window: window)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) is not supported")
+    }
+
+    func show() {
+        settings.reloadLaunchAtLogin()
+        NSApp.activate()
+        window?.makeKeyAndOrderFront(nil)
+        // macOS may decline the activation request when Topsail is opened from the background
+        // (e.g. `open topsail://settings`), which would leave the window ordered out.
+        window?.orderFrontRegardless()
+    }
+}

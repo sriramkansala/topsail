@@ -1,10 +1,10 @@
-# Clove
+# Topsail
 
-A Dynamic Island for the MacBook notch. Clove turns the notch into a small black island that
+A Dynamic Island for the MacBook notch. Topsail turns the notch into a small black island that
 shows what's playing, what's next and what your Mac is doing, and grows when you move the
 pointer to it.
 
-**[Website](https://sriramkansala.github.io/clove/)** · **[Download](https://github.com/sriramkansala/clove/releases/latest)** · **[Privacy policy](https://sriramkansala.github.io/clove/privacy.html)**
+**[Website](https://sriramkansala.github.io/topsail/)** · **[Download](https://github.com/sriramkansala/topsail/releases/latest)** · **[Privacy policy](https://sriramkansala.github.io/topsail/privacy.html)**
 
 <p align="center">
   <img src="website/images/player.png" width="640" alt="The expanded island showing the music player">
@@ -53,13 +53,13 @@ with a video link, a countdown sits beside the notch; as it starts, a card asks 
 
 ## Two builds
 
-Clove builds in two flavours from the same code:
+Topsail builds in two flavours from the same code:
 
 | | App Store | Direct download |
 |---|---|---|
-| Bundle id | `app.clove.Clove` | `app.clove.Clove.direct` |
+| Bundle id | `app.topsail.Topsail` | `app.topsail.Topsail.direct` |
 | Sandbox | Yes | No (hardened runtime, notarised) |
-| Brightness keys | Left to macOS | Taken over, with Clove's own indicator |
+| Brightness keys | Left to macOS | Taken over, with Topsail's own indicator |
 | Battery figures | From the IORegistry | Live power from the SMC as well |
 | Low-battery click | Opens Battery settings | Turns on Low Power Mode through a small helper |
 | Volume keys | Left to macOS until you turn on "Hide macOS volume indicator" | Taken over from the start |
@@ -69,7 +69,7 @@ needs root sits inside `#if DIRECT`, so none of it is in the App Store binary.
 
 The Low Power Mode helper is a launchd daemon registered with `SMAppService`. macOS asks you to
 allow it once, under System Settings › General › Login Items. It only accepts connections
-from Clove signed by the same team (and, in a release, only from Clove signed with that team's
+from Topsail signed by the same team (and, in a release, only from Topsail signed with that team's
 Developer ID), a release's daemon plist tells launchd to run only the helper that team signed,
 and it can only do one thing: set Low Power Mode on battery (`pmset -b`). To remove it, turn it
 off in Login Items.
@@ -82,17 +82,17 @@ You need Xcode 26.
 scripts/build.sh
 ```
 
-That builds the App Store flavour into `build/Clove.app`. Add `--direct` for the direct
-flavour (`build/Direct/Clove.app`) and `--install` to replace `/Applications/Clove.app` and
+That builds the App Store flavour into `build/Topsail.app`. Add `--direct` for the direct
+flavour (`build/Direct/Topsail.app`) and `--install` to replace `/Applications/Topsail.app` and
 relaunch it. If you have an Apple Development certificate, dev builds are signed with it, so
 permissions you grant survive rebuilds. Without one, they are signed ad hoc and macOS asks for
 permissions again after each rebuild.
 
-You can also open `Clove.xcodeproj` in Xcode and run the `Clove` scheme, which builds the
+You can also open `Topsail.xcodeproj` in Xcode and run the `Topsail` scheme, which builds the
 App Store flavour.
 
-In debug builds, `open clove://preview/low-battery` or `open clove://preview/charging` shows
-that activity without unplugging or draining the battery. `open clove://settings` opens
+In debug builds, `open topsail://preview/low-battery` or `open topsail://preview/charging` shows
+that activity without unplugging or draining the battery. `open topsail://settings` opens
 Settings in any build.
 
 ## Releasing
@@ -103,12 +103,12 @@ Both need a paid Apple Developer Program membership.
   upload with Transporter. The listing text, privacy answers, review notes and 2880 × 1800
   screenshots are in [`appstore/`](appstore/metadata.md).
 - **Website download:** `TEAM_ID=… NOTARY_PROFILE=… scripts/release-direct.sh` signs with
-  Developer ID, notarises and staples `build/Direct-Release/Clove.zip` (setup steps are at the top
+  Developer ID, notarises and staples `build/Direct-Release/Topsail.zip` (setup steps are at the top
   of the script). Publish it as a GitHub release, and the website's download buttons point at
   it:
 
   ```bash
-  gh release create v1.0.0 build/Direct-Release/Clove.zip --title "Clove 1.0.0"
+  gh release create v1.0.0 build/Direct-Release/Topsail.zip --title "Topsail 1.0.0"
   ```
 
   Before publishing, check on a clean Mac that one-click Low Power Mode works with the notarised
@@ -119,7 +119,7 @@ GitHub Pages whenever it changes on `main`.
 
 ## Permissions
 
-Clove asks for each permission the first time a feature needs it:
+Topsail asks for each permission the first time a feature needs it:
 
 | Permission | Used for |
 |---|---|
@@ -129,15 +129,15 @@ Clove asks for each permission the first time a feature needs it:
 | Microphone | Voice notes |
 
 Everything runs on your Mac. Your Linear API key is kept in the keychain, and voice notes are
-transcribed and understood on device. Clove has no analytics. The only servers it talks to are
+transcribed and understood on device. Topsail has no analytics. The only servers it talks to are
 Linear's API, if you connect it, and Spotify's, for album art. See the
-[privacy policy](https://sriramkansala.github.io/clove/privacy.html).
+[privacy policy](https://sriramkansala.github.io/topsail/privacy.html).
 
 ## Project layout
 
 ```
-Clove.xcodeproj
-Clove/
+Topsail.xcodeproj
+Topsail/
   App/            app delegate, menu bar item
   Notch/          the island: window, geometry, shape, view model
   Activities/     live activities: charging, low battery, volume, audio devices
@@ -149,7 +149,7 @@ Clove/
   Settings/       the Settings window
   Design/         motion, layout constants
   Resources/      Info.plist, entitlements, privacy manifest, app icon
-CloveHelper/      the direct build's Low Power Mode daemon
+TopsailHelper/    the direct build's Low Power Mode daemon
 scripts/          build, sign and release
 website/          the website, also home to the README's images
 appstore/         Mac App Store listing and screenshots

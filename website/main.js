@@ -1,7 +1,7 @@
-// Clove website: the demo's pages, the light / dark switch, the notch's section pill, and the
+// Topsail website: the demo's pages, the light / dark switch, the notch's section pill, and the
 // download links, which point at the latest release once there is one.
 
-const repo = "sriramkansala/clove";
+const repo = "sriramkansala/topsail";
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 // Demo: the segmented control under the big screen swaps the island.
@@ -14,7 +14,7 @@ const demoCaptions = {
   clipboard: "Copy anything and the notch says so; hover it for what you copied. Click one to copy it again, or pin it to keep it.",
 };
 const demoAlt = {
-  player: "The Clove island open below the notch, playing music",
+  player: "The Topsail island open below the notch, playing music",
   calendar: "The island's calendar page with two events",
   reminder: "A card below the notch: Design review starts in 1 min, with Remind me in 5 min, Ignore and Join",
   tasks: "The island's tasks page with Linear issues",

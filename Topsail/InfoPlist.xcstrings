@@ -1,0 +1,138 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "NSAppleEventsUsageDescription": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Topsail shows what is playing in Music or Spotify and lets you control playback from the notch."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Topsail muestra lo que suena en Música o Spotify y te permite controlarlo desde el notch."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Topsail affiche la lecture de Musique ou Spotify et vous permet de la contrôler depuis l’encoche."
+          }
+        }
+      }
+    },
+    "NSBluetoothAlwaysUsageDescription": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Topsail shows your headphones’ battery when they connect."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Topsail muestra la batería de tus auriculares cuando se conectan."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Topsail affiche la batterie de vos écouteurs quand ils se connectent."
+          }
+        }
+      }
+    },
+    "NSCalendarsFullAccessUsageDescription": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Topsail shows your upcoming events when you open the notch."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Topsail muestra tus próximos eventos cuando abres el notch."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Topsail affiche vos prochains événements quand vous ouvrez l’encoche."
+          }
+        }
+      }
+    },
+    "NSMicrophoneUsageDescription": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Topsail listens while you record a voice note about your tasks."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Topsail escucha mientras grabas una nota de voz sobre tus tareas."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Topsail écoute pendant que vous enregistrez une note vocale sur vos tâches."
+          }
+        }
+      }
+    },
+    "NSRemindersFullAccessUsageDescription": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Topsail shows your reminders in the notch, and lets you tick them off or add one there."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Topsail muestra tus recordatorios en el notch y te permite marcarlos o añadir uno."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Topsail affiche vos rappels dans l’encoche et vous permet de les cocher ou d’en ajouter."
+          }
+        }
+      }
+    },
+    "NSSpeechRecognitionUsageDescription": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your voice notes are transcribed on this Mac to update your Linear tasks."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tus notas de voz se transcriben en este Mac para actualizar tus tareas de Linear."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vos notes vocales sont transcrites sur ce Mac pour mettre à jour vos tâches Linear."
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

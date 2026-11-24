@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Archive Clove and export a signed Mac App Store package (build/AppStore/Clove.pkg).
+# Archive Topsail and export a signed Mac App Store package (build/AppStore/Topsail.pkg).
 #
 #   TEAM_ID=ABCDE12345 scripts/release.sh            # build number = timestamp
 #   TEAM_ID=ABCDE12345 scripts/release.sh 42         # explicit build number
@@ -13,14 +13,14 @@ set -euo pipefail
 ROOT=${0:A:h:h}
 : ${TEAM_ID:?Set TEAM_ID to your Team ID (developer.apple.com > Account > Membership details)}
 BUILD=${1:-$(date +%Y%m%d%H%M)}
-ARCHIVE=$ROOT/build/Clove.xcarchive
+ARCHIVE=$ROOT/build/Topsail.xcarchive
 EXPORT=$ROOT/build/AppStore
 OPTS=$ROOT/build/ExportOptions.plist
 
 rm -rf $ARCHIVE $EXPORT
 mkdir -p $ROOT/build
 
-xcodebuild -project $ROOT/Clove.xcodeproj -scheme Clove -configuration Release \
+xcodebuild -project $ROOT/Topsail.xcodeproj -scheme Topsail -configuration Release \
   -destination 'generic/platform=macOS' -archivePath $ARCHIVE \
   DEVELOPMENT_TEAM=$TEAM_ID CURRENT_PROJECT_VERSION=$BUILD \
   -allowProvisioningUpdates archive
@@ -29,5 +29,5 @@ sed "s/__TEAM_ID__/$TEAM_ID/" $ROOT/scripts/ExportOptions.plist > $OPTS
 xcodebuild -exportArchive -archivePath $ARCHIVE -exportPath $EXPORT \
   -exportOptionsPlist $OPTS -allowProvisioningUpdates
 
-echo "\nExported: ${EXPORT#$ROOT/}/Clove.pkg (build $BUILD)"
+echo "\nExported: ${EXPORT#$ROOT/}/Topsail.pkg (build $BUILD)"
 echo "Next: open Transporter, sign in, drag the .pkg in, and Deliver."

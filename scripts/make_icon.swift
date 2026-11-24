@@ -1,5 +1,5 @@
 // Renders a placeholder 1024×1024 app icon: a dark gradient squircle with a black
-// "island" pill and a warm clove-coloured activity dot.
+// "island" pill and a warm orange activity dot.
 //   swift scripts/make_icon.swift <out.png>
 import AppKit
 

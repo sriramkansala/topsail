@@ -1,9 +1,9 @@
 #!/bin/zsh
-# Debug-build Clove from the Xcode project, ad-hoc signed.
+# Debug-build Topsail from the Xcode project, ad-hoc signed.
 #
-#   scripts/build.sh            App Store flavour (sandboxed)      -> build/Clove.app
-#   scripts/build.sh --direct   direct-download flavour (DIRECT)   -> build/Direct/Clove.app
-#   add --install               also quit Clove, copy the build to /Applications/Clove.app, open it
+#   scripts/build.sh            App Store flavour (sandboxed)      -> build/Topsail.app
+#   scripts/build.sh --direct   direct-download flavour (DIRECT)   -> build/Direct/Topsail.app
+#   add --install               also quit Topsail, copy the build to /Applications/Topsail.app, open it
 #
 # The App Store flavour uses the same project, entitlements and Info.plist as the App Store
 # build, so sandbox problems show up during development. The direct flavour adds the DIRECT
@@ -30,22 +30,22 @@ done
 FLAVOUR_SETTINGS=()
 if (( DIRECT )); then
   DERIVED=$ROOT/build/DerivedDataDirect
-  APP=$ROOT/build/Direct/Clove.app
+  APP=$ROOT/build/Direct/Topsail.app
   FLAVOUR_SETTINGS=(
     'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) DIRECT'
-    CODE_SIGN_ENTITLEMENTS=Clove/Resources/Clove-Direct.entitlements
-    PRODUCT_BUNDLE_IDENTIFIER=app.clove.Clove.direct
+    CODE_SIGN_ENTITLEMENTS=Topsail/Resources/Topsail-Direct.entitlements
+    PRODUCT_BUNDLE_IDENTIFIER=app.topsail.Topsail.direct
     # Only the direct build reads Bluetooth (headphones' battery), so only it asks. Generated keys
     # are merged into Info.plist.
     GENERATE_INFOPLIST_FILE=YES
-    'INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription=Clove shows your headphones’ battery when they connect.'
+    'INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription=Topsail shows your headphones’ battery when they connect.'
   )
 else
   DERIVED=$ROOT/build/DerivedData
-  APP=$ROOT/build/Clove.app
+  APP=$ROOT/build/Topsail.app
 fi
 
-xcodebuild -project $ROOT/Clove.xcodeproj -scheme Clove -configuration Debug \
+xcodebuild -project $ROOT/Topsail.xcodeproj -scheme Topsail -configuration Debug \
   -derivedDataPath $DERIVED \
   CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= \
   ENABLE_DEBUG_DYLIB=NO \
@@ -61,14 +61,14 @@ fi
 
 rm -rf $APP
 mkdir -p ${APP:h}
-cp -R $DERIVED/Build/Products/Debug/Clove.app $APP
+cp -R $DERIVED/Build/Products/Debug/Topsail.app $APP
 
 # With an Apple Development certificate (signed in to Xcode), every dev build has the same
 # identity, so macOS privacy permissions (Input Monitoring, Accessibility) and keychain access
 # survive rebuilds. Without one it's ad hoc, and macOS asks again after each rebuild: a stable
 # ad-hoc identity would be one any other ad-hoc binary could claim, permissions and all.
 # Release builds are signed by release.sh / release-direct.sh.
-ENTITLEMENTS=$(mktemp "${TMPDIR:-/tmp}/clove-entitlements.XXXXXX")
+ENTITLEMENTS=$(mktemp "${TMPDIR:-/tmp}/topsail-entitlements.XXXXXX")
 codesign -d --entitlements - --xml $APP > $ENTITLEMENTS 2>/dev/null
 DEV_IDENTITY=$(security find-identity -v -p codesigning 2>/dev/null | awk -F'"' '/"Apple Development: / {print $2; exit}')
 
@@ -92,19 +92,19 @@ rm -f $ENTITLEMENTS
 echo "\nBUILD OK -> ${APP#$ROOT/}"
 
 if (( INSTALL )); then
-  DEST=/Applications/Clove.app
-  # Only ever replace a previous Clove, never another app that happens to share the name.
+  DEST=/Applications/Topsail.app
+  # Only ever replace a previous Topsail, never another app that happens to share the name.
   if [[ -e $DEST ]]; then
     EXISTING_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" $DEST/Contents/Info.plist 2>/dev/null)
-    if [[ $EXISTING_ID != app.clove.Clove* ]]; then
-      echo "Refusing to replace $DEST: it is '$EXISTING_ID', not Clove."
+    if [[ $EXISTING_ID != app.topsail.Topsail* ]]; then
+      echo "Refusing to replace $DEST: it is '$EXISTING_ID', not Topsail."
       exit 1
     fi
   fi
-  # Quit the installed copy, and any test build running from build/ (either flavour): two Cloves
+  # Quit the installed copy, and any test build running from build/ (either flavour): two Topsails
   # draw two islands over the notch, one on top of the other.
-  pkill -f "^$DEST/Contents/MacOS/Clove" && sleep 1
-  pkill -f "^$ROOT/build/(Direct/)?Clove.app/Contents/MacOS/Clove" && sleep 1
+  pkill -f "^$DEST/Contents/MacOS/Topsail" && sleep 1
+  pkill -f "^$ROOT/build/(Direct/)?Topsail.app/Contents/MacOS/Topsail" && sleep 1
   rm -rf $DEST
   ditto $APP $DEST
   open $DEST

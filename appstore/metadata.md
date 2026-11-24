@@ -8,15 +8,15 @@ and description.
 
 | Field | Value |
 |---|---|
-| Name | Clove |
+| Name | Topsail |
 | Subtitle (30) | Your notch, put to work |
-| Bundle ID | `app.clove.Clove` |
+| Bundle ID | `app.topsail.Topsail` |
 | Primary category | Utilities |
 | Secondary category | Productivity |
 | Price | Free |
-| Privacy policy URL | https://sriramkansala.github.io/clove/privacy.html |
-| Support URL | https://github.com/sriramkansala/clove/issues |
-| Marketing URL | https://sriramkansala.github.io/clove/ |
+| Privacy policy URL | https://sriramkansala.github.io/topsail/privacy.html |
+| Support URL | https://github.com/sriramkansala/topsail/issues |
+| Marketing URL | https://sriramkansala.github.io/topsail/ |
 | Copyright | 2026 *your legal name* |
 | Version | 1.0.0 |
 
@@ -27,7 +27,7 @@ source, and private: no account, no analytics.
 
 ## Description
 
-Clove turns the notch on your MacBook into a small black island that shows what matters right
+Topsail turns the notch on your MacBook into a small black island that shows what matters right
 now, and grows when you move the pointer to it.
 
 NOW PLAYING
@@ -61,7 +61,7 @@ PRIVATE BY DESIGN
 No account, no ads, no analytics and no server of its own. Your calendar and music never leave
 your Mac. Your Linear key stays in your keychain.
 
-Clove is free and open source: github.com/sriramkansala/clove
+Topsail is free and open source: github.com/sriramkansala/topsail
 
 ## Keywords (100)
 
@@ -77,14 +77,14 @@ Answer None / No to every question: 4+.
 
 **Do you or your third-party partners collect data from this app?** No.
 
-Clove has no server, analytics or SDKs. The only network requests are to `api.linear.app` with
+Topsail has no server, analytics or SDKs. The only network requests are to `api.linear.app` with
 the user's own key (only if they connect Linear; the developer never sees that data) and to
 Spotify's image servers for album artwork. Calendar data, audio and transcripts never leave the
-Mac. This matches `Clove/Resources/PrivacyInfo.xcprivacy`, which declares no collected data.
+Mac. This matches `Topsail/Resources/PrivacyInfo.xcprivacy`, which declares no collected data.
 
 ## App Review notes
 
-> Clove is a menu-bar utility with no Dock icon. It shows information in the area around the
+> Topsail is a menu-bar utility with no Dock icon. It shows information in the area around the
 > MacBook notch. Settings opens on first launch, and afterwards from the capsule icon in the menu
 > bar. Hover over the notch (on Macs without one, the top centre of the screen) to open it.
 >
@@ -95,7 +95,7 @@ Mac. This matches `Clove/Resources/PrivacyInfo.xcprivacy`, which declares no col
 > - Microphone: for voice notes, transcribed on device with SpeechAnalyzer and understood by the
 >   on-device Foundation Models (needs Apple Intelligence).
 > - Input Monitoring and Accessibility: asked only if the user turns on "Hide macOS volume
->   indicator" (off by default). Clove then receives only the volume and mute keys, changes the
+>   indicator" (off by default). Topsail then receives only the volume and mute keys, changes the
 >   volume itself and shows its own indicator. It reads no other keystrokes.
 >
 > The low-battery notice opens Battery settings, where the user can turn on Low Power Mode.
@@ -109,8 +109,8 @@ Mac. This matches `Clove/Resources/PrivacyInfo.xcprivacy`, which declares no col
 
 ## Before submitting
 
-1. Join the Apple Developer Program and register `app.clove.Clove` in App Store Connect.
-2. `TEAM_ID=<your team id> scripts/release.sh`, then upload `build/AppStore/Clove.pkg` with
+1. Join the Apple Developer Program and register `app.topsail.Topsail` in App Store Connect.
+2. `TEAM_ID=<your team id> scripts/release.sh`, then upload `build/AppStore/Topsail.pkg` with
    Transporter.
 3. Fill in the fields above, upload the screenshots, and add the Linear test key to the review
    notes.
