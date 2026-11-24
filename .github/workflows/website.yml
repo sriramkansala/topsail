@@ -11,22 +11,41 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  actions: read
 
 concurrency:
   group: pages
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  upload:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
           path: website
+
+  deploy:
+    needs: upload
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      # GitHub can take a while to list a new artifact, and deploy-pages fails if it isn't listed.
+      - name: Wait for the upload to be listed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for attempt in $(seq 1 24); do
+            count=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts?name=github-pages" --jq .total_count || echo 0)
+            echo "attempt $attempt: $count listed"
+            if [ "$count" -ge 1 ]; then exit 0; fi
+            sleep 5
+          done
+          echo "::error::The uploaded site wasn't listed within two minutes."
+          exit 1
       - id: deployment
         uses: actions/deploy-pages@v4
