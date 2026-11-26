@@ -71,10 +71,11 @@ struct ClipboardPageView: View {
             .frame(height: IslandLayout.clipboardHeaderHeight)
 
             VStack(spacing: IslandLayout.clipboardRowSpacing) {
-                ForEach(items) { item in
+                ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                     ClipboardRow(item: item, pinned: pinned, justCopied: justCopied == item.id,
                                  copy: { copy(item) },
                                  togglePin: { togglePin(item, pinned: pinned) })
+                        .traced("clip.\(pinned ? "pinned" : "row")\(index)", control: true)
                 }
             }
         }
@@ -168,6 +169,7 @@ private struct ClipboardRow: View {
                 Label("Copied", systemImage: "checkmark")
                     .font(.system(size: 10.5, weight: .semibold))
                     .foregroundColor(.green)
+                    .traced("toast.copied")
                     .transition(.opacity)
             } else if hovering {
                 PinButton(pinned: pinned, action: togglePin)
@@ -386,6 +388,7 @@ struct CopiedNotice: View {
                     .foregroundColor(.white)
                     .tracking(-0.1)
             }
+            .traced("toast.copied")
             .frame(maxWidth: .infinity)
             .frame(height: IslandLayout.copiedStageHeight - 6)
         }

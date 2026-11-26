@@ -95,6 +95,9 @@ final class NowPlayingService: ObservableObject {
     private var deniedApps: Set<PlayerApp> = []
 
     init() {
+        #if DEBUG
+        if Continuity.isActive { return }  // continuity tests: fixture data only
+        #endif
         dnc.addObserver(
             self,
             selector: #selector(musicChanged(_:)),
@@ -385,3 +388,37 @@ final class NowPlayingService: ObservableObject {
         }
     }
 }
+
+#if DEBUG
+extension NowPlayingService {
+    /// Continuity tests: a made-up track with drawn artwork, playing or paused; nil for nothing.
+    func setFixture(playing: Bool?) {
+        guard let playing else {
+            track = nil
+            isPlaying = false
+            artwork = nil
+            return
+        }
+        if track == nil {
+            track = Track(id: "fixture", title: "Harbour Lights", artist: "The Fixtures", album: "Test Card",
+                          duration: 215, app: .music)
+            artwork = Self.fixtureArtwork
+            accentColor = Color(red: 1, green: 0.72, blue: 0.36)
+            positionAnchor = 42
+            positionAnchorDate = Date()
+        }
+        isPlaying = playing
+    }
+
+    private static let fixtureArtwork: NSImage = {
+        let size = NSSize(width: 200, height: 200)
+        return NSImage(size: size, flipped: false) { rect in
+            NSGradient(colors: [NSColor(red: 0.98, green: 0.45, blue: 0.25, alpha: 1),
+                                NSColor(red: 0.35, green: 0.2, blue: 0.75, alpha: 1)])?.draw(in: rect, angle: 60)
+            NSColor.white.withAlphaComponent(0.9).setFill()
+            NSBezierPath(ovalIn: rect.insetBy(dx: 62, dy: 62)).fill()
+            return true
+        }
+    }()
+}
+#endif

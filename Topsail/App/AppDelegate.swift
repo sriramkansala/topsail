@@ -17,6 +17,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var teleprompterItem: NSMenuItem?
     private var updateItem: NSMenuItem?
     private var cancellables = Set<AnyCancellable>()
+    #if DEBUG
+    /// The continuity suite, in its test mode (`--continuity`).
+    private var continuity: ContinuityRunner?
+    #endif
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -38,7 +42,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .map { $0 == .connected }
             .removeDuplicates()
             .sink { [weak self] connected in
+                #if DEBUG
+                // The continuity tests' made-up Linear must not take the global shortcut.
+                shortcuts.isEnabled = connected && !Continuity.isActive
+                #else
                 shortcuts.isEnabled = connected
+                #endif
                 self?.voiceItem?.isHidden = !connected
             }
             .store(in: &cancellables)
@@ -63,6 +72,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // With no Dock icon, and the menu bar item easily hidden behind the notch, the first
         // launch opens Settings so it is clear Topsail is running and where to find it.
+        #if DEBUG
+        if Continuity.isActive {
+            let runner = ContinuityRunner(controller: controller)
+            continuity = runner
+            runner.handleLaunchArguments()
+            return
+        }
+        #endif
         if !UserDefaults.standard.bool(forKey: Self.launchedBeforeKey) {
             UserDefaults.standard.set(true, forKey: Self.launchedBeforeKey)
             showSettings()
@@ -92,16 +109,45 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // Debug builds only: `open topsail://preview/low-battery` (or `/charging`, `/meeting`, `/airpods`, `/headphones`, `/copied`, `/recording`, `/countdown`, `/recording-saved`, `/koi`; see `Recorder.preview`) shows that
             // activity now, without draining the battery or unplugging.
             case "preview": windowController?.preview(url.lastPathComponent)
+            // `open topsail://test/<cell-id>` (or `/all`, or `/toast.*`) runs continuity cells
+            // with made-up data and traces them (docs/continuity/matrix.md); `topsail://test/exit`
+            // goes back to the real island. Outside the test mode, Topsail first restarts in it.
+            case "test": runContinuity(url.lastPathComponent)
             #endif
             default: break
             }
         }
     }
 
+    #if DEBUG
+    private func runContinuity(_ route: String) {
+        if route == "exit" {
+            if Continuity.isActive { relaunch(arguments: []) }
+        } else if let continuity {
+            continuity.run(route: route)
+        } else {
+            relaunch(arguments: ["--continuity", "--continuity-run", route])
+        }
+    }
+
+    /// Starts a second copy of Topsail with `arguments` and quits this one.
+    private func relaunch(arguments: [String]) {
+        let configuration = NSWorkspace.OpenConfiguration()
+        configuration.arguments = arguments
+        configuration.createsNewApplicationInstance = true
+        NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL, configuration: configuration) { _, _ in
+            DispatchQueue.main.async { NSApp.terminate(nil) }
+        }
+    }
+    #endif
+
     private static let launchedBeforeKey = "launchedBefore"
 
     /// A recording in progress is saved before Topsail quits.
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        #if DEBUG
+        if Continuity.isActive { return .terminateNow }  // its recordings are made up
+        #endif
         guard features.recorder.showsWings else { return .terminateNow }
         features.recorder.finish { NSApp.reply(toApplicationShouldTerminate: true) }
         return .terminateLater

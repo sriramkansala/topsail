@@ -109,6 +109,8 @@ enum IslandLayout {
 
     // "Copied to clipboard", under the camera: the notch reaches a little lower and says so.
     static let copiedStageHeight: CGFloat = 24
+    /// The band a toast sits in, at the base of the island.
+    static let toastBandHeight: CGFloat = 24
 
     // Clipboard page: pinned items, then recent copies, one row each under a small header. Never
     // shorter than three rows, so one copy isn't a sliver; past five rows' height, it scrolls.

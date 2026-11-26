@@ -29,24 +29,33 @@ struct TransientActivityView: View {
         switch activity.kind {
         case .charging(let level):
             ChargingSweep(level: level, notchSize: notchSize, wingWidth: wingWidth, stageHeight: meterHeight)
+                .traced("wings.charging")
         case .lowBattery(let level, let lowPowerMode):
             LowBatteryNotice(level: level, lowPowerMode: lowPowerMode, notchSize: notchSize,
                              onClick: onRequestLowPowerMode)
+                .traced("notice.lowBattery")
         case .meetingReminder(let meeting):
             MeetingReminderNotice(meeting: meeting, notchSize: notchSize) { onMeetingAnswer(meeting, $0) }
+                .traced("notice.meetingReminder")
         case .audioDevice(let name, let battery):
             DeviceConnectedNotice(name: name, battery: battery, notchSize: notchSize, wingWidth: wingWidth,
                                   nowPlaying: nowPlaying)
+                .traced("notice.audioDevice")
         case .copied:
             CopiedNotice(notchSize: notchSize, wingWidth: wingWidth, nowPlaying: nowPlaying)
         case .agentApproval(let approval):
             AgentApprovalNotice(approval: approval, notchSize: notchSize) { onAgentAnswer(approval, $0) }
+                .traced("notice.agentApproval")
         case .notification(let notification):
             NotificationNotice(notification: notification, showsText: showsNotificationText, notchSize: notchSize)
+                .traced("notice.notification")
         case .recorder(let notice):
             RecorderNoticeView(notice: notice, notchSize: notchSize)
+                .traced("notice.recorder")
         default:
             wingsAndMeter
+                .traced(activity.kind.isLevel || activity.kind == .keepAwake(on: true) || activity.kind == .keepAwake(on: false)
+                        ? "toast.\(activity.kind.traceName)" : "wings.\(activity.kind.traceName)")
         }
     }
 

@@ -41,6 +41,9 @@ final class AgentHub: ObservableObject {
     }
 
     func start() {
+        #if DEBUG
+        if Continuity.isActive { return }  // continuity tests: fixture data only
+        #endif
         #if DIRECT
         guard server == nil else { return }
         let server = AgentServer(socketPath: Self.socketPath) { [weak self] agent, event, body in
@@ -371,3 +374,13 @@ private struct EventInfo {
         return line.count > 60 ? String(line.prefix(59)) + "…" : line
     }
 }
+
+#if DEBUG
+extension AgentHub {
+    /// Continuity tests: made-up sessions and requests.
+    func setFixture(sessions: [AgentSession], approvals: [AgentApproval]) {
+        self.sessions = sessions
+        self.approvals = approvals
+    }
+}
+#endif

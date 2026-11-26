@@ -46,6 +46,9 @@ final class LinearService: ObservableObject {
 
     init() {
         status = .notConnected
+        #if DEBUG
+        if Continuity.isActive { return }  // continuity tests: fixture data only
+        #endif
         // Read the key off the main thread: if macOS has to ask before handing it over, that
         // prompt must never freeze launch (it blocks the reading thread until answered).
         Task.detached(priority: .userInitiated) { [weak self] in
@@ -94,6 +97,9 @@ final class LinearService: ObservableObject {
     }
 
     func refresh() {
+        #if DEBUG
+        if Continuity.isActive { return }  // continuity tests: fixture data only
+        #endif
         guard let storedKey, refreshTask == nil || refreshTask?.isCancelled == true else { return }
         refreshTask = Task {
             defer { refreshTask = nil }
@@ -158,3 +164,13 @@ final class LinearService: ObservableObject {
         }
     }
 }
+
+#if DEBUG
+extension LinearService {
+    /// Continuity tests: connected with made-up issues, or not connected.
+    func setFixture(_ snapshot: LinearSnapshot?) {
+        self.snapshot = snapshot
+        status = snapshot == nil ? .notConnected : .connected
+    }
+}
+#endif

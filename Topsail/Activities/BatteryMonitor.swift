@@ -32,6 +32,9 @@ final class BatteryMonitor {
         self.center = center
         // The first reading is only a baseline; nothing is announced at launch.
         last = Self.read()
+        #if DEBUG
+        if Continuity.isActive { return }  // continuity tests: fixture data only
+        #endif
         guard last != nil else { return }
 
         // The callback is a C function pointer and cannot capture; route through `context`.

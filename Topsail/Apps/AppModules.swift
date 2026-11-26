@@ -71,6 +71,9 @@ final class AppModules: ObservableObject {
 
     /// Which of the apps are open, before the island sizes the page.
     func noteOpenApps() {
+        #if DEBUG
+        if Continuity.isActive { return }  // continuity tests: fixture data only
+        #endif
         let running = Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier))
         let terminal = running.contains(Self.terminalID), chrome = running.contains(Self.chromeID)
         if terminal != terminalOpen { terminalOpen = terminal }
@@ -79,6 +82,9 @@ final class AppModules: ObservableObject {
 
     /// The page came on (or went off) screen.
     func setVisible(_ visible: Bool) {
+        #if DEBUG
+        if Continuity.isActive { return }  // continuity tests: fixture data only
+        #endif
         timer?.invalidate()
         timer = nil
         awaiting = 0

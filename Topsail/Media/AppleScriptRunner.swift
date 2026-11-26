@@ -21,6 +21,9 @@ enum AppleScriptRunner {
 
     /// Runs `source` on the script queue; `completion`, if given, receives the outcome on the main actor.
     static func run(_ source: String, completion: (@MainActor (Outcome) -> Void)? = nil) {
+        #if DEBUG
+        if Continuity.isActive { return }  // continuity tests: fixture data only
+        #endif
         queue.async {
             let outcome = execute(source)
             guard let completion else { return }

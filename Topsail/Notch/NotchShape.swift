@@ -15,6 +15,9 @@ struct NotchShape: Shape {
     func path(in rect: CGRect) -> Path {
         let rt = topRadius
         let rb = bottomRadius
+        #if DEBUG
+        NotchRadiiTrace.note(top: rt, bottom: rb)
+        #endif
 
         var path = Path()
         path.move(to: CGPoint(x: rect.minX, y: rect.minY))

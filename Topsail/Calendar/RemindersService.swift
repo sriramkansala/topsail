@@ -36,6 +36,9 @@ final class RemindersService: ObservableObject {
 
     /// Starts listing (when the feature is turned on). Asks for access the first time.
     func start() {
+        #if DEBUG
+        if Continuity.isActive { return }  // continuity tests: fixture data only
+        #endif
         guard !running else { return }
         running = true
         switch access {
@@ -53,6 +56,9 @@ final class RemindersService: ObservableObject {
     }
 
     func requestAccess() {
+        #if DEBUG
+        if Continuity.isActive { return }  // continuity tests: fixture data only
+        #endif
         guard access == .notDetermined else { return }
         Task {
             let granted = (try? await store.requestFullAccessToReminders()) ?? false
@@ -62,6 +68,9 @@ final class RemindersService: ObservableObject {
     }
 
     func refresh() {
+        #if DEBUG
+        if Continuity.isActive { return }  // continuity tests: fixture data only
+        #endif
         guard access == .granted, running else { return }
         let predicate = store.predicateForIncompleteReminders(withDueDateStarting: nil, ending: nil, calendars: nil)
         store.fetchReminders(matching: predicate) { [weak self] fetched in

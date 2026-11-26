@@ -204,6 +204,7 @@ struct ExpandedPlayerView: View {
                             .foregroundColor(.white.opacity(0.55))
                     }
                     .lineLimit(1)
+                    .traced("title")
                     Spacer(minLength: 8)
                     Color.clear
                         .frame(width: IslandLayout.playerBarsWidth, height: 18)
@@ -217,11 +218,13 @@ struct ExpandedPlayerView: View {
             ZStack {
                 if let level, let reading = level.levelReading {
                     PlayerLevelRow(kind: level, reading: reading)
+                        .traced("toast.\(level.traceName)")
                         .transition(.contentMorph(reduceMotion: reduceMotion))
                 } else {
                     TimelineView(.periodic(from: .now, by: 0.5)) { context in
                         ProgressBarView(service: service, date: context.date)
                     }
+                    .traced("player.scrubber", control: true)
                     .transition(.contentMorph(reduceMotion: reduceMotion))
                 }
             }
@@ -235,6 +238,7 @@ struct ExpandedPlayerView: View {
                 control("forward.fill", size: 13) { service.next() }
             }
             .frame(height: IslandLayout.playerControlsHeight)
+            .traced("player.controls", control: true)
             .padding(.top, 6)
         }
         .frame(height: IslandLayout.playerHeight, alignment: .top)

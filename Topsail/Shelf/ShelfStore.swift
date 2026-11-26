@@ -29,6 +29,9 @@ final class ShelfStore: ObservableObject {
     private var accessed: Set<URL> = []
 
     init() {
+        #if DEBUG
+        if Continuity.isActive { return }  // continuity tests: fixture data only
+        #endif
         restore()
     }
 
@@ -123,6 +126,9 @@ final class ShelfStore: ObservableObject {
     #endif
 
     private func save() {
+        #if DEBUG
+        if Continuity.isActive { return }  // continuity tests: fixture data only
+        #endif
         let bookmarks = items.compactMap {
             try? $0.url.bookmarkData(options: Self.bookmarkOptions, includingResourceValuesForKeys: nil, relativeTo: nil)
         }

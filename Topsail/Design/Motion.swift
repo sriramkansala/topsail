@@ -123,11 +123,17 @@ enum Motion {
     // MARK: Reduce Motion
 
     static var reduceMotion: Bool {
-        NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        #if DEBUG
+        if Continuity.isActive { return Continuity.reduceMotion }
+        #endif
+        return NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
     }
 
     /// `withAnimation` that honours Reduce Motion: the change still happens, without motion.
     static func perform(_ animation: Animation, _ changes: () -> Void) {
+        #if DEBUG
+        if Continuity.settingUp { return withAnimation(nil, changes) }
+        #endif
         withAnimation(reduceMotion ? nil : animation, changes)
     }
 }
@@ -211,6 +217,21 @@ private struct MorphModifier: ViewModifier {
             .opacity(shown)
             .scaleEffect(0.97 + 0.03 * shown, anchor: .top)
             .blur(radius: 3 * (1 - shown))
+    }
+}
+
+// MARK: - Tracing
+
+extension View {
+    /// Names this view for the continuity suite (`docs/continuity/matrix.md`): in its test mode
+    /// the motion tracer writes the view's frame and opacity on every display frame. `control`
+    /// marks something the user clicks, which a toast must never cover. Does nothing otherwise.
+    @ViewBuilder func traced(_ name: String, control: Bool = false) -> some View {
+        #if DEBUG
+        modifier(TracedModifier(name: name, isControl: control))
+        #else
+        self
+        #endif
     }
 }
 

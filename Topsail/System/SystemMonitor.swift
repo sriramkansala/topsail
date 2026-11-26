@@ -35,6 +35,9 @@ final class SystemMonitor: ObservableObject {
     }
 
     func start() {
+        #if DEBUG
+        if Continuity.isActive { return }  // continuity tests: fixture data only
+        #endif
         guard timer == nil else { return }
         let timer = DispatchSource.makeTimerSource(queue: queue)
         let sampler = sampler

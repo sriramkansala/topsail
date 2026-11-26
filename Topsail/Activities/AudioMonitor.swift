@@ -20,6 +20,9 @@ final class AudioMonitor {
 
     init(center: ActivityCenter) {
         self.center = center
+        #if DEBUG
+        if Continuity.isActive { return }  // continuity tests: fixture data only
+        #endif
         // The device and volume at launch are only a baseline; nothing is announced.
         attach(to: AudioHardware.defaultOutputDevice())
 

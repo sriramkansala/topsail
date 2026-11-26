@@ -7,7 +7,12 @@ import ServiceManagement
 /// `SMAppService.mainApp` directly, so it always reflects System Settings > Login Items.
 @MainActor
 final class AppSettings: ObservableObject {
+    #if DEBUG
+    /// Continuity tests run on their own throwaway preferences, never the user's.
+    private let defaults: UserDefaults = Continuity.isActive ? Continuity.defaults : .standard
+    #else
     private let defaults = UserDefaults.standard
+    #endif
 
     @Published var showMusicActivity: Bool { didSet { save(showMusicActivity, "showMusicActivity") } }
     @Published var showChargingActivity: Bool { didSet { save(showChargingActivity, "showChargingActivity") } }
@@ -127,8 +132,7 @@ final class AppSettings: ObservableObject {
         teleprompterFontSize = defaults.double(forKey: "teleprompterFontSize")
         teleprompterHeight = defaults.double(forKey: "teleprompterHeight")
         launchAtLogin = false
-        let stored = UserDefaults.standard
-        features = Set(Feature.available.filter { stored.bool(forKey: Self.featureKey($0)) })
+        features = Set(Feature.available.filter { defaults.bool(forKey: Self.featureKey($0)) })
         readLaunchAtLogin()
     }
 

@@ -455,6 +455,9 @@ final class Recorder: ObservableObject {
     /// Reads the folder again for the newest recordings (screen recordings are .mov or .mp4;
     /// calls are .m4a).
     func refreshRecent() {
+        #if DEBUG
+        if Continuity.isActive { return }  // continuity tests: fixture data only
+        #endif
         let found: [RecentRecording] = settings.withFolderAccess { folder in
             let keys: Set<URLResourceKey> = [.creationDateKey, .contentModificationDateKey]
             let urls = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: Array(keys),
@@ -554,6 +557,9 @@ final class Recorder: ObservableObject {
             postNotice(.offer(meeting))
         case "recording-consent":
             postNotice(.consent(meeting))
+        case "recording-idle":
+            isPaused = false
+            Motion.perform(Motion.notice) { phase = .idle }
         default:
             break
         }

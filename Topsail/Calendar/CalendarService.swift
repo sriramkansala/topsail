@@ -56,6 +56,12 @@ final class CalendarService: ObservableObject {
     private var storeObserver: NSObjectProtocol?
 
     init() {
+        #if DEBUG
+        if Continuity.isActive {  // continuity tests: fixture data only
+            access = .granted
+            return
+        }
+        #endif
         access = Self.currentAccess()
         if access == .granted {
             startUpdating()
@@ -74,6 +80,9 @@ final class CalendarService: ObservableObject {
     }
 
     func refresh() {
+        #if DEBUG
+        if Continuity.isActive { return }  // continuity tests: fixture data only
+        #endif
         guard access == .granted else { return }
         let now = Date()
         let calendar = Calendar.current
@@ -199,3 +208,14 @@ final class CalendarService: ObservableObject {
         }
     }
 }
+
+#if DEBUG
+extension CalendarService {
+    /// Continuity tests: made-up events, and whether one of them is a call about to start.
+    func setFixture(events: [UpcomingEvent], imminent: UpcomingEvent?) {
+        upcoming = events
+        self.events = Array(events.prefix(IslandLayout.maxEvents))
+        imminentMeeting = imminent
+    }
+}
+#endif

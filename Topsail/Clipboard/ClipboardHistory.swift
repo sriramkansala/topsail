@@ -86,10 +86,16 @@ final class ClipboardHistory: ObservableObject {
     init() {
         changeCount = pasteboard.changeCount
         access = Self.currentAccess()
+        #if DEBUG
+        if Continuity.isActive { return }  // continuity tests: fixture data only
+        #endif
         loadPinned()
     }
 
     func start() {
+        #if DEBUG
+        if Continuity.isActive { return }  // continuity tests: fixture data only
+        #endif
         guard timer == nil else { return }
         changeCount = pasteboard.changeCount
         refreshAccess()
@@ -121,10 +127,17 @@ final class ClipboardHistory: ObservableObject {
             }
             return pasteboardItem
         }
-        pasteboard.clearContents()
-        pasteboard.writeObjects(restored)
-        // Topsail's own copy: not a new item, no "Copied" popup.
-        changeCount = pasteboard.changeCount
+        #if DEBUG
+        let writes = !Continuity.isActive  // continuity tests never touch the real clipboard
+        #else
+        let writes = true
+        #endif
+        if writes {
+            pasteboard.clearContents()
+            pasteboard.writeObjects(restored)
+            // Topsail's own copy: not a new item, no "Copied" popup.
+            changeCount = pasteboard.changeCount
+        }
         guard !pinned.contains(where: { $0.id == item.id }) else { return }
         items.removeAll { $0.id == item.id }
         items.insert(item, at: 0)
@@ -143,6 +156,9 @@ final class ClipboardHistory: ObservableObject {
         guard pinned.contains(where: { $0.id == item.id }) else { return }
         pinned.removeAll { $0.id == item.id }
         items.insert(item, at: 0)
+        #if DEBUG
+        if Continuity.isActive { return }  // continuity tests: nothing on disk
+        #endif
         if let file = Self.file(for: item.id) { try? FileManager.default.removeItem(at: file) }
     }
 
@@ -151,6 +167,9 @@ final class ClipboardHistory: ObservableObject {
     }
 
     func refreshAccess() {
+        #if DEBUG
+        if Continuity.isActive { return }  // continuity tests: fixture data only
+        #endif
         let current = Self.currentAccess()
         if current != access { access = current }
     }
@@ -282,6 +301,9 @@ final class ClipboardHistory: ObservableObject {
     }
 
     private func save(_ item: ClipboardItem) {
+        #if DEBUG
+        if Continuity.isActive { return }  // continuity tests: fixture data only
+        #endif
         guard let folder = Self.folder, let file = Self.file(for: item.id) else { return }
         let stored = StoredItem(id: item.id, copiedAt: item.copiedAt, pinnedAt: Date(),
                                 representations: item.representations.map { types in
@@ -339,3 +361,27 @@ final class ClipboardHistory: ObservableObject {
         return thumbnail
     }
 }
+
+#if DEBUG
+extension ClipboardHistory {
+    /// Continuity tests: made-up copies, as if Topsail were allowed to read the clipboard.
+    func setFixture(texts: [String]) {
+        access = .allowed
+        pinned = []
+        items = texts.enumerated().map { index, text in
+            ClipboardItem(content: text.hasPrefix("https://") ? .link(URL(string: text)!) : .text(text),
+                          copiedAt: Date().addingTimeInterval(-Double(index) * 240 - 5),
+                          representations: [], fingerprint: text.hashValue, byteCount: text.utf8.count)
+        }
+    }
+
+    /// Continuity tests: something was just copied in another app.
+    func fixtureCopy(_ text: String) {
+        let item = ClipboardItem(content: .text(text), copiedAt: Date(), representations: [],
+                                 fingerprint: text.hashValue, byteCount: text.utf8.count)
+        items.removeAll { $0.fingerprint == item.fingerprint }
+        items.insert(item, at: 0)
+        onCopy?()
+    }
+}
+#endif

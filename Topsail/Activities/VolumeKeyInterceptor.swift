@@ -51,6 +51,9 @@ final class VolumeKeyInterceptor {
         )
         remoteVolume.onActiveChange = { [tap] active in tap.remoteVolume = active }
 
+        #if DEBUG
+        if Continuity.isActive { return }  // continuity tests: fixture data only
+        #endif
         // At launch: start if already allowed, otherwise wait quietly for the permission.
         apply(enabled: settings.hideSystemVolumeHUD, userTurnedOn: false)
         settings.$hideSystemVolumeHUD

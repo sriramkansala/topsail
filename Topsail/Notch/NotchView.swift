@@ -16,11 +16,15 @@ struct NotchView: View {
             // The teleprompter's handle hangs just below the island, outside it: pull it down.
             if model.state == .expanded && model.teleprompterActive {
                 TeleprompterHandle(onDrag: model.dragTeleprompter(by:), onEnd: model.endTeleprompterDrag(predicted:))
+                    .traced("tele.handle", control: true)
                     .padding(.top, model.islandSize.height + IslandLayout.teleprompterHandleGap)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     .transition(.opacity.animation(reduceMotion ? nil : Motion.fast))
             }
         }
+        #if DEBUG
+        .modifier(ContinuityEnvironmentModifier())
+        #endif
     }
 
     private var island: some View {
@@ -28,6 +32,7 @@ struct NotchView: View {
             // The Koi pond page fills the whole open island, behind the notch row.
             if model.state == .expanded, model.visiblePage == .pond, !model.voiceActive, !model.teleprompterActive {
                 PondPageView(size: model.expandedSize, notchHeight: model.notchSize.height)
+                    .traced("pond")
                     .transition(.opacity.animation(reduceMotion ? nil : Motion.fast))
             }
 
@@ -52,17 +57,21 @@ struct NotchView: View {
                 } else if model.features.recorder.showsWings {
                     RecordingWings(recorder: model.features.recorder, notchSize: model.notchSize,
                                    wingWidth: RecorderLayout.wing)
+                        .traced("wings.recording")
                         .transition(.cascade(0, reduceMotion: reduceMotion))
                 } else if model.showsKoiPass && model.koiPassFirst {
                     KoiPassWings(notchSize: model.notchSize, wingWidth: IslandLayout.koiPassWing,
                                  onFinished: model.endKoiPass)
+                        .traced("wings.koi")
                         .transition(.cascade(0, reduceMotion: reduceMotion))
                 } else if model.showsMeetingActivity, let meeting = model.calendar.imminentMeeting {
                     MeetingSoonView(meeting: meeting, notchSize: model.notchSize)
+                        .traced("wings.meeting")
                         .id(meeting.id)
                         .transition(.cascade(0, reduceMotion: reduceMotion))
                 } else if model.showsAgentActivity, let agent = model.features.agents.workingAgent {
                     AgentWorkingWings(agent: agent, notchSize: model.notchSize, wingWidth: model.compactWing)
+                        .traced("wings.agent")
                         .transition(.cascade(0, reduceMotion: reduceMotion))
                 } else if model.showsMusicActivity {
                     CompactMusicWings(nowPlaying: nowPlaying, notchSize: model.notchSize, wingWidth: model.compactWing,
@@ -71,12 +80,14 @@ struct NotchView: View {
                 } else if model.showsKoiPass {
                     KoiPassWings(notchSize: model.notchSize, wingWidth: IslandLayout.koiPassWing,
                                  onFinished: model.endKoiPass)
+                        .traced("wings.koi")
                         .transition(.cascade(0, reduceMotion: reduceMotion))
                 }
                 // A recording stays in sight in the notch row while a notice hangs below it.
                 if model.features.recorder.showsWings, RecordingWings.sharesRow(with: model.activities.current?.kind) {
                     RecordingWings(recorder: model.features.recorder, notchSize: model.notchSize,
                                    wingWidth: model.activityWingWidth, rowOnly: true)
+                        .traced("wings.recording")
                         .transition(.cascade(0, reduceMotion: reduceMotion))
                 }
             }
@@ -87,12 +98,14 @@ struct NotchView: View {
 
             if let level = model.expandedLevel, model.visiblePage != .player || model.voiceActive || model.teleprompterActive {
                 ExpandedLevelIndicator(kind: level)
+                    .traced("toast.\(level.traceName)")
                     .padding(.bottom, IslandLayout.levelIndicatorBottom)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
                     .transition(.opacity.animation(reduceMotion ? nil : Motion.fast))
             }
         }
         .frame(width: model.islandSize.width, height: model.islandSize.height, alignment: .top)
+        .traced("island")
         .frame(width: model.islandSize.width + 2 * model.topRadius, height: model.islandSize.height)
         .background(NotchShape(topRadius: model.topRadius, bottomRadius: model.bottomRadius).fill(Color.black))
         .clipShape(NotchShape(topRadius: model.topRadius, bottomRadius: model.bottomRadius))
@@ -119,6 +132,7 @@ struct NotchView: View {
                     TeleprompterView(controller: model.features.teleprompter,
                                      fontSize: CGFloat(model.settings.teleprompterFontSize))
                         .environment(\.colorScheme, .dark)
+                        .traced("tele.script")
                         .transition(.cascade(1, reduceMotion: reduceMotion))
                 } else if model.state == .expanded && model.voiceActive {
                     // A voice note fills the island below the camera, in place of the pages.
@@ -131,6 +145,7 @@ struct NotchView: View {
                         .transition(.bloomReveal(reduceMotion: reduceMotion))
                     page
                         .frame(height: model.expandedContentHeight, alignment: .top)
+                        .traced("page")
                         .padding(.horizontal, IslandLayout.horizontalPadding)
                         .padding(.top, IslandLayout.contentTopPadding)
                         .transition(.bloomReveal(reduceMotion: reduceMotion))
@@ -147,8 +162,10 @@ struct NotchView: View {
                         ForEach(model.availablePages, id: \.self) { page in
                             PageTab(symbol: Self.symbol(for: page, model: model), page: page, model: model,
                                     namespace: pageNamespace)
+                                .traced("tab.\(page)", control: true)
                         }
                     }
+                    .traced("tabs", control: true)
                     .transition(.opacity.animation(reduceMotion ? nil : Motion.fast))
                 }
                 Spacer(minLength: model.notchSize.width)
@@ -167,6 +184,7 @@ struct NotchView: View {
                     }
                     if model.settings.isEnabled(.keepAwake) {
                         KeepAwakeButton(keepAwake: model.features.keepAwake, action: model.toggleKeepAwake)
+                            .traced("ctl.keepAwake", control: true)
                     }
                     if model.linear.isConnected {
                         Button(action: { model.toggleVoice() }) {
@@ -184,6 +202,7 @@ struct NotchView: View {
                     }
                     .buttonStyle(.pressable)
                 }
+                .traced("rowbuttons", control: true)
             }
             .padding(.leading, IslandLayout.horizontalPadding - IslandLayout.tabPadding)
             .padding(.trailing, IslandLayout.horizontalPadding)
@@ -196,25 +215,32 @@ struct NotchView: View {
             ZStack(alignment: .top) {
                 if model.visiblePage == .calendar {
                     CalendarTabView(model: model, calendar: calendar, reminders: model.features.reminders)
+                        .traced("page.calendar")
                         .transition(.contentMorph(reduceMotion: reduceMotion))
                 } else if model.visiblePage == .tasks {
                     TasksView(linear: linear, expanded: model.tasksExpanded, onViewMore: model.showMoreTasks)
+                        .traced("page.tasks")
                         .transition(.contentMorph(reduceMotion: reduceMotion))
                 } else if model.visiblePage == .system {
                     SystemPageView(system: model.system)
+                        .traced("page.system")
                         .transition(.contentMorph(reduceMotion: reduceMotion))
                 } else if model.visiblePage == .apps {
                     AppsPageView(apps: model.features.apps)
+                        .traced("page.apps")
                         .transition(.contentMorph(reduceMotion: reduceMotion))
                 } else if model.visiblePage == .agents {
                     AgentsPageView(hub: model.features.agents,
                                    connected: AgentKind.allCases.contains(where: AgentHooks.isConnected))
+                        .traced("page.agents")
                         .transition(.contentMorph(reduceMotion: reduceMotion))
                 } else if model.visiblePage == .recorder {
                     RecorderPageView(recorder: model.features.recorder)
+                        .traced("page.recorder")
                         .transition(.contentMorph(reduceMotion: reduceMotion))
                 } else if model.visiblePage == .clipboard {
                     ClipboardTabView(model: model, shelf: model.features.shelf)
+                        .traced("page.clipboard")
                         .transition(.contentMorph(reduceMotion: reduceMotion))
                 } else if model.visiblePage == .pond {
                     // The pond itself is drawn behind the whole island (see `island`).
@@ -223,9 +249,11 @@ struct NotchView: View {
                 } else if nowPlaying.track != nil {
                     ExpandedPlayerView(service: nowPlaying,
                                        level: model.voiceActive || model.teleprompterActive ? nil : model.expandedLevel)
+                        .traced("page.player")
                         .transition(.contentMorph(reduceMotion: reduceMotion))
                 } else {
                     MessageView(symbol: "music.note", text: String(localized: "Nothing playing"))
+                        .traced("page.nothing")
                         .transition(.contentMorph(reduceMotion: reduceMotion))
                 }
             }
@@ -312,6 +340,7 @@ struct CompactMusicWings: View {
                 ZStack {
                     if let level {
                         LevelGlyph(kind: level)
+                            .traced("toast.\(level.traceName)")
                             .transition(Self.swap(reduceMotion))
                     }
                 }
@@ -347,8 +376,10 @@ struct MusicTraveler: View {
     var body: some View {
         ZStack(alignment: .topLeading) {
             ArtworkView(image: nowPlaying.artwork, size: placement.art.width, cornerRadius: placement.artRadius)
+                .traced("art")
                 .offset(x: placement.art.minX, y: placement.art.minY)
             EqualizerView(isPlaying: nowPlaying.isPlaying, color: nowPlaying.accentColor)
+                .traced("bars")
                 .scaleEffect(placement.barsScale)
                 .position(placement.bars)
                 .opacity(placement.showsBars ? 1 : 0)

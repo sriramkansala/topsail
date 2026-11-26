@@ -67,6 +67,9 @@ final class RecorderSettings: ObservableObject {
         showsIsland = defaults.bool(forKey: Key.showsIsland)
         displayID = CGDirectDisplayID(clamping: defaults.integer(forKey: Key.displayID))
         folder = Self.defaultFolder
+        #if DEBUG
+        if Continuity.isActive { return }  // continuity tests: the default folder, never the user's own
+        #endif
         if let chosen = resolveBookmark() { folder = chosen }
     }
 

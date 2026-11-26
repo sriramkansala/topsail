@@ -60,6 +60,9 @@ final class NotificationMirror: ObservableObject {
     }
 
     func start() {
+        #if DEBUG
+        if Continuity.isActive { return }  // continuity tests: fixture data only
+        #endif
         guard timer == nil else { return }
         lastRecord = nil
         poll()

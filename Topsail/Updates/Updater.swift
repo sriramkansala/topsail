@@ -30,6 +30,9 @@ final class Updater: ObservableObject {
     private var task: Task<Void, Never>?
 
     func start() {
+        #if DEBUG
+        if Continuity.isActive { return }  // continuity tests: fixture data only
+        #endif
         guard timer == nil else { return }
         check()
         let timer = Timer(timeInterval: 24 * 3600, repeats: true) { [weak self] _ in

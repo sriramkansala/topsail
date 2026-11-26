@@ -67,6 +67,8 @@ final class NotchViewModel: ObservableObject {
     @Published private(set) var calendarMode: CalendarMode = .events
     /// Files are being dragged over the open island: the shelf lights up to take them.
     @Published private(set) var shelfTargeted = false
+    /// When something was last copied in another app; a recent copy is what the island opens on.
+    private(set) var lastCopyAt: Date?
     /// Height of the page below the notch row; the expanded island hugs it.
     @Published private(set) var expandedContentHeight: CGFloat = IslandLayout.messageHeight
 
@@ -377,7 +379,7 @@ final class NotchViewModel: ObservableObject {
         guard active != voiceActive else { return }
         Motion.perform(Motion.gentle) { voiceActive = active }
         // When the note ends, let the island go unless the pointer is still over it.
-        if !active, state == .expanded, !expandedActiveZone().contains(NSEvent.mouseLocation) {
+        if !active, state == .expanded, !expandedActiveZone().contains(pointerLocation) {
             collapse()
         }
     }
@@ -431,7 +433,7 @@ final class NotchViewModel: ObservableObject {
         if active {
             if state == .collapsed { expand() }
             onVoicePresent?()  // takes the keyboard, for Space, arrows and Esc
-        } else if state == .expanded, !expandedActiveZone().contains(NSEvent.mouseLocation) {
+        } else if state == .expanded, !expandedActiveZone().contains(pointerLocation) {
             collapse()
         }
     }
@@ -457,6 +459,9 @@ final class NotchViewModel: ObservableObject {
 
     func startTracking() {
         guard globalMonitor == nil, localMonitor == nil else { return }
+        #if DEBUG
+        if Continuity.isActive { return }  // the continuity tests move their own pointer
+        #endif
 
         // Mouse-down only marks where a drag would start (for the shelf).
         let events: NSEvent.EventTypeMask = [.mouseMoved, .leftMouseDragged, .leftMouseDown]
@@ -498,6 +503,14 @@ final class NotchViewModel: ObservableObject {
         } else {
             handleMouse(at: NSEvent.mouseLocation)
         }
+    }
+
+    /// Where the pointer is on screen.
+    private var pointerLocation: CGPoint {
+        #if DEBUG
+        if Continuity.isActive { return Continuity.pointer ?? CGPoint(x: -10_000, y: -10_000) }
+        #endif
+        return NSEvent.mouseLocation
     }
 
     private func handleMouse(at location: CGPoint) {
@@ -853,6 +866,9 @@ final class NotchViewModel: ObservableObject {
 
     /// Files are being dragged right now (and the shelf is on).
     private var isDraggingFiles: Bool {
+        #if DEBUG
+        if Continuity.isActive { return false }
+        #endif
         guard settings.isEnabled(.shelf), NSEvent.pressedMouseButtons & 1 != 0 else { return false }
         let pasteboard = NSPasteboard(name: .drag)
         return pasteboard.changeCount != dragChangeCount && pasteboard.types?.contains(.fileURL) == true
@@ -943,3 +959,62 @@ final class NotchViewModel: ObservableObject {
         onStateChange?(.collapsed)
     }
 }
+
+#if DEBUG
+// MARK: - Continuity tests
+
+extension NotchViewModel {
+    /// The test's pointer moved; nil takes it far from the island.
+    func testPointer(_ location: CGPoint?) {
+        Continuity.pointer = location
+        handleMouse(at: location ?? CGPoint(x: -10_000, y: -10_000))
+    }
+
+    /// On the closed island, under the camera.
+    var testPointOver: CGPoint { CGPoint(x: notchRect.midX, y: notchRect.maxY - 8) }
+
+    /// Beside the closed island: near enough to make it lean, not on it.
+    var testPointNear: CGPoint {
+        CGPoint(x: notchRect.midX + restingIslandSize.width / 2 + 30, y: notchRect.maxY - 8)
+    }
+
+    /// Inside the open island.
+    var testPointInside: CGPoint { CGPoint(x: notchRect.midX, y: notchRect.maxY - 40) }
+
+    /// Back to a closed, quiet island with nothing pending.
+    func testReset() {
+        pendingExpand?.cancel()
+        pendingExpand = nil
+        pendingCollapse?.cancel()
+        pendingCollapse = nil
+        cancelPendingHide()
+        Continuity.pointer = nil
+        leaning = false
+        teleprompterDragHeight = nil
+        teleprompterDragStart = nil
+        collapse()
+        endKoiPass()
+        page = .player
+        clipboardMode = .clipboard
+        calendarMode = .events
+    }
+
+    /// The last copy was `ago` seconds ago (nil: never).
+    func testCopied(ago: TimeInterval?) {
+        lastCopyAt = ago.map { Date().addingTimeInterval(-$0) }
+    }
+
+    /// What the model says the island is doing, for each traced frame.
+    var traceState: [String: String] {
+        ["st": state == .expanded ? "expanded" : "collapsed",
+         "page": "\(visiblePage)",
+         "lean": leaning ? "1" : "0",
+         "act": activities.current.map { $0.kind.traceName } ?? "",
+         "tele": teleprompterActive ? "1" : "0",
+         "side": (showsMusicActivity ? "m" : "") + (features.recorder.showsWings ? "r" : "")
+             + (showsAgentActivity ? "a" : "") + (showsMeetingActivity ? "c" : "") + (showsKoiPass ? "k" : ""),
+         "w": "\(Int(islandSize.width.rounded()))",
+         "h": "\(Int(islandSize.height.rounded()))"]
+    }
+}
+#endif

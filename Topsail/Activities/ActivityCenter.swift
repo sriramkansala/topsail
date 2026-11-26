@@ -305,3 +305,37 @@ final class ActivityCenter: ObservableObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
     }
 }
+
+extension ActivityKind {
+    /// The kind's name without what it carries: "volume", "copied", "meetingReminder"…
+    var traceName: String {
+        switch self {
+        case .charging: return "charging"
+        case .lowBattery: return "lowBattery"
+        case .audioDevice: return "audioDevice"
+        case .volume: return "volume"
+        case .brightness: return "brightness"
+        case .taskDue: return "taskDue"
+        case .meetingReminder: return "meetingReminder"
+        case .copied: return "copied"
+        case .keepAwake: return "keepAwake"
+        case .agentApproval: return "agentApproval"
+        case .agentFinished: return "agentFinished"
+        case .notification: return "notification"
+        case .recorder: return "recorder"
+        }
+    }
+}
+
+#if DEBUG
+extension ActivityCenter {
+    /// Continuity tests: nothing showing, nothing waiting.
+    func testClear() {
+        pendingWork?.cancel()
+        pendingWork = nil
+        queue = []
+        pointerInside = false
+        current = nil
+    }
+}
+#endif
