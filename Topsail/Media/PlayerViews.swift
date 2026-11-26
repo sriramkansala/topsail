@@ -203,12 +203,13 @@ struct ExpandedPlayerView: View {
                                 .foregroundColor(.white.opacity(0.55))
                         }
                         .lineLimit(1)
+                        // Anywhere beside the title, up to the controls, opens the app too.
+                        Spacer(minLength: 8)
                     }
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.pressable(.subtle, hoverWash: false))
                 .help(service.track.map { "Open \($0.app.displayName)" } ?? "")
-
-                Spacer(minLength: 8)
 
                 HStack(spacing: 16) {
                     control("backward.fill", size: 12) { service.previous() }
