@@ -44,6 +44,9 @@ final class NotchViewModel: ObservableObject {
     /// A koi is swimming under the notch (Koi pond feature): now and then, when nothing else is
     /// beside it.
     @Published private(set) var showsKoiPass = false
+    /// The passing koi was asked for (the debug preview): it shows over the music, an agent or a
+    /// meeting for its one crossing instead of waiting for them.
+    @Published private(set) var koiPassFirst = false
     /// The tasks page shows more than two issues after "View more"; reset when the island closes.
     @Published private(set) var tasksExpanded = false
     /// A voice note is in progress: the island holds it, pinned open, sized to its content.
@@ -237,6 +240,9 @@ final class NotchViewModel: ObservableObject {
             if activities.current != nil {
                 return CGSize(width: notchSize.width + 2 * activityWingWidth,
                               height: notchSize.height + activities.meterHeight)
+            }
+            if showsKoiPass && koiPassFirst {
+                return CGSize(width: notchSize.width + 2 * IslandLayout.koiPassWing, height: notchSize.height)
             }
             if showsMeetingActivity {
                 return CGSize(width: notchSize.width + 2 * IslandLayout.activityWing, height: notchSize.height)
@@ -644,17 +650,25 @@ final class NotchViewModel: ObservableObject {
     }
 
     /// The wings grow out and a koi swims across, unless the island is busy or open, or Low Power
-    /// Mode is on.
-    func startKoiPass() {
-        guard state == .collapsed, activities.current == nil, !showsMeetingActivity, !showsAgentActivity,
-              !showsMusicActivity, !showsKoiPass, !ProcessInfo.processInfo.isLowPowerModeEnabled else { return }
-        Motion.perform(Motion.islandGrow) { showsKoiPass = true }
+    /// Mode is on. `first` (the debug preview) only waits for the island to be closed and free of
+    /// a live activity, and swims over whatever else is beside the notch.
+    func startKoiPass(first: Bool = false) {
+        guard state == .collapsed, activities.current == nil, !showsKoiPass else { return }
+        guard first || (!showsMeetingActivity && !showsAgentActivity && !showsMusicActivity
+                        && !ProcessInfo.processInfo.isLowPowerModeEnabled) else { return }
+        Motion.perform(Motion.islandGrow) {
+            koiPassFirst = first
+            showsKoiPass = true
+        }
     }
 
     /// The koi has crossed (or the wings gave way to something else): they fold back in.
     func endKoiPass() {
         guard showsKoiPass else { return }
-        Motion.perform(Motion.islandShrink) { showsKoiPass = false }
+        Motion.perform(Motion.islandShrink) {
+            showsKoiPass = false
+            koiPassFirst = false
+        }
     }
 
     // MARK: - Calendar tab and reminders

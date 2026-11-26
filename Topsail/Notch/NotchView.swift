@@ -41,6 +41,10 @@ struct NotchView: View {
                         .id(activity.id)
                         .transition(activity.kind.isNotice ? .noticeBlur(reduceMotion: reduceMotion)
                                                            : .cascade(0, reduceMotion: reduceMotion))
+                } else if model.showsKoiPass && model.koiPassFirst {
+                    KoiPassWings(notchSize: model.notchSize, wingWidth: IslandLayout.koiPassWing,
+                                 onFinished: model.endKoiPass)
+                        .transition(.cascade(0, reduceMotion: reduceMotion))
                 } else if model.showsMeetingActivity, let meeting = model.calendar.imminentMeeting {
                     MeetingSoonView(meeting: meeting, notchSize: model.notchSize)
                         .id(meeting.id)
