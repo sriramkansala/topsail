@@ -668,7 +668,7 @@ Expected: Hovering as a toast leaves: the island opens in one growth while the b
 
 - **opacity step** at 305 ms: bars changed opacity by 0.40 in one frame
 - **opacity step** at 1996 ms: toast.volume changed opacity by 0.56 in one frame
-- **toast band** at 363 ms: toast.volume was 1 pt above the base band
+- **toast band** at 372 ms: toast.volume was 1 pt above the base band
 - **toast path** at 1971 ms: toast.volume did not leave the way it came (down, through the bottom edge)
 
 ### `int.hover-while-toast-slides` (closed · music playing)
@@ -678,7 +678,7 @@ Expected: Hovering as Copied slides in opens the island on the clipboard, with t
 - **opacity step** at 306 ms: art changed opacity by 0.40 in one frame
 - **opacity step** at 306 ms: bars changed opacity by 0.40 in one frame
 - **opacity step** at 472 ms: toast.copied changed opacity by 0.61 in one frame
-- **toast band** at 448 ms: toast.copied was 2 pt above the base band
+- **toast band** at 464 ms: toast.copied was 1 pt above the base band
 - **toast missing** at 4497 ms: the copied toast never showed fully inside the island
 
 ### `int.lean-during-toast` (closed)
@@ -776,7 +776,7 @@ Expected: A toast arriving while the island is closing rides its base down to th
 - **opacity step** at 455 ms: tabs changed opacity by 0.41 in one frame
 - **opacity step** at 455 ms: title changed opacity by 0.41 in one frame
 - **opacity step** at 3155 ms: toast.copied changed opacity by 0.60 in one frame
-- **toast band** at 513 ms: toast.copied was 91 pt above the base band
+- **toast band** at 513 ms: toast.copied was 84 pt above the base band
 - **toast path** at 3147 ms: toast.copied did not leave the way it came (down, through the bottom edge)
 
 ### `int.toast-during-collapse.volume` (open: player · music playing)
@@ -796,7 +796,7 @@ Expected: A toast arriving while the island is closing rides its base down to th
 - **opacity step** at 463 ms: tab.system changed opacity by 0.43 in one frame
 - **opacity step** at 463 ms: tabs changed opacity by 0.43 in one frame
 - **opacity step** at 463 ms: title changed opacity by 0.43 in one frame
-- **toast band** at 538 ms: toast.volume was 103 pt above the base band
+- **toast band** at 538 ms: toast.volume was 94 pt above the base band
 
 ### `int.toast-during-expand.copied.idle` (closed)
 
@@ -815,15 +815,15 @@ Expected: A toast arriving while the island is still growing joins at its base w
 Expected: A toast arriving while the island is still growing joins at its base without a second bounce.
 
 - **opacity step** at 2068 ms: toast.volume changed opacity by 0.40 in one frame
-- **toast overlap** at 609 ms: toast.volume covered page
+- **toast overlap** at 634 ms: toast.volume covered page
 - **toast path** at 460 ms: toast.volume did not slide up from the bottom edge
 
 ### `int.toast-during-expand.volume.music` (closed · music playing)
 
 Expected: A toast arriving while the island is still growing joins at its base without a second bounce.
 
-- **toast overlap** at 482 ms: toast.volume covered page
-- **toast band** at 507 ms: toast.volume was 3 pt above the base band
+- **toast overlap** at 490 ms: toast.volume covered page
+- **toast band** at 524 ms: toast.volume was 2 pt above the base band
 - **toast path** at 482 ms: toast.volume did not slide up from the bottom edge
 
 ### `int.toast-during-notice` (closed · lowBattery)
@@ -831,7 +831,7 @@ Expected: A toast arriving while the island is still growing joins at its base w
 Expected: A level changed while a notice shows: the band is added under the notice, which does not move.
 
 - **opacity step** at 1810 ms: toast.volume changed opacity by 0.60 in one frame
-- **toast band** at 276 ms: toast.volume was 56 pt above the base band
+- **toast band** at 276 ms: toast.volume was 54 pt above the base band
 - **toast path** at 1801 ms: toast.volume did not leave the way it came (down, through the bottom edge)
 - **notice order** at 2443 ms: notice.lowBattery was 47% there when the shape was half open: the shape must lead
 
@@ -846,7 +846,7 @@ Expected: A toast arriving mid page switch joins the base; the page the user pic
 - **opacity step** at 345 ms: player.scrubber changed opacity by 0.38 in one frame
 - **opacity step** at 345 ms: title changed opacity by 0.38 in one frame
 - **opacity step** at 1970 ms: toast.volume changed opacity by 0.40 in one frame
-- **toast band** at 362 ms: toast.volume was 28 pt above the base band
+- **toast band** at 362 ms: toast.volume was 24 pt above the base band
 - **toast overlap** at 362 ms: toast.volume covered page
 - **toast path** at 362 ms: toast.volume did not slide up from the bottom edge
 
@@ -873,7 +873,7 @@ Expected: Two different toasts 200 ms apart: the band stays, the second replaces
 Expected: Two of the same toast 200 ms apart: one band, updated in place; the island resizes once.
 
 - **opacity step** at 2090 ms: bars changed opacity by 0.43 in one frame
-- **toast band** at 366 ms: toast.volume was 1 pt above the base band
+- **toast band** at 374 ms: toast.volume was 1 pt above the base band
 
 ### `keys.brightness-held.closed.idle` (closed)
 
@@ -891,7 +891,7 @@ Expected: A held brightness key behaves like volume: one band, one resize each w
 Expected: Mute after a level: the same toast dims in place.
 
 - **opacity step** at 2299 ms: bars changed opacity by 0.40 in one frame
-- **toast band** at 366 ms: toast.volume was 1 pt above the base band
+- **toast band** at 374 ms: toast.volume was 1 pt above the base band
 - **still** at 282 ms: bars changed (frame or opacity) while only a toast was showing
 
 ### `keys.volume-held.closed.idle` (closed)
@@ -910,7 +910,7 @@ Expected: A held volume key: one band, the level following the key; the island r
 Expected: With music beside the notch: the band below it; the artwork and bars do not move or swap.
 
 - **opacity step** at 301 ms: bars changed opacity by 0.41 in one frame
-- **toast band** at 359 ms: toast.volume was 1 pt above the base band
+- **toast band** at 367 ms: toast.volume was 1 pt above the base band
 - **still** at 276 ms: bars changed (frame or opacity) while only a toast was showing
 
 ### `keys.volume-held.open.calendar` (open: calendar · music playing)
@@ -944,7 +944,7 @@ Expected: Volume then brightness: the band stays, the second level replaces the 
 - **blink** at 767 ms: toast.brightness went away and came back 8 ms later
 - **toast band** at 658 ms: toast.brightness was 8 pt above the base band
 - **toast band** at 700 ms: toast.brightness was 6 pt above the base band
-- **toast band** at 358 ms: toast.volume was 1 pt above the base band
+- **toast band** at 375 ms: toast.volume was 2 pt above the base band
 - **toast path** at 650 ms: toast.volume vanished at full opacity
 - **toast missing** at 3583 ms: the volume toast never showed fully inside the island
 - **still** at 275 ms: bars changed (frame or opacity) while only a toast was showing
@@ -1146,7 +1146,7 @@ Expected: With music: the same, music untouched.
 
 - **opacity step** at 264 ms: bars changed opacity by 1.00 in one frame
 - **opacity step** at 264 ms: toast.volume changed opacity by 1.00 in one frame
-- **toast band** at 264 ms: toast.volume was 8 pt above the base band
+- **toast band** at 281 ms: toast.volume was 7 pt above the base band
 
 ### `tele.start.from-closed` (closed)
 
@@ -1225,7 +1225,7 @@ Expected: The closed island grows down by the band only; the toast slides up fro
 Expected: The closed island grows down by the band only; the toast slides up from the bottom edge and leaves the same way; what is beside the notch does not move.
 
 - **opacity step** at 303 ms: bars changed opacity by 0.42 in one frame
-- **toast band** at 303 ms: toast.brightness was 1 pt above the base band
+- **toast band** at 312 ms: toast.brightness was 1 pt above the base band
 - **still** at 320 ms: art changed (frame or opacity) while only a toast was showing
 - **still** at 278 ms: bars changed (frame or opacity) while only a toast was showing
 - **still** at 303 ms: the island changed width by -0.5 pt
@@ -1258,7 +1258,7 @@ Expected: The closed island grows down by the band only; the toast slides up fro
 Expected: The closed island grows down by the band only; the toast slides up from the bottom edge and leaves the same way; what is beside the notch does not move.
 
 - **opacity step** at 303 ms: bars changed opacity by 0.41 in one frame
-- **toast band** at 353 ms: toast.brightness was 1 pt above the base band
+- **toast band** at 369 ms: toast.brightness was 2 pt above the base band
 - **still** at 278 ms: bars changed (frame or opacity) while only a toast was showing
 
 ### `toast.brightness.closed.recording` (closed · recording)
@@ -1592,7 +1592,7 @@ Expected: Clicking a row copies it again: the same Copied toast in the base band
 - **opacity step** at 297 ms: clip.row1 changed opacity by 1.00 in one frame
 - **opacity step** at 347 ms: toast.copied changed opacity by 0.40 in one frame
 - **toast band** at 322 ms: toast.copied was 72 pt above the base band
-- **toast overlap** at 322 ms: toast.copied covered clip.row0
+- **toast overlap** at 322 ms: toast.copied covered page
 - **toast path** at 322 ms: toast.copied did not slide up from the bottom edge
 
 ### `toast.copy-back.open.clipboard.no-music` (open: clipboard)
@@ -1605,7 +1605,7 @@ Expected: Clicking a row copies it again: the same Copied toast in the base band
 - **opacity step** at 296 ms: clip.row1 changed opacity by 1.00 in one frame
 - **opacity step** at 1609 ms: toast.copied changed opacity by 0.40 in one frame
 - **toast band** at 317 ms: toast.copied was 72 pt above the base band
-- **toast overlap** at 317 ms: toast.copied covered clip.row0
+- **toast overlap** at 317 ms: toast.copied covered page
 - **toast path** at 317 ms: toast.copied did not slide up from the bottom edge
 
 ### `toast.keepAwake.closed.agent` (closed · agent)
@@ -1854,7 +1854,7 @@ Expected: The closed island grows down by the band only; the toast slides up fro
 Expected: The closed island grows down by the band only; the toast slides up from the bottom edge and leaves the same way; what is beside the notch does not move.
 
 - **opacity step** at 1888 ms: bars changed opacity by 0.36 in one frame
-- **toast band** at 312 ms: toast.volume was 1 pt above the base band
+- **toast band** at 328 ms: toast.volume was 1 pt above the base band
 - **still** at 320 ms: art changed (frame or opacity) while only a toast was showing
 - **still** at 278 ms: bars changed (frame or opacity) while only a toast was showing
 - **still** at 307 ms: the island changed width by -0.5 pt
@@ -1887,7 +1887,7 @@ Expected: The closed island grows down by the band only; the toast slides up fro
 Expected: The closed island grows down by the band only; the toast slides up from the bottom edge and leaves the same way; what is beside the notch does not move.
 
 - **opacity step** at 1890 ms: bars changed opacity by 0.39 in one frame
-- **toast band** at 366 ms: toast.volume was 1 pt above the base band
+- **toast band** at 382 ms: toast.volume was 2 pt above the base band
 - **still** at 282 ms: bars changed (frame or opacity) while only a toast was showing
 
 ### `toast.volume.closed.recording` (closed · recording)

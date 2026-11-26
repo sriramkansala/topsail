@@ -57,9 +57,14 @@ main() {
   OUT=$ROOT/build/continuity/$LABEL
   rm -rf $OUT
   mkdir -p $OUT/traces
-  # The run uses its own copy of the app, so building again meanwhile cannot pull it from under it.
-  ditto $APP $OUT/Topsail.app
-  BINARY=$OUT/Topsail.app/Contents/MacOS/Topsail
+  # A build from build/ is run from its own copy, so building again meanwhile cannot pull it
+  # from under the run. An app named with --app (the installed one) is run where it is.
+  if [[ $APP == $ROOT/build/* ]]; then
+    ditto $APP $OUT/Topsail.app
+    BINARY=$OUT/Topsail.app/Contents/MacOS/Topsail
+  else
+    BINARY=$APP/Contents/MacOS/Topsail
+  fi
 
   FILM_TOOL=$ROOT/build/continuity/film
   if [[ -n $FILM$SNAP && ( ! -x $FILM_TOOL || $ROOT/scripts/continuity/film.swift -nt $FILM_TOOL ) ]]; then
