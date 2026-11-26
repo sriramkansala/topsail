@@ -41,7 +41,7 @@ enum Feature: String, CaseIterable, Identifiable {
         case .teleprompter:
             return String(localized: "Your script scrolls out of the notch, right under the camera, at your pace.")
         case .pond:
-            return String(localized: "A pixel-art koi pond as a page of the island. Click the water to feed the koi.")
+            return String(localized: "When nothing is going on, the island opens onto a pixel-art koi pond with the time and date. Click the water to feed the koi.")
         case .agents:
             return String(localized: "Claude Code, Codex, Cursor and Antigravity show their progress in the notch and ask you there before risky commands.")
         case .notifications:

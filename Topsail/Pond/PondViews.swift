@@ -22,8 +22,9 @@ struct PondCanvas: View {
     }
 }
 
-/// The Koi pond page: the pond fills the open island, behind the notch row, and dissolves into the
-/// island's black under the tabs. Clicking the water drops food, and the koi come for it.
+/// The Koi pond page, where the island opens when nothing is going on: the pond fills the open
+/// island, behind the notch row, and dissolves into the island's black under the tabs, with the
+/// time and the date over it. Clicking the water drops food, and the koi come for it.
 struct PondPageView: View {
     /// The open island.
     let size: CGSize
@@ -31,12 +32,17 @@ struct PondPageView: View {
 
     var body: some View {
         if let scene = PondStore.page(size: size, notchHeight: notchHeight) {
-            PondCanvas(scene: scene)
-                .contentShape(Rectangle())
-                .onTapGesture(coordinateSpace: .local) { scene.feed(at: $0) }
-                .accessibilityElement()
-                .accessibilityLabel(Text("Koi pond"))
-                .accessibilityHint(Text("Click the water to feed the koi"))
+            ZStack {
+                PondCanvas(scene: scene)
+                    .contentShape(Rectangle())
+                    .onTapGesture(coordinateSpace: .local) { scene.feed(at: $0) }
+                    .accessibilityElement()
+                    .accessibilityLabel(Text("Koi pond"))
+                    .accessibilityHint(Text("Click the water to feed the koi"))
+                // Centred in the pond below the notch row.
+                PondClock()
+                    .padding(.top, notchHeight)
+            }
         }
     }
 }

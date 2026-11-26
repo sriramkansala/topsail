@@ -33,8 +33,9 @@ pointer to it.
 | <img src="website/images/volume.png" width="400" alt="Volume"> | Volume and brightness, in place of the macOS indicators. While Spotify plays on another device (a phone, a speaker, a TV), the volume keys turn that device up and down. |
 
 **Switched off until you turn them on** (Settings › Features): a file shelf with AirDrop, Apple
-Reminders, Keep Awake, a teleprompter and a pixel-art koi pond (a page you can feed the koi on, and
-now and then a koi swimming under the notch); and, in the direct download, AI coding agents (Claude
+Reminders, Keep Awake, a teleprompter and a pixel-art koi pond (with nothing going on, the island
+opens onto it, with the time and date; click to feed the koi; now and then one swims under the
+notch); and, in the direct download, AI coding agents (Claude
 Code, Codex, Cursor and Antigravity: progress, and Approve or Deny, in the notch), other apps'
 notifications, an Apps page (Terminal, Chrome, YouTube) and automatic updates. English, French and
 Spanish.

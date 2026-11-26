@@ -523,6 +523,8 @@ final class NotchViewModel: ObservableObject {
     /// player page says "Nothing playing".
     var availablePages: [ExpandedPage] {
         var pages: [ExpandedPage] = []
+        // The koi pond comes first: it's where the island opens when nothing is going on.
+        if settings.isEnabled(.pond) { pages.append(.pond) }
         if nowPlaying.track != nil { pages.append(.player) }
         if !calendarModes.isEmpty { pages.append(.calendar) }
         if linear.isConnected { pages.append(.tasks) }
@@ -530,7 +532,6 @@ final class NotchViewModel: ObservableObject {
         if !clipboardModes.isEmpty { pages.append(.clipboard) }
         if settings.isEnabled(.agents) { pages.append(.agents) }
         if settings.isEnabled(.apps) { pages.append(.apps) }
-        if settings.isEnabled(.pond) { pages.append(.pond) }
         return pages.isEmpty ? [.player] : pages
     }
 
@@ -545,12 +546,14 @@ final class NotchViewModel: ObservableObject {
         availablePages.count > 1
     }
 
-    /// Where the island opens: a meeting about to start wins, then what is playing, then
-    /// deadlines, then the calendar.
+    /// Where the island opens: a meeting about to start wins, then an agent asking, then what is
+    /// playing; with nothing going on, the koi pond (time and date) if it's on; then deadlines,
+    /// then the calendar.
     private var preferredPage: ExpandedPage {
         let pages = availablePages
         if calendar.imminentMeeting != nil, pages.contains(.calendar) { return .calendar }
         if !features.agents.approvals.isEmpty, pages.contains(.agents) { return .agents }
+        if pages.contains(.pond), !nowPlaying.isPlaying { return .pond }
         if pages.contains(.player) { return .player }
         if pages.contains(.tasks), !linear.issues.isEmpty { return .tasks }
         return pages[0]

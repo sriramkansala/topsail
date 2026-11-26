@@ -4523,22 +4523,6 @@
         }
       }
     },
-    "A pixel-art koi pond as a page of the island. Click the water to feed the koi.": {
-      "localizations": {
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Un estanque koi en pixel art, en una página de la isla. Haz clic en el agua para dar de comer a los koi."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Un bassin à koïs en pixel art, sur une page de l’île. Cliquez sur l’eau pour nourrir les koïs."
-          }
-        }
-      }
-    },
     "Now and then, a koi swims under the notch": {
       "localizations": {
         "es": {
@@ -4567,6 +4551,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Cliquez sur l’eau pour nourrir les koïs"
+          }
+        }
+      }
+    },
+    "When nothing is going on, the island opens onto a pixel-art koi pond with the time and date. Click the water to feed the koi.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cuando no pasa nada, la isla se abre a un estanque koi en pixel art con la hora y la fecha. Haz clic en el agua para dar de comer a los koi."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quand il ne se passe rien, l’île s’ouvre sur un bassin à koïs en pixel art, avec l’heure et la date. Cliquez sur l’eau pour nourrir les koïs."
           }
         }
       }
