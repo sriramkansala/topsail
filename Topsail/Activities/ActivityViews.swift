@@ -75,22 +75,8 @@ struct TransientActivityView: View {
     @ViewBuilder
     private var leftWing: some View {
         switch activity.kind {
-        case .volume(let level, let muted, let remote) where remote:
-            // Spotify playing on another device: that device, not this Mac's speaker.
-            Image(systemName: "hifispeaker.fill")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.white.opacity(muted || level == 0 ? 0.5 : 1))
-        case .volume(let level, let muted, _):
-            Image(systemName: muted || level == 0 ? "speaker.slash.fill" : "speaker.wave.3.fill",
-                  variableValue: Double(level))
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.white)
-                .contentTransition(.symbolEffect(.replace))
-        case .brightness(let level):
-            Image(systemName: level < 0.5 ? "sun.min.fill" : "sun.max.fill")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.white)
-                .contentTransition(.symbolEffect(.replace))
+        case .volume, .brightness:
+            LevelGlyph(kind: activity.kind)
         case .charging, .lowBattery, .meetingReminder, .audioDevice, .copied:
             EmptyView()  // ChargingSweep and the notices draw their own.
         case .agentApproval, .notification:
@@ -181,21 +167,65 @@ struct TransientActivityView: View {
     // MARK: Meter
 
     private var meter: (level: Double, color: Color, dimmed: Bool)? {
-        switch activity.kind {
-        case .volume(let level, let muted, _): return (Double(level), .white, muted)
-        case .brightness(let level): return (Double(level), .white, false)
-        case .charging, .lowBattery, .audioDevice, .taskDue, .meetingReminder, .copied, .keepAwake,
-             .agentApproval, .agentFinished, .notification: return nil
+        activity.kind.levelReading.map { ($0.value, .white, $0.dimmed) }
+    }
+}
+
+/// What a level is of: this Mac's volume, a Spotify device's, or the display's brightness.
+struct LevelGlyph: View {
+    let kind: ActivityKind
+    var size: CGFloat = 13
+
+    var body: some View {
+        Group {
+            switch kind {
+            case .volume(let level, let muted, let remote) where remote:
+                // Spotify playing on another device: that device, not this Mac's speaker.
+                Image(systemName: "hifispeaker.fill")
+                    .foregroundStyle(.white.opacity(muted || level == 0 ? 0.5 : 1))
+            case .volume(let level, let muted, _):
+                Image(systemName: muted || level == 0 ? "speaker.slash.fill" : "speaker.wave.3.fill",
+                      variableValue: Double(level))
+                    .foregroundStyle(.white)
+                    .contentTransition(.symbolEffect(.replace))
+            case .brightness(let level):
+                Image(systemName: level < 0.5 ? "sun.min.fill" : "sun.max.fill")
+                    .foregroundStyle(.white)
+                    .contentTransition(.symbolEffect(.replace))
+            default:
+                EmptyView()
+            }
+        }
+        .font(.system(size: size, weight: .semibold))
+        .accessibilityHidden(true)
+    }
+}
+
+/// A level in the open island's own bottom margin, on pages that don't show it themselves.
+struct ExpandedLevelIndicator: View {
+    let kind: ActivityKind
+
+    var body: some View {
+        if let reading = kind.levelReading {
+            HStack(spacing: 8) {
+                LevelGlyph(kind: kind, size: 9)
+                LevelMeter(level: reading.value, color: .white, dimmed: reading.dimmed, inset: 0)
+                    .frame(width: 120)
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text(verbatim: "\(kind.levelPercent ?? 0)%"))
         }
     }
 }
 
 /// A 3 pt line along the island's bottom edge, inset clear of the rounded corners, filled to
 /// `level` with a soft glow. It follows the keys, so it springs (`Motion.snappy`).
-private struct LevelMeter: View {
+struct LevelMeter: View {
     let level: Double
     let color: Color
     let dimmed: Bool
+    /// Clear of the island's rounded corners.
+    var inset: CGFloat = 14
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -217,7 +247,7 @@ private struct LevelMeter: View {
             .animation(reduceMotion ? nil : Motion.fast, value: dimmed)
         }
         .frame(height: thickness)
-        .padding(.horizontal, 14)
-        .padding(.top, 1)
+        .padding(.horizontal, inset)
+        .padding(.top, inset > 0 ? 1 : 0)
     }
 }

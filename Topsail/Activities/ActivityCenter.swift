@@ -70,6 +70,32 @@ extension ActivityKind {
         }
     }
 
+    /// Volume or brightness: a level the user is adjusting. Music on screen shows it in place.
+    var isLevel: Bool {
+        switch self {
+        case .volume, .brightness: return true
+        default: return false
+        }
+    }
+
+    /// A level's reading, 0...1, and whether it's muted (shown dimmed).
+    var levelReading: (value: Double, dimmed: Bool)? {
+        switch self {
+        case .volume(let level, let muted, _): return (Double(level), muted)
+        case .brightness(let level): return (Double(level), false)
+        default: return nil
+        }
+    }
+
+    /// A level as the percentage shown: a muted volume reads 0.
+    var levelPercent: Int? {
+        switch self {
+        case .volume(let level, let muted, _): return Int(((muted ? 0 : level) * 100).rounded())
+        case .brightness(let level): return Int((level * 100).rounded())
+        default: return nil
+        }
+    }
+
     func isSameLiveLevel(as other: ActivityKind) -> Bool {
         switch (self, other) {
         case (.volume, .volume), (.brightness, .brightness), (.copied, .copied), (.keepAwake, .keepAwake): return true

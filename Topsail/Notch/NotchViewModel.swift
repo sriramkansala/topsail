@@ -245,7 +245,24 @@ final class NotchViewModel: ObservableObject {
     /// island's width.
     var activityWingWidth: CGFloat {
         if activities.current?.kind == .copied { return showsMusicActivity ? compactWing : 0 }
+        if musicLevel != nil { return compactWing }
         return activities.wingWidth
+    }
+
+    /// Volume or brightness changing while the music wings are what's beside the notch: the music
+    /// shows it in place, rather than giving way to a separate activity.
+    var musicLevel: ActivityKind? {
+        guard state == .collapsed, showsMusicActivity, !showsMeetingActivity, !showsAgentActivity,
+              let kind = activities.current?.kind, kind.isLevel else { return nil }
+        return kind
+    }
+
+    /// Volume or brightness changing while the island is open, where the keys show nothing else
+    /// (Topsail takes them from macOS). The player shows it in its own row; other pages in the
+    /// island's bottom margin.
+    var expandedLevel: ActivityKind? {
+        guard state == .expanded, let kind = activities.current?.kind, kind.isLevel else { return nil }
+        return kind
     }
 
     // MARK: - Voice notes

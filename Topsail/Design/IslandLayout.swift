@@ -30,6 +30,8 @@ enum IslandLayout {
     }
     static let contentTopPadding: CGFloat = 6
     static let contentBottomPadding: CGFloat = 16
+    /// A level in the open island's bottom margin sits this far up from the edge.
+    static let levelIndicatorBottom: CGFloat = 6
 
     /// Width of the island during a voice note.
     static let voiceWidth: CGFloat = 560

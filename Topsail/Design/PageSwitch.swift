@@ -27,6 +27,9 @@ struct PageSwitch: View {
 private struct PageSwitchButton: View {
     let option: PageSwitch.Option
 
+    @State private var hovering = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
         Button(action: option.action) {
             HStack(spacing: 4) {
@@ -40,9 +43,12 @@ private struct PageSwitchButton: View {
             .foregroundColor(option.selected ? .white : .white.opacity(0.5))
             .padding(.horizontal, 10)
             .frame(height: IslandLayout.pageSwitchHeight)
-            .background(Capsule().fill(Color.white.opacity(option.selected ? 0.14 : 0)))
+            // Hover lights the selection's own capsule, so it never reaches the neighbour.
+            .background(Capsule().fill(Color.white.opacity(option.selected ? 0.14 : hovering ? 0.07 : 0)))
             .contentShape(Capsule())
         }
-        .buttonStyle(.pressable(.normal, hoverWash: !option.selected))
+        .buttonStyle(.pressable(.normal, hoverWash: false))
+        .onHover { hovering = $0 }
+        .animation(reduceMotion ? nil : Motion.hover, value: hovering)
     }
 }

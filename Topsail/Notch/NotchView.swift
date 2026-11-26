@@ -22,7 +22,7 @@ struct NotchView: View {
                             linear: model.linear, clipboard: model.clipboard)
 
             if model.state == .collapsed {
-                if let activity = model.activities.current {
+                if let activity = model.activities.current, model.musicLevel == nil {
                     TransientActivityView(activity: activity,
                                           notchSize: model.notchSize,
                                           wingWidth: model.activityWingWidth,
@@ -43,9 +43,17 @@ struct NotchView: View {
                     AgentWorkingWings(agent: agent, notchSize: model.notchSize, wingWidth: model.compactWing)
                         .transition(.cascade(0, reduceMotion: reduceMotion))
                 } else if model.showsMusicActivity {
-                    CompactMusicWings(nowPlaying: nowPlaying, notchSize: model.notchSize, wingWidth: model.compactWing)
+                    CompactMusicWings(nowPlaying: nowPlaying, notchSize: model.notchSize, wingWidth: model.compactWing,
+                                      level: model.musicLevel, meterHeight: model.activities.meterHeight)
                         .transition(.cascade(0, reduceMotion: reduceMotion))
                 }
+            }
+
+            if let level = model.expandedLevel, model.visiblePage != .player || model.voiceActive || model.teleprompterActive {
+                ExpandedLevelIndicator(kind: level)
+                    .padding(.bottom, IslandLayout.levelIndicatorBottom)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                    .transition(.opacity.animation(reduceMotion ? nil : Motion.fast))
             }
         }
         .frame(width: model.islandSize.width, height: model.islandSize.height, alignment: .top)
@@ -166,7 +174,8 @@ struct NotchView: View {
                     ClipboardTabView(model: model, shelf: model.features.shelf)
                         .transition(.contentMorph(reduceMotion: reduceMotion))
                 } else if nowPlaying.track != nil {
-                    ExpandedPlayerView(service: nowPlaying)
+                    ExpandedPlayerView(service: nowPlaying,
+                                       level: model.voiceActive || model.teleprompterActive ? nil : model.expandedLevel)
                         .transition(.contentMorph(reduceMotion: reduceMotion))
                 } else {
                     MessageView(symbol: "music.note", text: String(localized: "Nothing playing"))
@@ -197,26 +206,35 @@ struct NotchView: View {
         @ObservedObject var model: NotchViewModel
         let namespace: Namespace.ID
 
+        @State private var hovering = false
+        @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
         private var isSelected: Bool { model.visiblePage == page }
 
         var body: some View {
             Button(action: { model.show(page) }) {
                 Image(systemName: symbol)
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(isSelected ? .white : .white.opacity(0.45))
+                    .foregroundColor(isSelected || hovering ? .white : .white.opacity(0.45))
                     .frame(width: IslandLayout.tabWidth)
                     .padding(.vertical, 3)
                     .background {
+                        // Hover lights the same shape the selection fills, inside the tab, so it
+                        // never reaches a neighbour. A selected tab takes no hover.
                         if isSelected {
                             RoundedRectangle(cornerRadius: 6, style: .continuous)
                                 .fill(Color.white.opacity(0.14))
                                 .matchedGeometryEffect(id: "pageSelection", in: namespace)
+                        } else {
+                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                .fill(Color.white.opacity(hovering ? 0.07 : 0))
                         }
                     }
                     .contentShape(Rectangle())
             }
-            // Selected items get no hover wash.
-            .buttonStyle(.pressable(.normal, hoverWash: !isSelected))
+            .buttonStyle(.pressable(.normal, hoverWash: false))
+            .onHover { hovering = $0 }
+            .animation(reduceMotion ? nil : Motion.hover, value: hovering)
         }
     }
 }
@@ -227,18 +245,47 @@ struct CompactMusicWings: View {
     @ObservedObject var nowPlaying: NowPlayingService
     let notchSize: CGSize
     let wingWidth: CGFloat
+    /// Volume or brightness being changed: shown in place of the bars, with the level along the
+    /// island's bottom edge, while the music stays.
+    var level: ActivityKind? = nil
+    var meterHeight: CGFloat = 0
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        HStack(spacing: 0) {
-            ArtworkView(image: nowPlaying.artwork, size: 22, cornerRadius: 6)
-                .frame(width: wingWidth, height: notchSize.height)
+        VStack(spacing: 0) {
+            HStack(spacing: 0) {
+                ArtworkView(image: nowPlaying.artwork, size: 22, cornerRadius: 6)
+                    .frame(width: wingWidth, height: notchSize.height)
 
-            Color.clear
-                .frame(width: notchSize.width, height: notchSize.height)
+                Color.clear
+                    .frame(width: notchSize.width, height: notchSize.height)
 
-            EqualizerView(isPlaying: nowPlaying.isPlaying, color: nowPlaying.accentColor)
+                ZStack {
+                    if let level {
+                        LevelGlyph(kind: level)
+                            .transition(Self.swap(reduceMotion))
+                    } else {
+                        EqualizerView(isPlaying: nowPlaying.isPlaying, color: nowPlaying.accentColor)
+                            .transition(Self.swap(reduceMotion))
+                    }
+                }
                 .frame(width: wingWidth, height: notchSize.height)
+            }
+
+            if let reading = level?.levelReading, meterHeight > 0 {
+                LevelMeter(level: reading.value, color: .white, dimmed: reading.dimmed)
+                    .frame(height: meterHeight, alignment: .top)
+                    .transition(.opacity.animation(reduceMotion ? nil : Motion.instant))
+            }
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(level?.levelPercent.map { Text(verbatim: "\($0)%") } ?? Text(nowPlaying.track?.title ?? ""))
+    }
+
+    /// The bars and a level trading places in the right wing.
+    static func swap(_ reduceMotion: Bool) -> AnyTransition {
+        reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.7))
     }
 }
 

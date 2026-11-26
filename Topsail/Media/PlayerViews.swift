@@ -141,10 +141,51 @@ struct ProgressBarView: View {
     }
 }
 
+/// The scrubber's row while a level changes: what it's of, the level, and its percentage, laid
+/// out like the scrubber (same bar, same ends) so the row trades one for the other in place.
+private struct PlayerLevelRow: View {
+    let kind: ActivityKind
+    let reading: (value: Double, dimmed: Bool)
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        HStack(spacing: 8) {
+            LevelGlyph(kind: kind, size: 10)
+                .frame(minWidth: 28, alignment: .leading)
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.white.opacity(0.2))
+                    Capsule()
+                        .fill(Color.white.opacity(reading.dimmed ? 0.35 : 1))
+                        .frame(width: max(4, geo.size.width * min(max(reading.value, 0), 1)))
+                }
+                .frame(height: 4)
+                .frame(maxHeight: .infinity)
+                .animation(reduceMotion ? nil : Motion.snappy, value: reading.value)
+            }
+            .frame(height: 12)
+            Text(verbatim: "\(kind.levelPercent ?? 0)%")
+                .font(.system(size: 10, weight: .medium).monospacedDigit())
+                .foregroundColor(.white.opacity(0.55))
+                .contentTransition(.numericText(value: reading.value))
+                .animation(reduceMotion ? nil : Motion.base, value: reading.value)
+                .frame(minWidth: 32, alignment: .trailing)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: "\(kind.levelPercent ?? 0)%"))
+    }
+}
+
 /// The compact player: artwork, title and artist, controls on the same row, scrubber below.
 /// Exactly `IslandLayout.playerHeight` tall. Clicking the track opens the app playing it.
 struct ExpandedPlayerView: View {
     @ObservedObject var service: NowPlayingService
+    /// Volume or brightness being changed: the scrubber's row shows it until the keys rest.
+    var level: ActivityKind? = nil
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(spacing: 8) {
@@ -178,8 +219,16 @@ struct ExpandedPlayerView: View {
             }
             .frame(height: 36)
 
-            TimelineView(.periodic(from: .now, by: 0.5)) { context in
-                ProgressBarView(service: service, date: context.date)
+            ZStack {
+                if let level, let reading = level.levelReading {
+                    PlayerLevelRow(kind: level, reading: reading)
+                        .transition(.contentMorph(reduceMotion: reduceMotion))
+                } else {
+                    TimelineView(.periodic(from: .now, by: 0.5)) { context in
+                        ProgressBarView(service: service, date: context.date)
+                    }
+                    .transition(.contentMorph(reduceMotion: reduceMotion))
+                }
             }
             .frame(height: 16)
         }
