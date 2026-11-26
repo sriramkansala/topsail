@@ -89,7 +89,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             switch url.host {
             case "settings": showSettings()
             #if DEBUG
-            // Debug builds only: `open topsail://preview/low-battery` (or `/charging`, `/meeting`, `/airpods`, `/headphones`, `/copied`, `/recording`, `/countdown`, `/recording-saved`; see `Recorder.preview`) shows that
+            // Debug builds only: `open topsail://preview/low-battery` (or `/charging`, `/meeting`, `/airpods`, `/headphones`, `/copied`, `/recording`, `/countdown`, `/recording-saved`, `/koi`; see `Recorder.preview`) shows that
             // activity now, without draining the battery or unplugging.
             case "preview": windowController?.preview(url.lastPathComponent)
             #endif

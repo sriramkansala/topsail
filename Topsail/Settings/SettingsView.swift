@@ -208,7 +208,7 @@ private struct FeaturesPane: View {
     var body: some View {
         SettingsPage(title: "Features",
                      detail: "New features start switched off. Each one asks for any permission it needs when you turn it on.") {
-            section("In the island", [.shelf, .reminders, .keepAwake, .teleprompter, .recorder])
+            section("In the island", [.shelf, .reminders, .keepAwake, .teleprompter, .recorder, .pond])
             section("With other apps", [.agents, .notifications, .apps])
             section("Updates", [.autoUpdates])
         }
@@ -261,6 +261,10 @@ extension FeaturesPane {
             TeleprompterOptions(settings: settings)
         case .recorder:
             RecorderOptions(settings: features.recorder.settings)
+        case .pond:
+            SettingsPanel {
+                SettingsToggle("Now and then, a koi swims under the notch", isOn: $settings.pondPassingKoi)
+            }
         case .keepAwake:
             SettingsPanel {
                 SettingsToggle("Keep the display on too", isOn: $settings.keepAwakeDisplay)

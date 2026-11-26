@@ -36,6 +36,11 @@ enum IslandLayout {
     /// Width of the island during a voice note.
     static let voiceWidth: CGFloat = 560
 
+    /// Each wing of the closed island while a koi swims under the notch (Koi pond).
+    static let koiPassWing: CGFloat = 60
+    /// The Koi pond page, below the notch row; with the margins the open island is 220 tall.
+    static let pondHeight: CGFloat = 166
+
     static let expandedTopRadius: CGFloat = 14
     static let expandedBottomRadius: CGFloat = 24
 

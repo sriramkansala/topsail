@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Koi Pond Study</title>
+<style>
+  :root {
+    --bg: #0e1008; --panel: #161a0d; --fg: #ebe7d4; --mute: #8e9079; --line: #2a2f1b; --accent: #8ca416;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 12px/1.5 ui-monospace, "SF Mono", Menlo, monospace; }
+  main { max-width: 1072px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 13px; font-weight: 600; margin: 0; letter-spacing: 0.02em; }
+  header p { margin: 4px 0 16px; color: var(--mute); max-width: 72ch; }
+  canvas { display: block; image-rendering: pixelated; }
+  .poster { border-radius: 4px; overflow: hidden; background: #000; }
+  .controls { display: flex; flex-wrap: wrap; gap: 10px 22px; margin: 14px 0 28px; color: var(--mute); }
+  .controls label { display: flex; align-items: center; gap: 8px; }
+  .controls output { color: var(--fg); min-width: 3ch; }
+  input[type=range] { width: 110px; accent-color: var(--accent); }
+  select { background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 3px; font: inherit; padding: 2px 4px; }
+  h2 { font-size: 12px; font-weight: 600; margin: 0 0 10px; color: var(--mute); text-transform: lowercase; }
+  .strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; margin-bottom: 28px; }
+  figure { margin: 0; }
+  figure .tile { width: 100%; aspect-ratio: 2 / 1; border-radius: 3px; overflow: hidden; background: #000 no-repeat; }
+  figure .tile canvas { width: 100% !important; height: auto !important; }
+  figcaption { margin-top: 6px; color: var(--mute); }
+  figcaption b { color: var(--fg); font-weight: 500; }
+  .sheet { border-radius: 4px; overflow: hidden; margin-bottom: 28px; }
+  .palette { display: flex; flex-wrap: wrap; gap: 6px; }
+  .sw { display: flex; align-items: center; gap: 6px; padding: 3px 8px 3px 3px; background: var(--panel); border-radius: 3px; color: var(--mute); }
+  .sw i { width: 16px; height: 16px; border-radius: 2px; display: block; outline: 1px solid #0006; outline-offset: -1px; }
+  .err { color: #e07b2c; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>koi pond — pixel study</h1>
+    <p>Your Blender pond, re-rendered without its koi, then pushed through a diamond lattice: each "pixel" is a cell of a grid turned 45°, ink lines run wherever two colours meet, sixteen colours, horizontal brush streaks and ordered dithering. The koi are your cut-outs, sampled into the same grid every frame.</p>
+  </header>
+
+  <div class="poster" id="posterWrap"><canvas id="poster"></canvas></div>
+
+  <div class="controls" id="controls">
+    <label>cell <input type="range" id="cell" min="4" max="12" step="1" value="7"><output></output></label>
+    <label>streaks <input type="range" id="streak" min="0" max="2" step="0.1" value="1"><output></output></label>
+    <label>band edges <input type="range" id="sharp" min="1" max="5" step="0.1" value="2.6"><output></output></label>
+    <label>shimmer <input type="range" id="shimmer" min="0" max="2" step="0.1" value="1"><output></output></label>
+    <label>koi size <input type="range" id="koiSize" min="0.12" max="0.36" step="0.01" value="0.24"><output></output></label>
+    <label>fps <select id="fps"><option>6</option><option selected>12</option><option>24</option></select></label>
+    <label><input type="checkbox" id="outline" checked> ink lines</label>
+    <label>words <select id="words">
+      <option value="0">still here? / the koi never once checked the time.</option>
+      <option value="1">breathe out. / nothing in this pond is late.</option>
+      <option value="2">put it down for a minute. / the water will hold it.</option>
+      <option value="-1">none</option>
+    </select></label>
+  </div>
+
+  <h2>pipeline, on one patch of the pond</h2>
+  <div class="strip" id="strip"></div>
+
+  <h2>koi sprites · four swim frames each, read from your cut-outs as flat colour regions</h2>
+  <div class="sheet"><canvas id="sheet"></canvas></div>
+
+  <h2>palette · 16 colours</h2>
+  <div class="palette" id="palette"></div>
+</main>
+
+<script src="pond.js"></script>
+<script>
+const WORDS = [
+  ['still here?', 'the koi never once checked the time.'],
+  ['breathe out.', 'nothing in this pond is late.'],
+  ['put it down for a minute.', 'the water will hold it.'],
+];
+const $ = (id) => document.getElementById(id);
+const val = (id) => (id === 'outline' ? $(id).checked : +$(id).value);
+let poster, tiles = [], sheet;
+
+function posterOpts() {
+  const W = Math.min(1040, $('posterWrap').parentElement.clientWidth), H = Math.round(W / 2.5);
+  const len = W * val('koiSize'), words = +$('words').value;
+  return {
+    width: W, height: H, cell: val('cell'), streak: val('streak'), sharp: val('sharp'), shimmer: val('shimmer'),
+    outline: val('outline'), fps: val('fps'),
+    bounds: [W * 0.12, H * 0.1, W * 0.88, H * 0.9],
+    koi: [
+      { kind: 'kohaku', len, x: W * 0.5, y: H * 0.3, heading: -0.15, speed: W * 0.022 },
+      { kind: 'showa', len: len * 0.9, x: W * 0.74, y: H * 0.72, heading: 2.9, speed: W * 0.02 },
+      { kind: 'beni', len: len * 0.85, x: W * 0.3, y: H * 0.7, heading: 0.35, speed: W * 0.024 },
+    ],
+    text: words < 0 ? null : { lines: WORDS[words], x: Math.round(W * 0.2), y: Math.round(H * 0.08), px: W > 700 ? 2 : 1, gap: 5 },
+  };
+}
+
+function build() {
+  if (poster) poster.stop();
+  const o = posterOpts();
+  poster = new Pond($('poster'), o).start();
+  buildStrip(o);
+  buildSheet(o);
+}
+
+// Each tile is the same 2:1 patch of the scene, so the stages line up.
+function buildStrip(p) {
+  const strip = $('strip');
+  strip.innerHTML = '';
+  const tw = Math.round(p.cell * Math.round(p.width * 0.3 / p.cell)), th = Math.round(tw / 2);
+  const view = [0, Math.round(p.height * 0.3 / p.cell) * p.cell];
+  const bg = (src) => `background-image:url(${src});background-size:${(p.width / tw) * 100}% auto;background-position:0 ${(view[1] / (p.height - th)) * 100}%`;
+  const stages = [
+    ['your render', 'build/assets/render.png'],
+    ['re-rendered without koi', 'build/assets/plate_flora.png'],
+    ['diamond lattice, 16 colours', { streak: 0, glitch: 0, outline: false }],
+    ['+ brush streaks, glitch rows', { outline: false }],
+    ['+ ink where colours meet', {}],
+  ];
+  for (const [name, s] of stages) {
+    const f = document.createElement('figure');
+    const tile = document.createElement('div');
+    tile.className = 'tile';
+    if (typeof s === 'string') tile.style.cssText = bg(s);
+    else {
+      const c = document.createElement('canvas');
+      tile.appendChild(c);
+      new Pond(c, Object.assign({}, p, { width: tw, height: th, scene: [p.width, p.height], view, koi: [], text: null, animate: false, blossoms: true, ripples: false }, s)).start();
+    }
+    f.appendChild(tile);
+    f.insertAdjacentHTML('beforeend', `<figcaption><b>${strip.children.length + 1}</b> · ${name}</figcaption>`);
+    strip.appendChild(f);
+  }
+}
+
+function buildSheet(p) {
+  const W = p.width, rows = 3, len = Math.min(W / 4.6, 150), rh = Math.round(len * 0.46);
+  const koi = [];
+  ['kohaku', 'showa', 'beni'].forEach((kind, r) => {
+    for (let f = 0; f < 4; f++) koi.push({ kind, len, x: W * (0.14 + f * 0.24), y: rh * (r + 0.55), heading: 0, fixed: true, phase: (f * Math.PI) / 2, depth: 0.15 });
+  });
+  new Pond($('sheet'), { width: W, height: rh * rows + 4, cell: p.cell, sharp: p.sharp, outline: p.outline, flat: true, streak: 0.8, koi, animate: false, blossoms: false }).start();
+}
+
+function palette() {
+  $('palette').innerHTML = Pond.PALETTE.filter(([n]) => n !== 'void').map(([n, h]) => `<span class="sw"><i style="background:${h}"></i>${n}</span>`).join('');
+}
+
+for (const el of document.querySelectorAll('#controls input, #controls select')) {
+  const out = el.parentElement.querySelector('output');
+  const show = () => { if (out) out.textContent = el.value; };
+  show();
+  el.addEventListener('input', show);
+  el.addEventListener('change', () => build());
+}
+let rs;
+addEventListener('resize', () => { clearTimeout(rs); rs = setTimeout(build, 200); });
+
+Pond.load('build/assets/').then(() => { palette(); build(); }).catch((e) => {
+  document.querySelector('header').insertAdjacentHTML('beforeend', `<p class="err">${e.message}</p>`);
+});
+</script>
+</body>
+</html>

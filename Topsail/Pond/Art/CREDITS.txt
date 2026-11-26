@@ -1,0 +1,22 @@
+Credits for the koi pond's art
+==============================
+
+The pond in the notch is drawn from renders of 3D models, made in Blender from straight above
+and then turned into pixel art by Topsail (Pond/PondScene.swift).
+
+pond-flora.png, pond-water.png: the pond with its lily pads and water lilies, and the bare water.
+koi-kohaku.png, koi-showa.png, koi-beni.png, koi-body.png: the three koi and their body mask.
+
+1. Koi: "Koi Fish" by SDPM Esare. Licence: CC BY 4.0.
+   https://sketchfab.com/3d-models/koi-fish-3e1b80c3653f43349252aab3b4fb1d86
+   Changes: laid out straight so it can bend as it swims, tail fin turned to show from above;
+   two fish given new colourings (black, red and white; orange). Rendered from above.
+2. Water lilies: "Water Lily" by Xan San. Licence: CC BY 4.0.
+   https://sketchfab.com/3d-models/water-lily-6e47f3a59c204db3ae312eed9169aef8
+   Changes: given pink and white petal, stamen and heart materials. Rendered from above.
+3. Lily pads: "CC0 Water Lily, Nymphaea cv." by ffish.asia / floraZia.com. Licence: CC0 1.0.
+   https://sketchfab.com/3d-models/cc0-water-lily-nymphaea-cv-e7830f486a0248b6b894f3e7a63b8c16
+   Changes: leaves laid level, blemishes filled, regraded to a summer green.
+
+CC BY 4.0: https://creativecommons.org/licenses/by/4.0/
+CC0 1.0:   https://creativecommons.org/publicdomain/zero/1.0/

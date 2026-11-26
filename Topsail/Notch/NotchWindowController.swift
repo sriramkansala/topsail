@@ -185,6 +185,7 @@ final class NotchWindowController: NSWindowController {
             model.activities.post(.audioDevice(name: "Headphones", battery: nil))
         case "copied": model.activities.post(.copied)
         case let name where name.hasPrefix("recording") || name == "countdown": model.features.recorder.preview(name)
+        case "koi": model.startKoiPass(first: true)
         default: break
         }
     }
