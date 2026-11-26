@@ -178,8 +178,10 @@ private struct PlayerLevelRow: View {
     }
 }
 
-/// The compact player: artwork, title and artist, controls on the same row, scrubber below.
-/// Exactly `IslandLayout.playerHeight` tall. Clicking the track opens the app playing it.
+/// The player: the artwork, title and artist and the bars in one row, the scrubber, then the
+/// controls centred. The artwork and the bars are drawn by `MusicTraveler`, which carries them here
+/// from the wings beside the notch; this view keeps their places. Anywhere along the top row
+/// opens the app playing.
 struct ExpandedPlayerView: View {
     @ObservedObject var service: NowPlayingService
     /// Volume or brightness being changed: the scrubber's row shows it until the keys rest.
@@ -188,37 +190,29 @@ struct ExpandedPlayerView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        VStack(spacing: 8) {
-            HStack(spacing: 10) {
-                Button(action: { service.openPlayerApp() }) {
-                    HStack(spacing: 10) {
-                        ArtworkView(image: service.artwork, size: 36, cornerRadius: 8)
-
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(service.track?.title ?? "")
-                                .font(.system(size: 12.5, weight: .semibold))
-                                .foregroundColor(.white)
-                            Text(service.track?.artist ?? "")
-                                .font(.system(size: 11))
-                                .foregroundColor(.white.opacity(0.55))
-                        }
-                        .lineLimit(1)
-                        // Anywhere beside the title, up to the controls, opens the app too.
-                        Spacer(minLength: 8)
+        VStack(spacing: 0) {
+            Button(action: { service.openPlayerApp() }) {
+                HStack(spacing: 12) {
+                    Color.clear
+                        .frame(width: IslandLayout.playerArtwork, height: IslandLayout.playerArtwork)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(service.track?.title ?? "")
+                            .font(.system(size: 13.5, weight: .semibold))
+                            .foregroundColor(.white)
+                        Text(service.track?.artist ?? "")
+                            .font(.system(size: 12))
+                            .foregroundColor(.white.opacity(0.55))
                     }
-                    .contentShape(Rectangle())
+                    .lineLimit(1)
+                    Spacer(minLength: 8)
+                    Color.clear
+                        .frame(width: IslandLayout.playerBarsWidth, height: 18)
                 }
-                .buttonStyle(.pressable(.subtle, hoverWash: false))
-                .help(service.track.map { "Open \($0.app.displayName)" } ?? "")
-
-                HStack(spacing: 16) {
-                    control("backward.fill", size: 12) { service.previous() }
-                    control(service.isPlaying ? "pause.fill" : "play.fill", size: 16) { service.playPause() }
-                        .contentTransition(.symbolEffect(.replace))
-                    control("forward.fill", size: 12) { service.next() }
-                }
+                .contentShape(Rectangle())
             }
-            .frame(height: 36)
+            .buttonStyle(.pressable(.subtle, hoverWash: false))
+            .help(service.track.map { "Open \($0.app.displayName)" } ?? "")
+            .frame(height: IslandLayout.playerArtwork)
 
             ZStack {
                 if let level, let reading = level.levelReading {
@@ -232,8 +226,18 @@ struct ExpandedPlayerView: View {
                 }
             }
             .frame(height: 16)
+            .padding(.top, IslandLayout.playerRowGap)
+
+            HStack(spacing: 30) {
+                control("backward.fill", size: 13) { service.previous() }
+                control(service.isPlaying ? "pause.fill" : "play.fill", size: 18) { service.playPause() }
+                    .contentTransition(.symbolEffect(.replace))
+                control("forward.fill", size: 13) { service.next() }
+            }
+            .frame(height: IslandLayout.playerControlsHeight)
+            .padding(.top, 6)
         }
-        .frame(height: IslandLayout.playerHeight)
+        .frame(height: IslandLayout.playerHeight, alignment: .top)
     }
 
     private func control(_ symbol: String, size: CGFloat, action: @escaping () -> Void) -> some View {

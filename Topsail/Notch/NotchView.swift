@@ -81,6 +81,10 @@ struct NotchView: View {
                 }
             }
 
+            // The music's artwork and bars: the same two views travel from the wings into the
+            // player and back, as the island grows and shrinks.
+            MusicTraveler(nowPlaying: nowPlaying, placement: model.musicPlacement, visible: model.showsMusicTraveler)
+
             if let level = model.expandedLevel, model.visiblePage != .player || model.voiceActive || model.teleprompterActive {
                 ExpandedLevelIndicator(kind: level)
                     .padding(.bottom, IslandLayout.levelIndicatorBottom)
@@ -124,12 +128,12 @@ struct NotchView: View {
                         .transition(.cascade(1, reduceMotion: reduceMotion))
                 } else if model.state == .expanded {
                     notchRow
-                        .transition(.cascade(0, reduceMotion: reduceMotion))
+                        .transition(.bloomReveal(reduceMotion: reduceMotion))
                     page
                         .frame(height: model.expandedContentHeight, alignment: .top)
                         .padding(.horizontal, IslandLayout.horizontalPadding)
                         .padding(.top, IslandLayout.contentTopPadding)
-                        .transition(.cascade(1, reduceMotion: reduceMotion))
+                        .transition(.bloomReveal(reduceMotion: reduceMotion))
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -299,19 +303,15 @@ struct CompactMusicWings: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            // The artwork and the bars themselves are drawn by `MusicTraveler`, so they can travel
+            // into the player; these wings keep their places and show a level in the bars' place.
             HStack(spacing: 0) {
-                ArtworkView(image: nowPlaying.artwork, size: 22, cornerRadius: 6)
-                    .frame(width: wingWidth, height: notchSize.height)
-
                 Color.clear
-                    .frame(width: notchSize.width, height: notchSize.height)
+                    .frame(width: wingWidth + notchSize.width, height: notchSize.height)
 
                 ZStack {
                     if let level {
                         LevelGlyph(kind: level)
-                            .transition(Self.swap(reduceMotion))
-                    } else {
-                        EqualizerView(isPlaying: nowPlaying.isPlaying, color: nowPlaying.accentColor)
                             .transition(Self.swap(reduceMotion))
                     }
                 }
@@ -331,6 +331,34 @@ struct CompactMusicWings: View {
     /// The bars and a level trading places in the right wing.
     static func swap(_ reduceMotion: Bool) -> AnyTransition {
         reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.7))
+    }
+}
+
+/// The music's artwork and bars, drawn once over the island and moved by the island's own spring
+/// between the wings beside the notch and the open player. The wings and the player only keep
+/// their places, so nothing pops in or swaps: the same two things grow and travel.
+struct MusicTraveler: View {
+    @ObservedObject var nowPlaying: NowPlayingService
+    let placement: NotchViewModel.MusicPlacement
+    let visible: Bool
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            ArtworkView(image: nowPlaying.artwork, size: placement.art.width, cornerRadius: placement.artRadius)
+                .offset(x: placement.art.minX, y: placement.art.minY)
+            EqualizerView(isPlaying: nowPlaying.isPlaying, color: nowPlaying.accentColor)
+                .scaleEffect(placement.barsScale)
+                .position(placement.bars)
+                .opacity(placement.showsBars ? 1 : 0)
+                .animation(reduceMotion ? nil : Motion.fast, value: placement.showsBars)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .opacity(visible ? 1 : 0)
+        .animation(reduceMotion ? nil : Motion.fast, value: visible)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 }
 

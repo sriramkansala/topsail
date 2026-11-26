@@ -103,12 +103,15 @@ enum Motion {
     // MARK: The island
 
     /// The island growing: the container moves now; content cascades in beneath it.
-    static let islandGrow = gentle
+    /// Bloom: the island grows with a little life in it, then settles (spring 0.46 s, bounce 0.2).
+    static let islandGrow = Animation.spring(duration: 0.46, bounce: 0.2)
     /// The island shrinking: content has `instant` to leave before the container moves.
-    static let islandShrink = gentle.delay(Duration.instant)
+    static let islandShrink = Animation.spring(duration: 0.4, bounce: 0).delay(Duration.instant)
     /// How long a shrink takes to settle: the content's exit plus the container's travel.
     /// Derived, never retyped — e.g. the gap before the next activity is shown.
-    static let islandShrinkSettle: TimeInterval = Duration.instant + Duration.slow
+    static let islandShrinkSettle: TimeInterval = Duration.instant + 0.4
+    /// The closed island leaning toward a pointer that comes near: a small, springy give.
+    static let lean = Animation.spring(duration: 0.32, bounce: 0.3)
 
     /// The low-battery notice: iOS's island spring (0.6 s, a 0.2 bounce), and every change the
     /// notice goes through runs on it — the island dropping it and taking it back, the hint
@@ -132,6 +135,16 @@ enum Motion {
 // MARK: - Transitions
 
 extension AnyTransition {
+    /// The open island's content arriving a beat after the shape: out of a 9 pt blur, from 95 %
+    /// scale and 6 pt up, anchored at the top. It leaves faster than it came (0.14 s), before the
+    /// shape shrinks. With Reduce Motion it only fades.
+    static func bloomReveal(reduceMotion: Bool) -> AnyTransition {
+        guard !reduceMotion else { return .opacity.animation(Motion.fast) }
+        let bloom = AnyTransition.modifier(active: BloomModifier(shown: 0), identity: BloomModifier(shown: 1))
+        return .asymmetric(insertion: bloom.animation(Animation.spring(duration: 0.34, bounce: 0).delay(0.06)),
+                           removal: bloom.animation(Motion.easeOut(0.14)))
+    }
+
     /// Content entering while the island grows: a short cascade, subordinate to the container.
     /// `index` orders items top to bottom / left to right. Leaving is a plain `instant` fade.
     static func cascade(_ index: Int, reduceMotion: Bool) -> AnyTransition {
@@ -173,6 +186,19 @@ private struct NoticeBlurModifier: ViewModifier {
         content
             .opacity(shown)
             .blur(radius: 16 * max(0, 1 - shown))
+    }
+}
+
+private struct BloomModifier: ViewModifier {
+    /// 0 = hidden, 1 = shown.
+    let shown: Double
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(shown)
+            .blur(radius: 9 * (1 - shown))
+            .scaleEffect(0.95 + 0.05 * shown, anchor: .top)
+            .offset(y: -6 * (1 - shown))
     }
 }
 

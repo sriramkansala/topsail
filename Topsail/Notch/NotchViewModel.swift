@@ -54,6 +54,8 @@ final class NotchViewModel: ObservableObject {
     @Published private(set) var voiceActive = false
     /// The teleprompter is running: the island holds it, pinned open.
     @Published private(set) var teleprompterActive = false
+    /// The pointer is near the closed island: it leans toward it a little (+6 wide, +3 tall).
+    @Published private(set) var leaning = false
     /// While the teleprompter's handle is held: the height it's pulled to (it follows the pointer
     /// directly, with resistance past the limits). nil when it rests at the saved height.
     @Published private(set) var teleprompterDragHeight: CGFloat?
@@ -244,6 +246,57 @@ final class NotchViewModel: ObservableObject {
     }
 
     var islandSize: CGSize {
+        let size = restingIslandSize
+        guard state == .collapsed, leaning, activities.current == nil else { return size }
+        return CGSize(width: size.width + 6, height: size.height + 3)
+    }
+
+    /// Whether the music's own wings are what the closed island shows: nothing else outranks them.
+    var musicIsBesideNotch: Bool {
+        guard state == .collapsed, showsMusicActivity else { return false }
+        if activities.current != nil && musicLevel == nil { return false }
+        if features.recorder.showsWings || (showsKoiPass && koiPassFirst) { return false }
+        if showsMeetingActivity && calendar.imminentMeeting != nil { return false }
+        if showsAgentActivity && features.agents.workingAgent != nil { return false }
+        return true
+    }
+
+    /// Where the music's artwork and bars sit: one pair that travels between the wings and the
+    /// player as the island grows and shrinks, never two copies swapping.
+    struct MusicPlacement: Equatable {
+        var art: CGRect
+        var artRadius: CGFloat
+        var bars: CGPoint
+        var barsScale: CGFloat
+        var showsBars: Bool
+    }
+
+    var musicPlacement: MusicPlacement {
+        if state == .expanded {
+            let top = notchSize.height + IslandLayout.contentTopPadding
+            let side = IslandLayout.playerArtwork
+            return MusicPlacement(art: CGRect(x: IslandLayout.horizontalPadding, y: top, width: side, height: side),
+                                  artRadius: 11,
+                                  bars: CGPoint(x: islandSize.width - IslandLayout.horizontalPadding - IslandLayout.playerBarsWidth / 2,
+                                                y: top + side / 2),
+                                  barsScale: 1.3, showsBars: true)
+        }
+        let side: CGFloat = 22
+        return MusicPlacement(art: CGRect(x: (compactWing - side) / 2, y: (notchSize.height - side) / 2, width: side, height: side),
+                              artRadius: 6,
+                              bars: CGPoint(x: islandSize.width - compactWing / 2, y: notchSize.height / 2),
+                              barsScale: 1, showsBars: musicLevel == nil)
+    }
+
+    /// Whether the travelling artwork and bars are on screen: beside the notch, or in the player.
+    var showsMusicTraveler: Bool {
+        if state == .expanded {
+            return visiblePage == .player && nowPlaying.track != nil && !voiceActive && !teleprompterActive
+        }
+        return musicIsBesideNotch
+    }
+
+    private var restingIslandSize: CGSize {
         switch state {
         case .collapsed:
             // A transient activity (charging, device connected) takes priority, then an
@@ -458,8 +511,9 @@ final class NotchViewModel: ObservableObject {
                 activities.pointerMoved(inside: hotZone.contains(location))
                 return
             }
+            setLeaning(activities.current == nil && nearZone().contains(location))
             if hotZone.contains(location) {
-                scheduleExpand(after: 0.06)
+                scheduleExpand(after: 0.09)
             } else {
                 cancelPendingExpand()
             }
@@ -473,9 +527,21 @@ final class NotchViewModel: ObservableObject {
             if activeZone.contains(location) {
                 cancelPendingCollapse()
             } else {
-                scheduleCollapse(after: 0.25)
+                scheduleCollapse(after: 0.15)
             }
         }
+    }
+
+    /// Near the closed island: up to 44 pt to either side and 48 pt below it.
+    private func nearZone() -> CGRect {
+        let size = restingIslandSize
+        return CGRect(x: notchRect.midX - size.width / 2 - 44, y: notchRect.maxY - size.height - 48,
+                      width: size.width + 88, height: size.height + 48)
+    }
+
+    private func setLeaning(_ near: Bool) {
+        guard near != leaning else { return }
+        Motion.perform(Motion.lean) { leaning = near }
     }
 
     private func collapsedHotZone() -> CGRect {
@@ -858,6 +924,7 @@ final class NotchViewModel: ObservableObject {
         cancelPendingExpand()
         Motion.perform(Motion.islandGrow) {
             state = .expanded
+            leaning = false
         }
         if settings.hapticFeedback {
             NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)

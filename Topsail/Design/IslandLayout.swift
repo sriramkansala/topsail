@@ -45,7 +45,12 @@ enum IslandLayout {
     static let expandedBottomRadius: CGFloat = 24
 
     // Page heights
-    static let playerHeight: CGFloat = 60
+    /// The player: artwork, title and the bars in one row; the scrubber; the controls, centred.
+    static let playerArtwork: CGFloat = 48
+    static let playerBarsWidth: CGFloat = 24
+    static let playerRowGap: CGFloat = 10
+    static let playerControlsHeight: CGFloat = 24
+    static let playerHeight: CGFloat = playerArtwork + playerRowGap + 16 + 6 + playerControlsHeight
     /// One line of text: "Nothing playing", "No more events", "Show calendar".
     static let messageHeight: CGFloat = 24
     static let eventRowHeight: CGFloat = 28

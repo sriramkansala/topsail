@@ -5627,38 +5627,6 @@
         }
       }
     },
-    "Saves to %@": {
-      "localizations": {
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se guarda en %@"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enregistrement dans %@"
-          }
-        }
-      }
-    },
-    "Show the folder in Finder": {
-      "localizations": {
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mostrar la carpeta en el Finder"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Afficher le dossier dans le Finder"
-          }
-        }
-      }
-    },
     "Koi pond": {
       "localizations": {
         "es": {
@@ -5719,6 +5687,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Quand il ne se passe rien, l’île s’ouvre sur un bassin à koïs en pixel art, avec l’heure et la date. Cliquez sur l’eau pour nourrir les koïs."
+          }
+        }
+      }
+    },
+    "Previously": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anteriores"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Précédemment"
           }
         }
       }

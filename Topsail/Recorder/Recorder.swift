@@ -82,6 +82,8 @@ final class Recorder: ObservableObject {
     @Published private(set) var phase: Phase = .idle
     @Published private(set) var isPaused = false
     @Published private(set) var clock = RecordingClock()
+    /// The newest recordings in the folder, newest first, for the Record page.
+    @Published private(set) var recent: [RecentRecording] = []
     let levels = RecorderLevels()
     let settings = RecorderSettings()
 
@@ -136,7 +138,7 @@ final class Recorder: ObservableObject {
     /// The Record page's height for what it shows now.
     var pageHeight: CGFloat {
         switch phase {
-        case .idle: return RecorderLayout.idleHeight
+        case .idle: return RecorderLayout.idleHeight + RecorderLayout.previousHeight(count: recent.count)
         case .recording: return RecorderLayout.recordingHeight
         case .needsPermission, .consent, .countdown, .starting, .saving: return RecorderLayout.messageHeight
         }
@@ -332,6 +334,7 @@ final class Recorder: ObservableObject {
                     let files = try await session.stop()
                     let url = try await save(files, kind: kind, separateTracks: separateTracks, in: session.directory)
                     postNotice(.saved(SavedRecording(url: url, kind: kind, duration: duration)))
+                    refreshRecent()
                 } catch {
                     postNotice(.failed(Self.message(for: error)))
                 }
@@ -445,6 +448,36 @@ final class Recorder: ObservableObject {
 
     func showInFinder(_ saved: SavedRecording) {
         settings.withFolderAccess { _ in NSWorkspace.shared.activateFileViewerSelecting([saved.url]) }
+    }
+
+    // MARK: Earlier recordings
+
+    /// Reads the folder again for the newest recordings (screen recordings are .mov or .mp4;
+    /// calls are .m4a).
+    func refreshRecent() {
+        let found: [RecentRecording] = settings.withFolderAccess { folder in
+            let keys: Set<URLResourceKey> = [.creationDateKey, .contentModificationDateKey]
+            let urls = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: Array(keys),
+                                                                     options: [.skipsHiddenFiles])) ?? []
+            return urls.compactMap { url in
+                let type = url.pathExtension.lowercased()
+                guard ["mov", "mp4", "m4a"].contains(type) else { return nil }
+                let values = try? url.resourceValues(forKeys: keys)
+                return RecentRecording(url: url, kind: type == "m4a" ? .call : .screen,
+                                       date: values?.creationDate ?? values?.contentModificationDate ?? .distantPast)
+            }
+            .sorted { $0.date > $1.date }
+        }
+        let newest = Array(found.prefix(RecorderLayout.previousLimit))
+        if newest != recent { recent = newest }
+    }
+
+    func open(_ recording: RecentRecording) {
+        settings.withFolderAccess { _ in NSWorkspace.shared.open(recording.url) }
+    }
+
+    func showInFinder(_ recording: RecentRecording) {
+        settings.withFolderAccess { _ in NSWorkspace.shared.activateFileViewerSelecting([recording.url]) }
     }
 
     // MARK: The offer after joining a call

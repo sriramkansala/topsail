@@ -9,6 +9,8 @@ final class NotchWindowController: NSWindowController {
     private let audioMonitor: AudioMonitor
     private let volumeKeys: VolumeKeyInterceptor
     private var activitySubscription: AnyCancellable?
+    /// Keeps the teleprompter out of screen sharing, recordings and screenshots.
+    private var privacySubscription: AnyCancellable?
     private var clipboardSubscription: AnyCancellable?
     private var featureSubscriptions = Set<AnyCancellable>()
 
@@ -76,6 +78,12 @@ final class NotchWindowController: NSWindowController {
                 self.giveUpKeyboard()
             }
         }
+        // While the teleprompter is open, the island is left out of screen sharing, recordings
+        // and screenshots (Zoom, Meet, Teams and screen recorders all capture through macOS,
+        // which honours this): the audience sees the screen, never the script.
+        privacySubscription = model.$teleprompterActive
+            .removeDuplicates()
+            .sink { [weak panel] active in panel?.sharingType = active ? .none : .readOnly }
         activitySubscription = activities.$current.sink { [weak self] activity in
             guard let self else { return }
             self.updateMouseEvents(state: self.model.state, activity: activity)

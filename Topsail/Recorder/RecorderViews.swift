@@ -233,24 +233,23 @@ struct RecorderPageView: View {
                 }
             }
             .frame(height: RecorderLayout.chipHeight)
-            // Where the files go, and a way there.
-            Button(action: settings.showFolder) {
-                HStack(spacing: 5) {
-                    Image(systemName: "folder")
-                    Text("Saves to \(settings.folderBreadcrumb)")
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                    Image(systemName: "arrow.up.forward")
-                        .font(.system(size: 8.5, weight: .bold))
+
+            if !recorder.recent.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Previously")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.45))
+                        .frame(height: RecorderLayout.previousHeaderHeight)
+                    VStack(spacing: 0) {
+                        ForEach(recorder.recent) { recording in
+                            PreviousRecordingRow(recording: recording, recorder: recorder)
+                        }
+                    }
                 }
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.white.opacity(0.5))
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .frame(height: RecorderLayout.folderRowHeight)
             }
-            .buttonStyle(.pressable(.subtle))
-            .help("Show the folder in Finder")
         }
+        .onAppear { recorder.refreshRecent() }
     }
 
     private var displayName: String {
@@ -470,6 +469,57 @@ private struct RecorderLevelMeters: View {
             LevelMeter(level: Double(level), color: .white, dimmed: false, inset: 0)
                 .frame(width: 52)
         }
+    }
+}
+
+/// One earlier recording: what kind it was and when. Clicking it opens it; on hover, a way to it
+/// in Finder.
+private struct PreviousRecordingRow: View {
+    let recording: RecentRecording
+    let recorder: Recorder
+
+    @State private var hovering = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: recording.kind.symbol)
+                .font(.system(size: 10.5, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.8))
+                .frame(width: 24, height: 24)
+                .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Color.white.opacity(hovering ? 0.12 : 0.08)))
+            Text(recording.kind.title)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.white)
+            Spacer(minLength: 8)
+            if hovering {
+                Button { recorder.showInFinder(recording) } label: {
+                    Image(systemName: "folder")
+                        .font(.system(size: 10.5, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.7))
+                }
+                .buttonStyle(.pressable)
+                .help("Show in Finder")
+                .transition(.opacity)
+            }
+            Text(Self.when(recording.date))
+                .font(.system(size: 11).monospacedDigit())
+                .foregroundStyle(.white.opacity(0.45))
+        }
+        .frame(height: RecorderLayout.previousRowHeight)
+        .contentShape(Rectangle())
+        .onTapGesture { recorder.open(recording) }
+        .onHover { hovering = $0 }
+        .animation(reduceMotion ? nil : Motion.hover, value: hovering)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction { recorder.open(recording) }
+    }
+
+    /// Today: the time. Before: the day.
+    static func when(_ date: Date) -> String {
+        Calendar.current.isDateInToday(date) ? date.formatted(date: .omitted, time: .shortened)
+                                              : date.formatted(.dateTime.month(.abbreviated).day())
     }
 }
 
