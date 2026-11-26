@@ -1,7 +1,8 @@
 # Koi pond (prototype)
 
-An ambient pixel-art koi pond for the notch, made from a Blender render of a koi pond. It is not
-part of the app yet: nothing in `Topsail/` uses it.
+An ambient pixel-art koi pond for the notch, made from a Blender render of a koi pond. These are
+the browser prototypes; the app's version (night palette only) is `Packages/PondKit` (the
+renderer, a port of `pond.js`) and `Topsail/Pond` (its views and art).
 
 - `index.html`: the study. The live pond, the pipeline stage by stage, the koi sprites, the palette.
 - `notch.html`: the pond in the island at real size. A: on idle, a koi swims under the notch.
@@ -29,8 +30,9 @@ swimming wave and by their turns, with dithered translucent fins and a shadow on
 # 1. Render the pond without its koi (Blender 5; needs GPU access, so outside a sandbox)
 Blender -b <koi-pond-blender>/pond.blend --python render_plates.py -- <plates dir>
 
-# 2. Gather everything the pages load into build/assets (Pillow, NumPy, SciPy)
-python prepare.py <koi-pond-blender> <plates dir>
+# 2. Gather everything the pages load into build/assets (Pillow, NumPy, SciPy);
+#    --app also refreshes the app's copy of the art
+python prepare.py <koi-pond-blender> <plates dir> --app ../../Topsail/Pond/Art
 ```
 
 Then serve this folder over http (the pages read pixels back from canvases, which `file://`

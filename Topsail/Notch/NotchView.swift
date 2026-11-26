@@ -17,6 +17,12 @@ struct NotchView: View {
 
     private var island: some View {
         ZStack(alignment: .top) {
+            // The Koi pond page fills the whole open island, behind the notch row.
+            if model.state == .expanded, model.visiblePage == .pond, !model.voiceActive, !model.teleprompterActive {
+                PondPageView(size: model.expandedSize, notchHeight: model.notchSize.height)
+                    .transition(.opacity.animation(reduceMotion ? nil : Motion.fast))
+            }
+
             // Always mounted; its parts enter and leave with the expanded state.
             ExpandedContent(model: model, nowPlaying: nowPlaying, calendar: model.calendar,
                             linear: model.linear, clipboard: model.clipboard)
@@ -45,6 +51,10 @@ struct NotchView: View {
                 } else if model.showsMusicActivity {
                     CompactMusicWings(nowPlaying: nowPlaying, notchSize: model.notchSize, wingWidth: model.compactWing,
                                       level: model.musicLevel, meterHeight: model.activities.meterHeight)
+                        .transition(.cascade(0, reduceMotion: reduceMotion))
+                } else if model.showsKoiPass {
+                    KoiPassWings(notchSize: model.notchSize, wingWidth: IslandLayout.koiPassWing,
+                                 onFinished: model.endKoiPass)
                         .transition(.cascade(0, reduceMotion: reduceMotion))
                 }
             }
@@ -173,6 +183,10 @@ struct NotchView: View {
                 } else if model.visiblePage == .clipboard {
                     ClipboardTabView(model: model, shelf: model.features.shelf)
                         .transition(.contentMorph(reduceMotion: reduceMotion))
+                } else if model.visiblePage == .pond {
+                    // The pond itself is drawn behind the whole island (see `island`).
+                    Color.clear
+                        .transition(.contentMorph(reduceMotion: reduceMotion))
                 } else if nowPlaying.track != nil {
                     ExpandedPlayerView(service: nowPlaying,
                                        level: model.voiceActive || model.teleprompterActive ? nil : model.expandedLevel)
@@ -194,6 +208,7 @@ struct NotchView: View {
             case .clipboard: return model.clipboardModes == [.shelf] ? "tray.full" : "doc.on.doc"
             case .agents: return "sparkles"
             case .apps: return "square.grid.2x2"
+            case .pond: return "fish"
             }
         }
     }

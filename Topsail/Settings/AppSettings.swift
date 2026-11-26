@@ -29,6 +29,8 @@ final class AppSettings: ObservableObject {
     @Published var hapticFeedback: Bool { didSet { save(hapticFeedback, "hapticFeedback") } }
     /// Keep Awake also keeps the display on.
     @Published var keepAwakeDisplay: Bool { didSet { save(keepAwakeDisplay, "keepAwakeDisplay") } }
+    /// Koi pond: now and then a koi swims under the notch.
+    @Published var pondPassingKoi: Bool { didSet { save(pondPassingKoi, "pondPassingKoi") } }
     /// Keep Awake turns itself off after this many hours; 0 = when turned off.
     @Published var keepAwakeHours: Int { didSet { defaults.set(keepAwakeHours, forKey: "keepAwakeHours") } }
     /// The teleprompter's script, its speed (points a second) and text size.
@@ -77,6 +79,7 @@ final class AppSettings: ObservableObject {
             "showCopyActivity": true,
             "hapticFeedback": true,
             "keepAwakeDisplay": false,
+            "pondPassingKoi": true,
             "keepAwakeHours": 0,
             "notificationApps": ["com.apple.mobilesms", "com.apple.mail", "com.tinyspeck.slackmacgap", "com.hnc.discord",
                                  "com.burbn.instagram"],
@@ -106,6 +109,7 @@ final class AppSettings: ObservableObject {
         hapticFeedback = defaults.bool(forKey: "hapticFeedback")
         hideSystemVolumeHUD = defaults.bool(forKey: "hideSystemVolumeHUD")
         keepAwakeDisplay = defaults.bool(forKey: "keepAwakeDisplay")
+        pondPassingKoi = defaults.bool(forKey: "pondPassingKoi")
         keepAwakeHours = defaults.integer(forKey: "keepAwakeHours")
         notificationApps = Set(defaults.stringArray(forKey: "notificationApps") ?? [])
         appsTerminal = defaults.bool(forKey: "appsTerminal")

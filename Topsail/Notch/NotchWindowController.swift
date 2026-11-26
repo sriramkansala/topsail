@@ -172,6 +172,7 @@ final class NotchWindowController: NSWindowController {
             // The App Store build's card: no battery.
             model.activities.post(.audioDevice(name: "Headphones", battery: nil))
         case "copied": model.activities.post(.copied)
+        case "koi": model.startKoiPass()
         default: break
         }
     }

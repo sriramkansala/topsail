@@ -30,6 +30,7 @@ final class NotchViewModel: ObservableObject {
         case clipboard
         case agents
         case apps
+        case pond
     }
 
     @Published private(set) var state: IslandState = .collapsed
@@ -40,6 +41,9 @@ final class NotchViewModel: ObservableObject {
     @Published private(set) var showsAgentActivity = false
     /// A meeting with a join link starts soon (or just started) and reminders are on.
     @Published private(set) var showsMeetingActivity = false
+    /// A koi is swimming under the notch (Koi pond feature): now and then, when nothing else is
+    /// beside it.
+    @Published private(set) var showsKoiPass = false
     /// The tasks page shows more than two issues after "View more"; reset when the island closes.
     @Published private(set) var tasksExpanded = false
     /// A voice note is in progress: the island holds it, pinned open, sized to its content.
@@ -83,6 +87,7 @@ final class NotchViewModel: ObservableObject {
     private var pendingCollapse: DispatchWorkItem?
     private var cancellables = Set<AnyCancellable>()
     private var hideActivityWork: DispatchWorkItem?
+    private var koiPassWork: DispatchWorkItem?
 
     init(nowPlaying: NowPlayingService, activities: ActivityCenter, calendar: CalendarService,
          linear: LinearService, voice: VoiceNoteController, system: SystemMonitor, clipboard: ClipboardHistory,
@@ -124,6 +129,14 @@ final class NotchViewModel: ObservableObject {
             .removeDuplicates()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] active in self?.setTeleprompterActive(active) }
+            .store(in: &cancellables)
+
+        // The koi pond's passing koi: rescheduled whenever the feature or its option changes.
+        Publishers.CombineLatest(settings.publisher(for: .pond), settings.$pondPassingKoi)
+            .map { $0 && $1 }
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in self?.scheduleKoiPass() }
             .store(in: &cancellables)
 
         // Views read settings (e.g. whether to show the calendar) through the model.
@@ -233,6 +246,9 @@ final class NotchViewModel: ObservableObject {
             }
             if showsMusicActivity {
                 return CGSize(width: notchSize.width + 2 * compactWing, height: notchSize.height)
+            }
+            if showsKoiPass {
+                return CGSize(width: notchSize.width + 2 * IslandLayout.koiPassWing, height: notchSize.height)
             }
             return notchSize
         case .expanded:
@@ -514,6 +530,7 @@ final class NotchViewModel: ObservableObject {
         if !clipboardModes.isEmpty { pages.append(.clipboard) }
         if settings.isEnabled(.agents) { pages.append(.agents) }
         if settings.isEnabled(.apps) { pages.append(.apps) }
+        if settings.isEnabled(.pond) { pages.append(.pond) }
         return pages.isEmpty ? [.player] : pages
     }
 
@@ -567,6 +584,8 @@ final class NotchViewModel: ObservableObject {
         case .agents:
             return IslandLayout.agentsHeight(approvals: features.agents.approvals.count,
                                              sessions: features.agents.sessions.count)
+        case .pond:
+            return IslandLayout.pondHeight
         case .clipboard:
             let switchRow = clipboardModes.count > 1 ? IslandLayout.pageSwitchHeight + IslandLayout.pageSwitchGap : 0
             if visibleClipboardMode == .shelf { return switchRow + IslandLayout.shelfHeight }
@@ -598,6 +617,41 @@ final class NotchViewModel: ObservableObject {
         Motion.perform(Motion.snappy) {
             self.page = page
         }
+    }
+
+    // MARK: - Koi pond
+
+    /// Every few minutes, while the feature and its option are on, a koi tries to pass under the
+    /// notch; it only does if nothing else is beside the notch.
+    private func scheduleKoiPass() {
+        koiPassWork?.cancel()
+        koiPassWork = nil
+        guard settings.isEnabled(.pond), settings.pondPassingKoi else {
+            endKoiPass()
+            return
+        }
+        let work = DispatchWorkItem { [weak self] in
+            MainActor.assumeIsolated {
+                self?.startKoiPass()
+                self?.scheduleKoiPass()
+            }
+        }
+        koiPassWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + .random(in: 180...480), execute: work)
+    }
+
+    /// The wings grow out and a koi swims across, unless the island is busy or open, or Low Power
+    /// Mode is on.
+    func startKoiPass() {
+        guard state == .collapsed, activities.current == nil, !showsMeetingActivity, !showsAgentActivity,
+              !showsMusicActivity, !showsKoiPass, !ProcessInfo.processInfo.isLowPowerModeEnabled else { return }
+        Motion.perform(Motion.islandGrow) { showsKoiPass = true }
+    }
+
+    /// The koi has crossed (or the wings gave way to something else): they fold back in.
+    func endKoiPass() {
+        guard showsKoiPass else { return }
+        Motion.perform(Motion.islandShrink) { showsKoiPass = false }
     }
 
     // MARK: - Calendar tab and reminders

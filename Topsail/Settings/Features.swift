@@ -8,6 +8,7 @@ enum Feature: String, CaseIterable, Identifiable {
     case reminders
     case keepAwake
     case teleprompter
+    case pond
     case agents
     case notifications
     case apps
@@ -21,6 +22,7 @@ enum Feature: String, CaseIterable, Identifiable {
         case .reminders: return String(localized: "Reminders")
         case .keepAwake: return String(localized: "Keep Awake")
         case .teleprompter: return String(localized: "Teleprompter")
+        case .pond: return String(localized: "Koi pond")
         case .agents: return String(localized: "AI coding agents")
         case .notifications: return String(localized: "Notifications")
         case .apps: return String(localized: "Terminal, Chrome and YouTube")
@@ -38,6 +40,8 @@ enum Feature: String, CaseIterable, Identifiable {
             return String(localized: "A button in the island that stops your Mac sleeping during a long job.")
         case .teleprompter:
             return String(localized: "Your script scrolls out of the notch, right under the camera, at your pace.")
+        case .pond:
+            return String(localized: "A pixel-art koi pond as a page of the island. Click the water to feed the koi.")
         case .agents:
             return String(localized: "Claude Code, Codex, Cursor and Antigravity show their progress in the notch and ask you there before risky commands.")
         case .notifications:
@@ -55,6 +59,7 @@ enum Feature: String, CaseIterable, Identifiable {
         case .reminders: return "checklist"
         case .keepAwake: return "cup.and.saucer.fill"
         case .teleprompter: return "text.alignleft"
+        case .pond: return "fish"
         case .agents: return "sparkles"
         case .notifications: return "bell.badge"
         case .apps: return "square.grid.2x2"
@@ -66,7 +71,7 @@ enum Feature: String, CaseIterable, Identifiable {
     var directOnly: Bool {
         switch self {
         case .agents, .notifications, .apps, .autoUpdates: return true
-        case .shelf, .reminders, .keepAwake, .teleprompter: return false
+        case .shelf, .reminders, .keepAwake, .teleprompter, .pond: return false
         }
     }
 

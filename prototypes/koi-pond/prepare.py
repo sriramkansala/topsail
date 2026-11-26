@@ -10,8 +10,14 @@ import json, os, sys
 import numpy as np
 from PIL import Image, ImageFilter
 
-src, plates = sys.argv[1], sys.argv[2]
-out = sys.argv[3] if len(sys.argv) > 3 else os.path.join(os.path.dirname(__file__), 'build', 'assets')
+args = sys.argv[1:]
+app = None
+if '--app' in args:  # also write the app's copy: python prepare.py SRC PLATES --app Topsail/Pond/Art
+    i = args.index('--app')
+    app = args[i + 1]
+    del args[i:i + 2]
+src, plates = args[0], args[1]
+out = args[2] if len(args) > 2 else os.path.join(os.path.dirname(__file__), 'build', 'assets')
 os.makedirs(out, exist_ok=True)
 
 # Backgrounds: the original render (for the pipeline strip) and both plates, 1300 x 520.
@@ -56,3 +62,13 @@ meta = {'koi': {'width': W, 'height': h, 'axisY': h / 2}}
 with open(os.path.join(out, 'meta.json'), 'w') as f:
     json.dump(meta, f)
 print('wrote', sorted(os.listdir(out)), meta)
+
+# The app's copy: the plates at half size (the island samples them coarsely), the koi as above.
+if app:
+    os.makedirs(app, exist_ok=True)
+    for name in ('flora', 'water'):
+        Image.open(os.path.join(out, f'plate_{name}.png')).resize((650, 260), Image.LANCZOS) \
+            .save(os.path.join(app, f'pond-{name}.png'), optimize=True)
+    for name in ('kohaku', 'showa', 'beni', 'body'):
+        Image.open(os.path.join(out, f'koi_{name}.png')).save(os.path.join(app, f'koi-{name}.png'), optimize=True)
+    print('app art', sorted(os.listdir(app)))

@@ -33,7 +33,8 @@ pointer to it.
 | <img src="website/images/volume.png" width="400" alt="Volume"> | Volume and brightness, in place of the macOS indicators. While Spotify plays on another device (a phone, a speaker, a TV), the volume keys turn that device up and down. |
 
 **Switched off until you turn them on** (Settings › Features): a file shelf with AirDrop, Apple
-Reminders, Keep Awake and a teleprompter; and, in the direct download, AI coding agents (Claude
+Reminders, Keep Awake, a teleprompter and a pixel-art koi pond (a page you can feed the koi on, and
+now and then a koi swimming under the notch); and, in the direct download, AI coding agents (Claude
 Code, Codex, Cursor and Antigravity: progress, and Approve or Deny, in the notch), other apps'
 notifications, an Apps page (Terminal, Chrome, YouTube) and automatic updates. English, French and
 Spanish.
@@ -148,11 +149,14 @@ Topsail/
   Voice/          voice notes: recording, transcription, planning, review
   Settings/       the Settings window
   Design/         motion, layout constants
+  Pond/           the koi pond's views and art
   Resources/      Info.plist, entitlements, privacy manifest, app icon
+Packages/PondKit/ the koi pond's renderer (always built optimised)
 TopsailHelper/    the direct build's Low Power Mode daemon
 scripts/          build, sign and release
 website/          the website, also home to the README's images
 appstore/         Mac App Store listing and screenshots
+prototypes/       browser prototypes (the koi pond's pixel style, stage by stage)
 ```
 
 `Design/Motion.swift` holds every animation in the app; its header explains the rules they
@@ -162,6 +166,15 @@ follow.
 
 The low-battery notice follows Raphael Salaja's recreation of the iOS 26 low-battery
 notification ([write-up](https://www.raphaelsalaja.com/work/low-battery-notification)).
+
+The koi pond is drawn from Blender renders of
+["Koi Fish"](https://sketchfab.com/3d-models/koi-fish-3e1b80c3653f43349252aab3b4fb1d86) by SDPM
+Esare (CC BY 4.0) and
+["Water Lily"](https://sketchfab.com/3d-models/water-lily-6e47f3a59c204db3ae312eed9169aef8) by Xan
+San (CC BY 4.0), with lily pads from
+["CC0 Water Lily, Nymphaea cv."](https://sketchfab.com/3d-models/cc0-water-lily-nymphaea-cv-e7830f486a0248b6b894f3e7a63b8c16)
+by ffish.asia / floraZia.com (CC0); the changes made to them are listed in
+`Topsail/Pond/Art/CREDITS.txt`.
 
 ## License
 
