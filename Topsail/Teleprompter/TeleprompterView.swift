@@ -147,12 +147,15 @@ struct TeleprompterHandle: View {
     @State private var dragging = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    /// The handle's hit area; the bar itself is drawn in its middle.
+    static let height: CGFloat = 22
+
     var body: some View {
         Capsule()
             .fill(Color.white.opacity(hovering || dragging ? 0.95 : 0.7))
             .frame(width: hovering || dragging ? 48 : 40, height: 5)
             .shadow(color: .black.opacity(0.45), radius: 2, y: 1)
-            .frame(width: 120, height: 22)
+            .frame(width: 120, height: Self.height)
             .contentShape(Rectangle())
             .pointerStyle(.frameResize(position: .bottom))
             .onHover { hovering = $0 }

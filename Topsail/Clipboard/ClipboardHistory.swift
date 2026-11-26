@@ -50,8 +50,9 @@ final class ClipboardHistory: ObservableObject {
     /// Kept forever (on disk), most recently pinned first; never cleared or pushed out.
     @Published private(set) var pinned: [ClipboardItem] = []
     @Published private(set) var access: Access
-    /// Something was copied (by another app; Topsail's own copies don't count).
-    var onCopy: (() -> Void)?
+    /// Something was copied (by another app; Topsail's own copies don't count). It comes with
+    /// the item, when Topsail may read the clipboard and kept it (never for secrets).
+    var onCopy: ((ClipboardItem?) -> Void)?
     /// Off: copies are still noticed (for "Copied to clipboard") but nothing is read or kept.
     var keepsHistory = true {
         didSet { if !keepsHistory { items = [] } }
@@ -206,18 +207,18 @@ final class ClipboardHistory: ObservableObject {
         let count = pasteboard.changeCount
         guard count != changeCount else { return }
         changeCount = count
-        onCopy?()
         refreshAccess()
         // Reading would make macOS ask on every copy until "Always Allow" is chosen.
-        if access == .allowed, keepsHistory { capture() }
+        let kept = access == .allowed && keepsHistory ? capture() : nil
+        onCopy?(kept)
     }
 
     /// Reads what is on the clipboard now and keeps it, unless it is marked secret, too large, or
-    /// of a kind the list can't show.
-    private func capture() {
-        guard let pasteboardItems = pasteboard.pasteboardItems, !pasteboardItems.isEmpty else { return }
+    /// of a kind the list can't show. Returns the item it kept.
+    @discardableResult private func capture() -> ClipboardItem? {
+        guard let pasteboardItems = pasteboard.pasteboardItems, !pasteboardItems.isEmpty else { return nil }
         let types = Set(pasteboardItems.flatMap(\.types).map(\.rawValue))
-        guard types.isDisjoint(with: Self.ignoredTypes) else { return }
+        guard types.isDisjoint(with: Self.ignoredTypes) else { return nil }
 
         var representations: [[NSPasteboard.PasteboardType: Data]] = []
         var bytes = 0
@@ -229,14 +230,14 @@ final class ClipboardHistory: ObservableObject {
             for type in pasteboardItem.types where !type.rawValue.hasPrefix("dyn.") && !(hasPNG && type == .tiff) {
                 guard let data = pasteboardItem.data(forType: type) else { continue }
                 bytes += data.count
-                guard bytes <= Self.maxItemBytes else { return }
+                guard bytes <= Self.maxItemBytes else { return nil }
                 dictionary[type] = data
             }
             if !dictionary.isEmpty { representations.append(dictionary) }
         }
-        guard let (content, fingerprint) = describe(representations) else { return }
+        guard let (content, fingerprint) = describe(representations) else { return nil }
         // Already pinned: it stays there, not twice in the list.
-        guard !pinned.contains(where: { $0.fingerprint == fingerprint }) else { return }
+        if let pinnedItem = pinned.first(where: { $0.fingerprint == fingerprint }) { return pinnedItem }
 
         let item = ClipboardItem(content: content, copiedAt: Date(), representations: representations,
                                  fingerprint: fingerprint, byteCount: bytes)
@@ -246,6 +247,7 @@ final class ClipboardHistory: ObservableObject {
         while items.count > 1, items.reduce(0, { $0 + $1.byteCount }) > Self.maxTotalBytes {
             items.removeLast()
         }
+        return item
     }
 
     /// What the list shows for a copy: files, a picture, a link or text, in that order of
@@ -381,7 +383,7 @@ extension ClipboardHistory {
                                  fingerprint: text.hashValue, byteCount: text.utf8.count)
         items.removeAll { $0.fingerprint == item.fingerprint }
         items.insert(item, at: 0)
-        onCopy?()
+        onCopy?(item)
     }
 }
 #endif

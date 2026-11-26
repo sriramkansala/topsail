@@ -3,26 +3,20 @@ import SwiftUI
 /// A Bluetooth device became the Mac's output: the island drops a card below the camera with the
 /// device and its name on the left and its battery on the right, each earbud and the case for
 /// AirPods, one level for headphones and speakers. Whatever is playing keeps its artwork and bars
-/// beside the notch above the card, so connecting never hides the music.
+/// beside the notch above the card, so connecting never hides the music: they are the island's
+/// own travelling pair (`MusicTraveler`), which rides the wings out as they widen for the card.
 struct DeviceConnectedNotice: View {
     let name: String
     /// Nil while it hasn't arrived (it can, a moment later) or when the build can't read it.
     let battery: DeviceBattery?
     let notchSize: CGSize
-    let wingWidth: CGFloat
-    /// What is playing, kept beside the notch; nil when nothing is.
-    let nowPlaying: NowPlayingService?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(spacing: 0) {
-            ZStack {
-                if let nowPlaying {
-                    NowPlayingWings(nowPlaying: nowPlaying, notchSize: notchSize, wingWidth: wingWidth)
-                }
-            }
-            .frame(height: notchSize.height)
+            Color.clear
+                .frame(height: notchSize.height)
 
             HStack(spacing: 10) {
                 RoundedRectangle(cornerRadius: 9, style: .continuous)
@@ -148,27 +142,4 @@ private struct BatteryGauge: View {
     }
 
     private var color: Color { level <= 20 ? .red : .white }
-}
-
-/// The track's artwork and bars beside the notch, as the island shows them while music plays,
-/// at the card's wider wings.
-private struct NowPlayingWings: View {
-    @ObservedObject var nowPlaying: NowPlayingService
-    let notchSize: CGSize
-    let wingWidth: CGFloat
-
-    var body: some View {
-        HStack(spacing: 0) {
-            ArtworkView(image: nowPlaying.artwork, size: 22, cornerRadius: 6)
-                .padding(.leading, 12)
-                .frame(width: wingWidth, height: notchSize.height, alignment: .leading)
-
-            Color.clear
-                .frame(width: notchSize.width, height: notchSize.height)
-
-            EqualizerView(isPlaying: nowPlaying.isPlaying, color: nowPlaying.accentColor)
-                .padding(.trailing, 12)
-                .frame(width: wingWidth, height: notchSize.height, alignment: .trailing)
-        }
-    }
 }

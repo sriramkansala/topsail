@@ -138,6 +138,8 @@ struct ContinuityCell {
         var toasts: [String] = []
         /// Notices and wing activities that must each show.
         var shows: [String] = []
+        /// Elements that must at least be glimpsed (a toast replaced 200 ms after it arrived).
+        var glimpses: [String] = []
         /// Elements that must never show.
         var never: [String] = []
         /// Nothing visible may change at all (a notice arriving while the island is open).
@@ -158,6 +160,7 @@ struct ContinuityCell {
 
     func header(notch: CGSize, build: String) -> [String: Any] {
         var expected: [String: Any] = ["toasts": expect.toasts, "shows": expect.shows, "never": expect.never,
+                                       "glimpses": expect.glimpses,
                                        "quiet": expect.quiet, "still": expect.still]
         if let page = expect.page { expected["page"] = "\(page)" }
         if let state = expect.state { expected["state"] = state }
@@ -322,7 +325,7 @@ enum ContinuityCells {
                               "The teleprompter keeps its height and script; the band is added at the base and the handle follows the edge."))
         }
         for (name, start) in [("music", Start(island: .open(.clipboard), music: .playing)), ("no-music", Start(island: .open(.clipboard)))] {
-            cells.append(cell("toast.copy-back.open.clipboard.\(name)", "Toasts", start, [(250, .click("clip.row1"))], tail: life("copied"),
+            cells.append(cell("toast.copy-back.open.clipboard.\(name)", "Toasts", start, [(250, .click("clip.row.#1"))], tail: life("copied"),
                               Expect(page: .clipboard, state: "expanded", toasts: ["copied"]),
                               "Clicking a row copies it again: the same Copied toast in the base band, not a label swapped into the row."))
         }
@@ -407,11 +410,11 @@ enum ContinuityCells {
                           "Two of the same toast 200 ms apart: one band, updated in place; the island resizes once."))
         cells.append(cell("int.two-toasts.different.open", "Interruptions", Start(island: .open(.player), music: .playing),
                           [(250, .click("ctl.keepAwake")), (450, .copy)], tail: life("copied"),
-                          Expect(page: .player, state: "expanded", toasts: ["keepAwake", "copied"]),
+                          Expect(page: .player, state: "expanded", toasts: ["copied"], glimpses: ["toast.keepAwake"]),
                           "Two different toasts 200 ms apart: the band stays, the second replaces the first inside it."))
         cells.append(cell("int.two-toasts.different.closed", "Interruptions", Start(),
                           [(250, .copy), (450, .volume(0.6))], tail: life("copied"),
-                          Expect(state: "collapsed", toasts: ["copied", "volume"]),
+                          Expect(state: "collapsed", toasts: ["volume"], glimpses: ["toast.copied"]),
                           "Two different toasts 200 ms apart on the closed island: the band stays down, no second bounce."))
         cells.append(cell("int.pointer-leaves-while-toast-slides", "Interruptions", Start(island: .open(.player), music: .playing),
                           [(250, .click("ctl.keepAwake")), (340, .away)], tail: life("keepAwake"),
@@ -491,7 +494,7 @@ enum ContinuityCells {
                  "A held brightness key behaves like volume: one band, one resize each way."),
             cell("keys.volume-then-brightness.closed.music", "Media keys", Start(music: .playing),
                  [(250, .volume(0.5)), (650, .brightness(0.7))], tail: life("brightness"),
-                 Expect(state: "collapsed", toasts: ["volume", "brightness"], still: true),
+                 Expect(state: "collapsed", toasts: ["brightness"], glimpses: ["toast.volume"], still: true),
                  "Volume then brightness: the band stays, the second level replaces the first inside it."),
         ]
     }

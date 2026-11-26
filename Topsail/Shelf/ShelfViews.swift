@@ -26,7 +26,7 @@ struct ClipboardTabView: View {
                     ShelfPageView(shelf: shelf, targeted: model.shelfTargeted)
                         .transition(.contentMorph(reduceMotion: reduceMotion))
                 } else {
-                    ClipboardPageView(history: model.clipboard)
+                    ClipboardPageView(history: model.clipboard, copy: model.copyAgain)
                         .transition(.contentMorph(reduceMotion: reduceMotion))
                 }
             }
@@ -111,7 +111,7 @@ private struct DropZone: View {
                 }
                 .foregroundColor(.white.opacity(targeted ? 0.9 : 0.5))
             }
-            .animation(Motion.fast, value: targeted)
+            .animation(Motion.fadeFast, value: targeted)
     }
 }
 

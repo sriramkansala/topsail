@@ -4,13 +4,14 @@ import UniformTypeIdentifiers
 /// The clipboard page: pinned items first, then recent copies, newest first, each under a small
 /// header (Clear on the recent one). Text shows its first line, a link its address, a picture a
 /// thumbnail and its size, files their icon and name. Clicking a row puts it back on the
-/// clipboard; the pin that appears under the pointer keeps it forever. Until Topsail may read the
-/// clipboard, a row at the top asks for that. The page is never shorter than three rows.
+/// clipboard (the "Copied" toast at the island's base says so); the pin that appears under the
+/// pointer keeps it forever. Until Topsail may read the clipboard, a row at the top asks for
+/// that. The page is never shorter than three rows.
 struct ClipboardPageView: View {
     @ObservedObject var history: ClipboardHistory
+    /// A row was clicked: copy it again.
+    let copy: (ClipboardItem) -> Void
 
-    /// The row just clicked, which says "Copied" for a moment.
-    @State private var justCopied: UUID?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var needsSetup: Bool { history.access != .allowed }
@@ -54,6 +55,9 @@ struct ClipboardPageView: View {
                 section("Recently copied", history.items, pinned: false)
             }
         }
+        // Whatever changes the list (a copy, a row copied again, Clear), rows travel to their
+        // new places and new ones fade in, rather than the list being redrawn.
+        .animation(reduceMotion ? nil : Motion.snappy, value: history.items.map(\.id))
     }
 
     private func section(_ title: String, _ items: [ClipboardItem], pinned: Bool) -> some View {
@@ -71,22 +75,13 @@ struct ClipboardPageView: View {
             .frame(height: IslandLayout.clipboardHeaderHeight)
 
             VStack(spacing: IslandLayout.clipboardRowSpacing) {
-                ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                    ClipboardRow(item: item, pinned: pinned, justCopied: justCopied == item.id,
+                ForEach(items) { item in
+                    ClipboardRow(item: item, pinned: pinned,
                                  copy: { copy(item) },
                                  togglePin: { togglePin(item, pinned: pinned) })
-                        .traced("clip.\(pinned ? "pinned" : "row")\(index)", control: true)
+                        .traced("clip.row.\(item.id.uuidString.prefix(8))", control: true)
                 }
             }
-        }
-    }
-
-    private func copy(_ item: ClipboardItem) {
-        history.copy(item)
-        Motion.perform(reduceMotion ? Motion.instant : Motion.fast) { justCopied = item.id }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-            guard justCopied == item.id else { return }
-            Motion.perform(reduceMotion ? Motion.instant : Motion.fast) { justCopied = nil }
         }
     }
 
@@ -119,11 +114,10 @@ private struct ClearButton: View {
 
 /// One copy: what it is on the left, what it says in the middle, how long ago on the right (a
 /// pin for a pinned one). Brightens under the pointer, where the right side becomes the pin
-/// button; a click anywhere else copies it again and says "Copied".
+/// button; a click anywhere else copies it again.
 private struct ClipboardRow: View {
     let item: ClipboardItem
     let pinned: Bool
-    let justCopied: Bool
     let copy: () -> Void
     let togglePin: () -> Void
 
@@ -160,18 +154,11 @@ private struct ClipboardRow: View {
         )
         .onHover { hovering = $0 }
         .animation(reduceMotion ? nil : Motion.hover, value: hovering)
-        .animation(reduceMotion ? nil : Motion.fast, value: justCopied)
     }
 
     @ViewBuilder private var trailing: some View {
         ZStack(alignment: .trailing) {
-            if justCopied {
-                Label("Copied", systemImage: "checkmark")
-                    .font(.system(size: 10.5, weight: .semibold))
-                    .foregroundColor(.green)
-                    .traced("toast.copied")
-                    .transition(.opacity)
-            } else if hovering {
+            if hovering {
                 PinButton(pinned: pinned, action: togglePin)
                     .transition(.opacity)
             } else if pinned {
@@ -360,39 +347,17 @@ private struct ClipboardSetupView: View {
     }
 }
 
-/// A copy, beside the notch: the island reaches a little lower than the camera and says
-/// "Copied to clipboard" under it, with a green check. Music keeps its artwork and bars beside the
-/// notch. Hovering it opens the island on the clipboard page.
-struct CopiedNotice: View {
-    let notchSize: CGSize
-    let wingWidth: CGFloat
-    /// What is playing, kept beside the notch; nil when nothing is.
-    let nowPlaying: NowPlayingService?
-
-    var body: some View {
-        VStack(spacing: 0) {
-            ZStack {
-                if let nowPlaying {
-                    CompactMusicWings(nowPlaying: nowPlaying, notchSize: notchSize, wingWidth: wingWidth)
-                }
-            }
-            .frame(height: notchSize.height)
-
-            HStack(spacing: 5) {
-                Image(systemName: "checkmark.circle.fill")
-                    .symbolRenderingMode(.palette)
-                    .foregroundStyle(.white, .green)
-                    .font(.system(size: 12, weight: .semibold))
-                Text("Copied to clipboard")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.white)
-                    .tracking(-0.1)
-            }
-            .traced("toast.copied")
-            .frame(maxWidth: .infinity)
-            .frame(height: IslandLayout.copiedStageHeight - 6)
+extension ClipboardItem {
+    /// A glimpse of the copy for the "Copied" toast: the text's start, a link's address, a
+    /// file's name, or just what it is.
+    var snippet: String {
+        switch content {
+        case .text(let string): return String(ClipboardRow.oneLine(string).prefix(60))
+        case .link(let url): return ClipboardRow.address(of: url)
+        case .image: return String(localized: "Image")
+        case .files(let urls):
+            let name = urls.first?.lastPathComponent ?? ""
+            return urls.count > 1 ? "\(name)  +\(urls.count - 1)" : name
         }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Copied to clipboard")
     }
 }

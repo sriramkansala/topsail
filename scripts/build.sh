@@ -4,6 +4,9 @@
 #   scripts/build.sh            App Store flavour (sandboxed)      -> build/Topsail.app
 #   scripts/build.sh --direct   direct-download flavour (DIRECT)   -> build/Direct/Topsail.app
 #   add --install               also quit Topsail, copy the build to /Applications/Topsail.app, open it
+#   add --optimized             the continuity suite's flavour: Release settings (so frame times
+#                               mean something) with the debug-only test mode compiled in
+#                               -> build/Continuity/Topsail.app. Never shipped, never installed.
 #
 # The App Store flavour uses the same project, entitlements and Info.plist as the App Store
 # build, so sandbox problems show up during development. The direct flavour adds the DIRECT
@@ -19,20 +22,24 @@ mkdir -p $LOGS
 
 DIRECT=0
 INSTALL=0
+OPTIMIZED=0
 for arg in "$@"; do
   case $arg in
     --direct) DIRECT=1 ;;
     --install) INSTALL=1 ;;
+    --optimized) OPTIMIZED=1 ;;
     *) echo "unknown option: $arg"; exit 2 ;;
   esac
 done
 
 FLAVOUR_SETTINGS=()
+CONFIGURATION=Debug
+CONDITIONS=
 if (( DIRECT )); then
   DERIVED=$ROOT/build/DerivedDataDirect
   APP=$ROOT/build/Direct/Topsail.app
+  CONDITIONS=DIRECT
   FLAVOUR_SETTINGS=(
-    'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) DIRECT'
     CODE_SIGN_ENTITLEMENTS=Topsail/Resources/Topsail-Direct.entitlements
     PRODUCT_BUNDLE_IDENTIFIER=app.topsail.Topsail.direct
     # Only the direct build reads Bluetooth (headphones' battery), so only it asks. Generated keys
@@ -44,8 +51,18 @@ else
   DERIVED=$ROOT/build/DerivedData
   APP=$ROOT/build/Topsail.app
 fi
+if (( OPTIMIZED )); then
+  if (( INSTALL )); then echo "--optimized builds are for the continuity suite and are not installed."; exit 2; fi
+  CONFIGURATION=Release
+  DERIVED=$ROOT/build/DerivedDataContinuity
+  APP=$ROOT/build/Continuity/Topsail.app
+  CONDITIONS="$CONDITIONS DEBUG CONTINUITY_OPTIMIZED"
+fi
+if [[ -n $CONDITIONS ]]; then
+  FLAVOUR_SETTINGS+=("SWIFT_ACTIVE_COMPILATION_CONDITIONS=\$(inherited) $CONDITIONS")
+fi
 
-xcodebuild -project $ROOT/Topsail.xcodeproj -scheme Topsail -configuration Debug \
+xcodebuild -project $ROOT/Topsail.xcodeproj -scheme Topsail -configuration $CONFIGURATION \
   -derivedDataPath $DERIVED \
   CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= \
   ENABLE_DEBUG_DYLIB=NO \
@@ -61,7 +78,7 @@ fi
 
 rm -rf $APP
 mkdir -p ${APP:h}
-cp -R $DERIVED/Build/Products/Debug/Topsail.app $APP
+cp -R $DERIVED/Build/Products/$CONFIGURATION/Topsail.app $APP
 
 # With an Apple Development certificate (signed in to Xcode), every dev build has the same
 # identity, so macOS privacy permissions (Input Monitoring, Accessibility) and keychain access

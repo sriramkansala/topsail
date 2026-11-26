@@ -30,8 +30,6 @@ enum IslandLayout {
     }
     static let contentTopPadding: CGFloat = 6
     static let contentBottomPadding: CGFloat = 16
-    /// A level in the open island's bottom margin sits this far up from the edge.
-    static let levelIndicatorBottom: CGFloat = 6
 
     /// Width of the island during a voice note.
     static let voiceWidth: CGFloat = 560
@@ -107,10 +105,11 @@ enum IslandLayout {
     static let deviceGaugeSize: CGFloat = 24
     static let deviceStageHeight: CGFloat = noticeTopGap + deviceTileSize + deviceInset
 
-    // "Copied to clipboard", under the camera: the notch reaches a little lower and says so.
-    static let copiedStageHeight: CGFloat = 24
-    /// The band a toast sits in, at the base of the island.
+    /// The band a toast sits in (Copied, Keep Awake, a level), at the base of the island, closed
+    /// or open: the island reaches down by exactly this much to hold it.
     static let toastBandHeight: CGFloat = 24
+    /// A toast comes up this far into its band, from under the island's bottom edge.
+    static let toastSlide: CGFloat = 14
 
     // Clipboard page: pinned items, then recent copies, one row each under a small header. Never
     // shorter than three rows, so one copy isn't a sliver; past five rows' height, it scrolls.

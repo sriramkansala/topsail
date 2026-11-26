@@ -228,7 +228,8 @@ final class ContinuityRunner {
         case .keepAwake: model.toggleKeepAwake()
         case .copy: model.clipboard.fixtureCopy(Fixtures.freshCopy)
         case .copied(let ago): model.testCopied(ago: ago)
-        case .post(let name): Fixtures.activity(name, hub: model.features.agents).map(activities.post)
+        case .post(let name):
+            if let kind = Fixtures.activity(name, hub: model.features.agents) { activities.post(kind) }
         case .volume(let level): activities.post(.volume(level: level, muted: false))
         case .mute: activities.post(.volume(level: 0.5, muted: true))
         case .brightness(let level): activities.post(.brightness(level: level))
@@ -253,8 +254,9 @@ final class ContinuityRunner {
         case .answerMeeting:
             if case .meetingReminder(let meeting) = activities.current?.kind { model.answerMeeting(meeting, .ignore) }
         case .answerAgent:
+            // Answered: the request goes, the agent carries on working.
             if case .agentApproval(let approval) = activities.current?.kind {
-                model.features.agents.setFixture(sessions: [], approvals: [])
+                model.features.agents.setFixture(sessions: [Fixtures.workingSession], approvals: [])
                 activities.withdraw(.agentApproval(approval))
             }
         case .clipboardMode(let shelf): model.showClipboardMode(shelf ? .shelf : .clipboard)
@@ -297,9 +299,13 @@ enum Fixtures {
         ]
     }()
 
+    nonisolated(unsafe) private static var meetingCount = 0
+
     static func meeting(inMinutes minutes: Double) -> UpcomingEvent {
         let start = Date().addingTimeInterval(minutes * 60)
-        return UpcomingEvent(id: "fixture-meeting-\(Int(minutes))", title: "Design review", start: start,
+        // A new call each time: one that was answered is never offered again.
+        meetingCount += 1
+        return UpcomingEvent(id: "fixture-meeting-\(meetingCount)", title: "Design review", start: start,
                              end: start.addingTimeInterval(30 * 60), isAllDay: false, color: .purple,
                              joinURL: URL(string: "https://example.com/call"))
     }
@@ -345,7 +351,7 @@ enum Fixtures {
         case "recorder":
             return .recorder(.saved(SavedRecording(url: RecorderSettings.defaultFolder.appending(path: "Screen recording.mov"),
                                                    kind: .screen, duration: 154)))
-        case "copied": return .copied
+        case "copied": return .copied(snippet: freshCopy)
         case "keepAwake": return .keepAwake(on: true)
         case "volume": return .volume(level: 0.6, muted: false)
         case "brightness": return .brightness(level: 0.7)

@@ -94,9 +94,9 @@ struct RemindersView: View {
     }
 
     private func tick(_ item: ReminderItem) {
-        withAnimation(Motion.fast) { _ = ticked.insert(item.id) }
+        Motion.perform(Motion.fadeFast) { _ = ticked.insert(item.id) }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-            withAnimation(Motion.base) { reminders.complete(item) }
+            Motion.perform(Motion.base) { reminders.complete(item) }
             ticked.remove(item.id)
         }
     }

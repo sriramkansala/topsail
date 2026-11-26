@@ -15,6 +15,12 @@ import SwiftUI
 ///    container moves (`islandShrink` is delayed by exactly that).
 /// 6. Correctness never depends on an animation running. With Reduce Motion every change still
 ///    happens, instantly; numbers always land on their final value.
+/// 7. Opacity never rides the sharp curve. `easeOut` spends most of its travel in its first two
+///    frames, which is right for something moving and a cut for something fading; fades use
+///    `fade`, whose start is soft. Nothing changes opacity by more than a third in one frame
+///    (the continuity suite, docs/continuity/matrix.md, holds the island to that).
+/// 8. One event, one transaction: whatever an event changes (size, page, what is shown) changes
+///    inside one `Motion.perform`, so the island moves once.
 enum Motion {
     enum Duration {
         /// A cut with a soft edge.
@@ -34,8 +40,10 @@ enum Motion {
         static let morphOut: TimeInterval = 0.18
         static let morphIn: TimeInterval = 0.25
         /// Cascade: each item's fade, and the gap between items.
-        static let cascadeItem: TimeInterval = 0.10
+        static let cascadeItem: TimeInterval = 0.14
         static let cascadeStagger: TimeInterval = 0.025
+        /// Content leaving before its container moves.
+        static let leave: TimeInterval = 0.14
         /// The charging moment: the band of light falling through the island, its line narrowing
         /// once it lands, and one breath of the line at rest.
         static let chargeSweep: TimeInterval = 0.75
@@ -43,6 +51,10 @@ enum Motion {
         static let chargeBreath: TimeInterval = 1.4
         /// The low-battery notice's one spring.
         static let notice: TimeInterval = 0.6
+        /// A notice's shape leads its words in by this much, and the words leave within
+        /// `noticeLeave`, before the shape has closed over them.
+        static let noticeLead: TimeInterval = 0.1
+        static let noticeLeave: TimeInterval = 0.2
         /// The low-battery notice: the last bit of charge sends out a ring, then rests.
         static let lowBatteryPulse: TimeInterval = 1.5
         static let lowBatteryPulseRest: TimeInterval = 0.5
@@ -60,6 +72,11 @@ enum Motion {
         .timingCurve(0.65, 0, 0.35, 1, duration: duration)
     }
 
+    /// Opacity alone: a soft start and a soft landing, so nothing is cut in or out (rule 7).
+    static func fade(_ duration: TimeInterval) -> Animation {
+        .easeOut(duration: duration)
+    }
+
     /// Leaves faster and lands harder: something clicking into place.
     static func snap(_ duration: TimeInterval) -> Animation {
         .timingCurve(0.2, 0.9, 0.25, 1, duration: duration)
@@ -72,6 +89,11 @@ enum Motion {
     static let base = easeOut(Duration.base)
     static let slow = easeOut(Duration.slow)
     static let hover = easeOut(Duration.hover)
+
+    /// Something appearing or disappearing in place: a plain fade.
+    static let fadeFast = fade(Duration.fast)
+    /// Content leaving before its container moves.
+    static let leave = fade(Duration.leave)
 
     /// A live signal (the microphone waveform): linear, because it tracks a level rather than
     /// transitioning between states.
@@ -113,6 +135,10 @@ enum Motion {
     /// The closed island leaning toward a pointer that comes near: a small, springy give.
     static let lean = Animation.spring(duration: 0.32, bounce: 0.3)
 
+    /// A toast: the island reaching down by the band at its base, the toast sliding up into it,
+    /// and both going back the same way. One spring for the shape and the words, in and out.
+    static let toast = Animation.spring(duration: 0.36, bounce: 0.12)
+
     /// The low-battery notice: iOS's island spring (0.6 s, a 0.2 bounce), and every change the
     /// notice goes through runs on it — the island dropping it and taking it back, the hint
     /// changing, the battery turning gold — while each element blurs in or out (`noticeBlur`).
@@ -136,6 +162,29 @@ enum Motion {
         #endif
         withAnimation(reduceMotion ? nil : animation, changes)
     }
+
+    /// The same, for a change that makes the island smaller. With Reduce Motion the shape still
+    /// changes in one step, but only once the content it would cut off has had time to fade
+    /// (`fadeFast`): growing, the shape goes first and content fades in; shrinking, content
+    /// fades out and the shape follows.
+    static func performShrink(_ animation: Animation, _ changes: () -> Void) {
+        #if DEBUG
+        if Continuity.settingUp { return withAnimation(nil, changes) }
+        #endif
+        withAnimation(reduceMotion ? stepAfterFade : animation, changes)
+    }
+
+    /// The island growing (`islandGrow`) or shrinking (`islandShrink`) for something beside the notch.
+    static func performResize(growing: Bool, _ changes: () -> Void) {
+        if growing {
+            perform(islandGrow, changes)
+        } else {
+            performShrink(islandShrink, changes)
+        }
+    }
+
+    /// One step, after a fade's length: Reduce Motion's way of shrinking.
+    private static let stepAfterFade = Animation.linear(duration: 0.001).delay(Duration.fast)
 }
 
 // MARK: - Transitions
@@ -145,31 +194,39 @@ extension AnyTransition {
     /// scale and 6 pt up, anchored at the top. It leaves faster than it came (0.14 s), before the
     /// shape shrinks. With Reduce Motion it only fades.
     static func bloomReveal(reduceMotion: Bool) -> AnyTransition {
-        guard !reduceMotion else { return .opacity.animation(Motion.fast) }
+        guard !reduceMotion else { return .opacity.animation(Motion.fadeFast) }
         let bloom = AnyTransition.modifier(active: BloomModifier(shown: 0), identity: BloomModifier(shown: 1))
         return .asymmetric(insertion: bloom.animation(Animation.spring(duration: 0.34, bounce: 0).delay(0.06)),
-                           removal: bloom.animation(Motion.easeOut(0.14)))
+                           removal: bloom.animation(Motion.leave))
     }
 
     /// Content entering while the island grows: a short cascade, subordinate to the container.
-    /// `index` orders items top to bottom / left to right. Leaving is a plain `instant` fade.
+    /// `index` orders items top to bottom / left to right. Leaving is a plain fade (`leave`).
+    /// With Reduce Motion it fades both ways and does not move.
     static func cascade(_ index: Int, reduceMotion: Bool) -> AnyTransition {
-        guard !reduceMotion else { return .identity }
+        guard !reduceMotion else { return .opacity.animation(Motion.fadeFast) }
         let delay = Double(index) * Motion.Duration.cascadeStagger
         let insertion = AnyTransition.opacity
             .combined(with: .offset(y: 4))
-            .animation(Motion.easeOut(Motion.Duration.cascadeItem).delay(delay))
-        return .asymmetric(insertion: insertion, removal: .opacity.animation(Motion.instant))
+            .animation(Motion.fade(Motion.Duration.cascadeItem).delay(delay))
+        return .asymmetric(insertion: insertion, removal: .opacity.animation(Motion.leave))
     }
 
     /// A region changing what it shows (player ↔ calendar): scale 0.97 and a 3 pt blur, anchored
     /// at the top centre; out in 180 ms, in in 250 ms. Put both states in a `ZStack` so the incoming
-    /// view mounts at once instead of waiting for the outgoing one to leave.
+    /// view mounts at once instead of waiting for the outgoing one to leave. With Reduce Motion
+    /// the two cross-fade.
     static func contentMorph(reduceMotion: Bool) -> AnyTransition {
-        guard !reduceMotion else { return .identity }
+        guard !reduceMotion else { return .opacity.animation(Motion.fadeFast) }
         let morph = AnyTransition.modifier(active: MorphModifier(shown: 0), identity: MorphModifier(shown: 1))
         return .asymmetric(insertion: morph.animation(Motion.easeOut(Motion.Duration.morphIn)),
-                           removal: morph.animation(Motion.easeOut(Motion.Duration.morphOut)))
+                           removal: morph.animation(Motion.fade(Motion.Duration.morphOut)))
+    }
+
+    /// Two glyphs trading places (the recording dot and its pause sign): each fades and shrinks
+    /// a little as the other grows in.
+    static func glyphSwap(reduceMotion: Bool) -> AnyTransition {
+        reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.7))
     }
 }
 
@@ -178,9 +235,19 @@ extension AnyTransition {
     /// `Motion.notice`, while the island resizes on the same spring. Put an element's old and new
     /// states in a `ZStack`, so the outgoing one leaves the layout at once and blurs out on top.
     static func noticeBlur(reduceMotion: Bool) -> AnyTransition {
-        guard !reduceMotion else { return .identity }
+        guard !reduceMotion else { return .opacity.animation(Motion.fadeFast) }
         return AnyTransition.modifier(active: NoticeBlurModifier(shown: 0), identity: NoticeBlurModifier(shown: 1))
             .animation(Motion.notice)
+    }
+
+    /// A whole notice arriving and leaving. The shape leads and the words follow: they blur in a
+    /// beat behind the island as it grows out of the notch, and are gone before it closes over
+    /// them on the way back.
+    static func noticeArrival(reduceMotion: Bool) -> AnyTransition {
+        guard !reduceMotion else { return .opacity.animation(Motion.fadeFast) }
+        let blur = AnyTransition.modifier(active: NoticeBlurModifier(shown: 0), identity: NoticeBlurModifier(shown: 1))
+        return .asymmetric(insertion: blur.animation(Motion.notice.delay(Motion.Duration.noticeLead)),
+                           removal: blur.animation(Motion.fade(Motion.Duration.noticeLeave)))
     }
 }
 

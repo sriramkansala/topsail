@@ -9,8 +9,8 @@ enum ActivityKind: Equatable {
     case brightness(level: Float)           // display brightness changed (direct build only)
     case taskDue(title: String, overdue: Bool)  // a Linear issue is due today or overdue
     case meetingReminder(UpcomingEvent)    // a call is starting: Join, Ignore or Remind me in 5 min
-    case copied                            // something was copied: "Copied to clipboard" under the camera
-    case keepAwake(on: Bool)               // Keep Awake was turned on or off
+    case copied(snippet: String? = nil)    // something was copied: a toast, with a glimpse of it when known
+    case keepAwake(on: Bool)               // Keep Awake was turned on or off: a toast
     case agentApproval(AgentApproval)      // an AI agent asks before a command: Deny or Approve
     case agentFinished(agent: AgentKind, project: String)  // an AI agent finished its turn
     case notification(MirroredNotification)  // another app's notification
@@ -61,9 +61,11 @@ extension ActivityKind {
         }
     }
 
-    /// The user's own actions, answered right away: levels they are adjusting (volume,
-    /// brightness), shown at once and updated in place, and a copy.
-    var isLiveLevel: Bool {
+    /// A toast: the user's own action, confirmed in the band at the base of the island, closed
+    /// or open. A copy, Keep Awake switched, a level being adjusted (volume, brightness). Shown
+    /// at once and updated in place; it never takes the island over, changes the page or covers
+    /// anything.
+    var isToast: Bool {
         switch self {
         case .volume, .brightness, .copied, .keepAwake: return true
         case .charging, .lowBattery, .audioDevice, .taskDue, .meetingReminder, .agentApproval, .agentFinished,
@@ -71,12 +73,10 @@ extension ActivityKind {
         }
     }
 
-    /// Volume or brightness: a level the user is adjusting. Music on screen shows it in place.
-    var isLevel: Bool {
-        switch self {
-        case .volume, .brightness: return true
-        default: return false
-        }
+    /// A device connecting keeps the music's artwork and bars in the notch row above its card.
+    var keepsMusicBesideNotch: Bool {
+        if case .audioDevice = self { return true }
+        return false
     }
 
     /// A level's reading, 0...1, and whether it's muted (shown dimmed).
@@ -97,7 +97,8 @@ extension ActivityKind {
         }
     }
 
-    func isSameLiveLevel(as other: ActivityKind) -> Bool {
+    /// The same toast with a newer value: it updates in place instead of leaving and arriving.
+    func isSameToast(as other: ActivityKind) -> Bool {
         switch (self, other) {
         case (.volume, .volume), (.brightness, .brightness), (.copied, .copied), (.keepAwake, .keepAwake): return true
         default: return false
@@ -111,18 +112,23 @@ struct TransientActivity: Identifiable, Equatable {
 }
 
 /// Queues short "live activities" that are shown beside the notch for a few seconds,
-/// one at a time, while the island is collapsed.
+/// one at a time, while the island is collapsed; and shows toasts, which have their own place
+/// (the band at the island's base) and so never wait for, or interrupt, an activity.
 @MainActor
 final class ActivityCenter: ObservableObject {
     @Published private(set) var current: TransientActivity?
+    /// The toast in the band at the base of the island, closed or open.
+    @Published private(set) var toast: TransientActivity?
     /// Settings filter; activities it rejects are dropped.
     var isAllowed: (ActivityKind) -> Bool = { _ in true }
 
     private var queue: [ActivityKind] = []
     private var pendingWork: DispatchWorkItem?
+    private var toastWork: DispatchWorkItem?
     private let displayDuration: TimeInterval = 3
-    private let levelDisplayDuration: TimeInterval = 1.5
-    /// "Copied to clipboard": long enough to reach with the pointer, which opens the history.
+    /// A toast stays this long after its last update (a held key keeps it up).
+    private let toastDuration: TimeInterval = 1.5
+    /// "Copied": a little longer, to read what was copied.
     private let copiedDuration: TimeInterval = 2.5
     /// A device connecting: long enough to read each battery.
     private let deviceDuration: TimeInterval = 4
@@ -139,28 +145,27 @@ final class ActivityCenter: ObservableObject {
         current == nil ? 0 : IslandLayout.activityWing
     }
 
-    /// Extra height below the notch for the level meter drawn along the island's bottom edge, for
-    /// the charging moment, or for a notice's card.
+    /// Extra height below the notch for the charging moment or a notice's card.
     var meterHeight: CGFloat {
         switch current?.kind {
         case .charging: return 34
         case .lowBattery: return IslandLayout.noticeStageHeight
         case .meetingReminder: return IslandLayout.reminderStageHeight
         case .audioDevice: return IslandLayout.deviceStageHeight
-        case .copied: return IslandLayout.copiedStageHeight
         case .agentApproval: return IslandLayout.approvalStageHeight
-        case .agentFinished: return 0
         case .notification: return IslandLayout.notificationStageHeight
         case .recorder(let notice): return notice.stageHeight
-        case .volume, .brightness: return 8
-        case .taskDue, .keepAwake, nil: return 0
+        // Toasts are never `current`: they have the band at the island's base.
+        case .taskDue, .agentFinished, .copied, .keepAwake, .volume, .brightness, nil: return 0
         }
     }
 
-    func post(_ kind: ActivityKind) {
-        guard isAllowed(kind) else { return }
-        if kind.isLiveLevel {
-            showLevel(kind)
+    /// `confirming` a click made inside the island (a clipboard row copied again) is shown
+    /// whatever the settings say about announcing that kind from outside.
+    func post(_ kind: ActivityKind, confirming: Bool = false) {
+        guard confirming || isAllowed(kind) else { return }
+        if kind.isToast {
+            showToast(kind)
             return
         }
         guard current?.kind != kind, !queue.contains(kind), queue.count < maxQueued else { return }
@@ -261,31 +266,41 @@ final class ActivityCenter: ObservableObject {
         }
     }
 
-    /// Volume and brightness changes, and copies, are the user's own action, so they show
-    /// immediately and update in place while keys are held (or copies follow each other), instead
-    /// of queueing one notification per key press. An activity they interrupt is shown again
-    /// afterwards.
-    private func showLevel(_ kind: ActivityKind) {
-        if let showing = current, showing.kind.isSameLiveLevel(as: kind) {
-            current = TransientActivity(id: showing.id, kind: kind)  // same id: the view updates, no cross-fade
+    /// Toasts are the user's own action, so they show at once and update in place while a key
+    /// is held (or copies follow each other). A different toast takes the band over from the one
+    /// showing; the band itself stays, so the island resizes once for the lot. Whatever else the
+    /// island is showing carries on above the band, untouched.
+    private func showToast(_ kind: ActivityKind) {
+        if let showing = toast, showing.kind.isSameToast(as: kind) {
+            toast = TransientActivity(id: showing.id, kind: kind)  // same id: the view updates in place
         } else {
-            // Resume an interrupted notification afterwards; a stale level is not worth repeating.
-            if let showing = current, !showing.kind.isLiveLevel {
-                queue.insert(showing.kind, at: 0)
-            }
-            pointerInside = false
-            Motion.perform(Motion.islandGrow) {
-                current = TransientActivity(kind: kind)
+            Motion.perform(Motion.toast) {
+                toast = TransientActivity(kind: kind)
             }
         }
-        schedule(after: kind == .copied ? copiedDuration : levelDisplayDuration) { [weak self] in self?.hideCurrent() }
+        toastWork?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            MainActor.assumeIsolated { self?.hideToast() }
+        }
+        toastWork = work
+        var duration = toastDuration
+        if case .copied = kind { duration = copiedDuration }
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration, execute: work)
+    }
+
+    /// A toast leaves the way it came, on the same spring.
+    private func hideToast() {
+        toastWork = nil
+        Motion.performShrink(Motion.toast) {
+            toast = nil
+        }
     }
 
     /// A notice leaves as it came: blurring out while the island closes, on the same spring.
     private func hideCurrent() {
         pointerInside = false
         let notice = current?.kind.isNotice == true
-        Motion.perform(notice ? Motion.notice : Motion.islandShrink) {
+        Motion.performShrink(notice ? Motion.notice : Motion.islandShrink) {
             current = nil
         }
         schedule(after: notice ? Motion.Duration.notice : Motion.islandShrinkSettle) { [weak self] in
@@ -336,6 +351,9 @@ extension ActivityCenter {
         queue = []
         pointerInside = false
         current = nil
+        toastWork?.cancel()
+        toastWork = nil
+        toast = nil
     }
 }
 #endif

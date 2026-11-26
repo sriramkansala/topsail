@@ -1,15 +1,15 @@
 import SwiftUI
 
-/// A transient activity beside the notch: an icon in the left wing, a value in the right wing,
-/// and — for volume and brightness — a level meter along the island's bottom edge, so the island
-/// itself becomes the gauge. A charger connecting gets its own moment, `ChargingSweep`; low
-/// battery, a call starting and a device connecting get cards below the camera
-/// (`LowBatteryNotice`, `MeetingReminderNotice`, `DeviceConnectedNotice`).
+/// A transient activity beside the notch: an icon in the left wing, a value in the right wing.
+/// A charger connecting gets its own moment, `ChargingSweep`; low battery, a call starting and a
+/// device connecting get cards below the camera (`LowBatteryNotice`, `MeetingReminderNotice`,
+/// `DeviceConnectedNotice`). Toasts (a copy, Keep Awake, volume and brightness) are not shown
+/// here at all: they have the band at the island's base (`ToastBand`).
 struct TransientActivityView: View {
     let activity: TransientActivity
     let notchSize: CGSize
     let wingWidth: CGFloat
-    /// Height of the strip below the notch that holds the meter (0 = no meter).
+    /// Height of the stage below the notch, for the charging moment.
     let meterHeight: CGFloat
     /// The low-battery notice was clicked.
     var onRequestLowPowerMode: () -> Void = {}
@@ -19,9 +19,6 @@ struct TransientActivityView: View {
     var showsNotificationText = true
     /// Deny or Approve on an agent's request.
     var onAgentAnswer: (AgentApproval, Bool?) -> Void = { _, _ in }
-    /// What is playing, which a device connecting or a copy keeps beside the notch; nil when
-    /// nothing is.
-    var nowPlaying: NowPlayingService? = nil
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -38,11 +35,8 @@ struct TransientActivityView: View {
             MeetingReminderNotice(meeting: meeting, notchSize: notchSize) { onMeetingAnswer(meeting, $0) }
                 .traced("notice.meetingReminder")
         case .audioDevice(let name, let battery):
-            DeviceConnectedNotice(name: name, battery: battery, notchSize: notchSize, wingWidth: wingWidth,
-                                  nowPlaying: nowPlaying)
+            DeviceConnectedNotice(name: name, battery: battery, notchSize: notchSize)
                 .traced("notice.audioDevice")
-        case .copied:
-            CopiedNotice(notchSize: notchSize, wingWidth: wingWidth, nowPlaying: nowPlaying)
         case .agentApproval(let approval):
             AgentApprovalNotice(approval: approval, notchSize: notchSize) { onAgentAnswer(approval, $0) }
                 .traced("notice.agentApproval")
@@ -53,31 +47,23 @@ struct TransientActivityView: View {
             RecorderNoticeView(notice: notice, notchSize: notchSize)
                 .traced("notice.recorder")
         default:
-            wingsAndMeter
-                .traced(activity.kind.isLevel || activity.kind == .keepAwake(on: true) || activity.kind == .keepAwake(on: false)
-                        ? "toast.\(activity.kind.traceName)" : "wings.\(activity.kind.traceName)")
+            wings
+                .traced("wings.\(activity.kind.traceName)")
         }
     }
 
-    private var wingsAndMeter: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 0) {
-                leftWing
-                    .padding(.leading, 12)
-                    .frame(width: wingWidth, height: notchSize.height, alignment: .leading)
+    private var wings: some View {
+        HStack(spacing: 0) {
+            leftWing
+                .padding(.leading, 12)
+                .frame(width: wingWidth, height: notchSize.height, alignment: .leading)
 
-                Color.clear
-                    .frame(width: notchSize.width, height: notchSize.height)
+            Color.clear
+                .frame(width: notchSize.width, height: notchSize.height)
 
-                rightWing
-                    .padding(.trailing, 12)
-                    .frame(width: wingWidth, height: notchSize.height, alignment: .trailing)
-            }
-
-            if meterHeight > 0, let meter {
-                LevelMeter(level: meter.level, color: meter.color, dimmed: meter.dimmed)
-                    .frame(height: meterHeight, alignment: .top)
-            }
+            rightWing
+                .padding(.trailing, 12)
+                .frame(width: wingWidth, height: notchSize.height, alignment: .trailing)
         }
     }
 
@@ -86,24 +72,16 @@ struct TransientActivityView: View {
     @ViewBuilder
     private var leftWing: some View {
         switch activity.kind {
-        case .volume, .brightness:
-            LevelGlyph(kind: activity.kind)
-        case .charging, .lowBattery, .meetingReminder, .audioDevice, .copied:
+        case .charging, .lowBattery, .meetingReminder, .audioDevice:
             EmptyView()  // ChargingSweep and the notices draw their own.
         case .agentApproval, .notification, .recorder:
             EmptyView()
+        case .copied, .keepAwake, .volume, .brightness:
+            EmptyView()  // Toasts: the band at the island's base.
         case .agentFinished(let agent, _):
             HStack(spacing: 5) {
                 icon(agent.symbol, agent.color)
                 Text(agent.shortName)
-                    .font(Self.valueFont)
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
-            }
-        case .keepAwake(let on):
-            HStack(spacing: 5) {
-                icon(on ? "cup.and.saucer.fill" : "cup.and.saucer", on ? Self.awake : .white.opacity(0.5))
-                Text("Keep Awake")
                     .font(Self.valueFont)
                     .foregroundStyle(.white)
                     .lineLimit(1)
@@ -123,27 +101,13 @@ struct TransientActivityView: View {
     @ViewBuilder
     private var rightWing: some View {
         switch activity.kind {
-        case .volume(let level, let muted, _):
-            // The number is a derived value: the text is always the final value; only its
-            // digits roll, on base, so correctness never depends on the animation.
-            Text("\(Int(((muted ? 0 : level) * 100).rounded()))")
-                .font(Self.valueFont)
-                .foregroundStyle(.white.opacity(muted ? 0.5 : 1))
-                .contentTransition(.numericText(value: Double(level)))
-                .animation(reduceMotion ? nil : Motion.base, value: level)
-        case .brightness(let level):
-            Text("\(Int((level * 100).rounded()))")
-                .font(Self.valueFont)
-                .foregroundStyle(.white)
-                .contentTransition(.numericText(value: Double(level)))
-                .animation(reduceMotion ? nil : Motion.base, value: level)
-        case .charging, .lowBattery, .meetingReminder, .audioDevice, .copied:
+        case .charging, .lowBattery, .meetingReminder, .audioDevice:
             EmptyView()
         case .taskDue(_, let overdue):
             value(overdue ? String(localized: "Overdue") : String(localized: "Due today"), overdue ? .red : .orange)
-        case .keepAwake(let on):
-            value(on ? String(localized: "On") : String(localized: "Off"), on ? Self.awake : .white.opacity(0.5))
         case .agentApproval, .notification, .recorder:
+            EmptyView()
+        case .copied, .keepAwake, .volume, .brightness:
             EmptyView()
         case .agentFinished(_, let project):
             HStack(spacing: 4) {
@@ -175,17 +139,13 @@ struct TransientActivityView: View {
             .foregroundStyle(color)
     }
 
-    // MARK: Meter
-
-    private var meter: (level: Double, color: Color, dimmed: Bool)? {
-        activity.kind.levelReading.map { ($0.value, .white, $0.dimmed) }
-    }
 }
 
 /// What a level is of: this Mac's volume, a Spotify device's, or the display's brightness.
 struct LevelGlyph: View {
     let kind: ActivityKind
     var size: CGFloat = 13
+    var tint: Color = .white
 
     var body: some View {
         Group {
@@ -193,15 +153,15 @@ struct LevelGlyph: View {
             case .volume(let level, let muted, let remote) where remote:
                 // Spotify playing on another device: that device, not this Mac's speaker.
                 Image(systemName: "hifispeaker.fill")
-                    .foregroundStyle(.white.opacity(muted || level == 0 ? 0.5 : 1))
+                    .foregroundStyle(tint.opacity(muted || level == 0 ? 0.5 : 1))
             case .volume(let level, let muted, _):
                 Image(systemName: muted || level == 0 ? "speaker.slash.fill" : "speaker.wave.3.fill",
                       variableValue: Double(level))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(tint)
                     .contentTransition(.symbolEffect(.replace))
             case .brightness(let level):
                 Image(systemName: level < 0.5 ? "sun.min.fill" : "sun.max.fill")
-                    .foregroundStyle(.white)
+                    .foregroundStyle(tint)
                     .contentTransition(.symbolEffect(.replace))
             default:
                 EmptyView()
@@ -212,25 +172,8 @@ struct LevelGlyph: View {
     }
 }
 
-/// A level in the open island's own bottom margin, on pages that don't show it themselves.
-struct ExpandedLevelIndicator: View {
-    let kind: ActivityKind
-
-    var body: some View {
-        if let reading = kind.levelReading {
-            HStack(spacing: 8) {
-                LevelGlyph(kind: kind, size: 9)
-                LevelMeter(level: reading.value, color: .white, dimmed: reading.dimmed, inset: 0)
-                    .frame(width: 120)
-            }
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(Text(verbatim: "\(kind.levelPercent ?? 0)%"))
-        }
-    }
-}
-
-/// A 3 pt line along the island's bottom edge, inset clear of the rounded corners, filled to
-/// `level` with a soft glow. It follows the keys, so it springs (`Motion.snappy`).
+/// A 3 pt line filled to `level` with a soft glow: the level in a volume or brightness toast.
+/// It follows the keys, so it springs (`Motion.snappy`).
 struct LevelMeter: View {
     let level: Double
     let color: Color
@@ -255,7 +198,7 @@ struct LevelMeter: View {
             }
             .frame(height: thickness)
             .animation(reduceMotion ? nil : Motion.snappy, value: level)
-            .animation(reduceMotion ? nil : Motion.fast, value: dimmed)
+            .animation(reduceMotion ? nil : Motion.fadeFast, value: dimmed)
         }
         .frame(height: thickness)
         .padding(.horizontal, inset)

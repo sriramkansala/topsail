@@ -43,8 +43,14 @@ struct EqualizerView: View {
                         .frame(width: barWidth, height: height)
                 }
             }
+            .frame(width: Self.size.width, height: Self.size.height, alignment: .bottom)
         }
+        .frame(width: Self.size.width, height: Self.size.height)
     }
+
+    /// The bars' box: always the tallest bar's height, so they stand on one line instead of
+    /// floating up and down as the tallest of them changes.
+    static let size = CGSize(width: 18, height: 14)
 
     private func barHeight(index: Int, time: TimeInterval) -> CGFloat {
         guard isPlaying else { return maxHeight * 0.25 }
@@ -141,53 +147,16 @@ struct ProgressBarView: View {
     }
 }
 
-/// The scrubber's row while a level changes: what it's of, the level, and its percentage, laid
-/// out like the scrubber (same bar, same ends) so the row trades one for the other in place.
-private struct PlayerLevelRow: View {
-    let kind: ActivityKind
-    let reading: (value: Double, dimmed: Bool)
-
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    var body: some View {
-        HStack(spacing: 8) {
-            LevelGlyph(kind: kind, size: 10)
-                .frame(minWidth: 28, alignment: .leading)
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    Capsule()
-                        .fill(Color.white.opacity(0.2))
-                    Capsule()
-                        .fill(Color.white.opacity(reading.dimmed ? 0.35 : 1))
-                        .frame(width: max(4, geo.size.width * min(max(reading.value, 0), 1)))
-                }
-                .frame(height: 4)
-                .frame(maxHeight: .infinity)
-                .animation(reduceMotion ? nil : Motion.snappy, value: reading.value)
-            }
-            .frame(height: 12)
-            Text(verbatim: "\(kind.levelPercent ?? 0)%")
-                .font(.system(size: 10, weight: .medium).monospacedDigit())
-                .foregroundColor(.white.opacity(0.55))
-                .contentTransition(.numericText(value: reading.value))
-                .animation(reduceMotion ? nil : Motion.base, value: reading.value)
-                .frame(minWidth: 32, alignment: .trailing)
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text(verbatim: "\(kind.levelPercent ?? 0)%"))
-    }
-}
-
 /// The player: the artwork, title and artist and the bars in one row, the scrubber, then the
 /// controls centred. The artwork and the bars are drawn by `MusicTraveler`, which carries them here
 /// from the wings beside the notch; this view keeps their places. Anywhere along the top row
 /// opens the app playing.
 struct ExpandedPlayerView: View {
     @ObservedObject var service: NowPlayingService
-    /// Volume or brightness being changed: the scrubber's row shows it until the keys rest.
-    var level: ActivityKind? = nil
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// The last track, which the page keeps showing while it leaves after the track has ended.
+    @State private var lastTrack: Track?
+    private var track: Track? { service.track ?? lastTrack }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -196,10 +165,10 @@ struct ExpandedPlayerView: View {
                     Color.clear
                         .frame(width: IslandLayout.playerArtwork, height: IslandLayout.playerArtwork)
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(service.track?.title ?? "")
+                        Text(track?.title ?? "")
                             .font(.system(size: 13.5, weight: .semibold))
                             .foregroundColor(.white)
-                        Text(service.track?.artist ?? "")
+                        Text(track?.artist ?? "")
                             .font(.system(size: 12))
                             .foregroundColor(.white.opacity(0.55))
                     }
@@ -215,20 +184,11 @@ struct ExpandedPlayerView: View {
             .help(service.track.map { "Open \($0.app.displayName)" } ?? "")
             .frame(height: IslandLayout.playerArtwork)
 
-            ZStack {
-                if let level, let reading = level.levelReading {
-                    PlayerLevelRow(kind: level, reading: reading)
-                        .traced("toast.\(level.traceName)")
-                        .transition(.contentMorph(reduceMotion: reduceMotion))
-                } else {
-                    TimelineView(.periodic(from: .now, by: 0.5)) { context in
-                        ProgressBarView(service: service, date: context.date)
-                    }
-                    .traced("player.scrubber", control: true)
-                    .transition(.contentMorph(reduceMotion: reduceMotion))
-                }
+            TimelineView(.periodic(from: .now, by: 0.5)) { context in
+                ProgressBarView(service: service, date: context.date)
             }
             .frame(height: 16)
+            .traced("player.scrubber", control: true)
             .padding(.top, IslandLayout.playerRowGap)
 
             HStack(spacing: 30) {
@@ -242,6 +202,9 @@ struct ExpandedPlayerView: View {
             .padding(.top, 6)
         }
         .frame(height: IslandLayout.playerHeight, alignment: .top)
+        .onChange(of: service.track, initial: true) { _, track in
+            if let track { lastTrack = track }
+        }
     }
 
     private func control(_ symbol: String, size: CGFloat, action: @escaping () -> Void) -> some View {

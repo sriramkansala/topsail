@@ -156,7 +156,7 @@ struct VoiceIslandView: View {
                             DraftRow(draft: draft)
                                 .transition(.asymmetric(
                                     insertion: .opacity.combined(with: .offset(y: 8)).animation(Motion.base),
-                                    removal: .opacity.animation(Motion.fast)))
+                                    removal: .opacity.animation(Motion.fadeFast)))
                         }
                     }
                 }

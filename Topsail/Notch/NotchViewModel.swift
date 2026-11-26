@@ -69,6 +69,8 @@ final class NotchViewModel: ObservableObject {
     @Published private(set) var shelfTargeted = false
     /// When something was last copied in another app; a recent copy is what the island opens on.
     private(set) var lastCopyAt: Date?
+    /// How long a copy stays the most relevant thing.
+    static let copyRelevance: TimeInterval = 60
     /// Height of the page below the notch row; the expanded island hugs it.
     @Published private(set) var expandedContentHeight: CGFloat = IslandLayout.messageHeight
 
@@ -131,9 +133,7 @@ final class NotchViewModel: ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] shows in
                 guard let self, shows != self.showsAgentActivity else { return }
-                Motion.perform(shows ? Motion.islandGrow : Motion.islandShrink) {
-                    self.showsAgentActivity = shows
-                }
+                Motion.performResize(growing: shows) { self.showsAgentActivity = shows }
             }
             .store(in: &cancellables)
 
@@ -182,8 +182,11 @@ final class NotchViewModel: ObservableObject {
         Publishers.MergeMany(changes)
         .receive(on: DispatchQueue.main)
         .sink { [weak self] in
-            self?.objectWillChange.send()
-            self?.updateContentHeight(animated: true)
+            guard let self else { return }
+            // What the island shows changed under it (a track started or ended, a page's data
+            // arrived): its tabs, page and height adapt in one move instead of being redrawn.
+            Motion.perform(Motion.gentle) { self.objectWillChange.send() }
+            self.updateContentHeight(animated: true)
         }
         .store(in: &cancellables)
 
@@ -194,14 +197,16 @@ final class NotchViewModel: ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] shows in
                 guard let self, shows != self.showsMeetingActivity else { return }
-                Motion.perform(shows ? Motion.islandGrow : Motion.islandShrink) {
-                    self.showsMeetingActivity = shows
-                }
+                Motion.performResize(growing: shows) { self.showsMeetingActivity = shows }
             }
             .store(in: &cancellables)
 
-        // `islandSize` reads `activities.current`, so republish when it changes.
+        // `islandSize` reads `activities.current` and `activities.toast`, so republish when
+        // either changes (inside the change's own animation, so the island moves with it).
         activities.$current
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
+        activities.$toast
             .sink { [weak self] _ in self?.objectWillChange.send() }
             .store(in: &cancellables)
 
@@ -229,7 +234,7 @@ final class NotchViewModel: ObservableObject {
                     // No track, or the music activity is turned off in settings.
                     self.cancelPendingHide()
                     if self.showsMusicActivity {
-                        Motion.perform(Motion.islandShrink) {
+                        Motion.performShrink(Motion.islandShrink) {
                             self.showsMusicActivity = false
                         }
                     }
@@ -248,19 +253,42 @@ final class NotchViewModel: ObservableObject {
     }
 
     var islandSize: CGSize {
-        let size = restingIslandSize
-        guard state == .collapsed, leaning, activities.current == nil else { return size }
-        return CGSize(width: size.width + 6, height: size.height + 3)
+        var size = restingIslandSize
+        if state == .collapsed, leaning, activities.current == nil {
+            size = CGSize(width: size.width + 6, height: size.height + 3)
+        }
+        // A toast: the island reaches down by its band, closed or open, and nothing else moves.
+        size.height += toastBandHeight
+        return size
+    }
+
+    /// The band a toast sits in, at the island's base: 0 with no toast.
+    var toastBandHeight: CGFloat {
+        activities.toast == nil ? 0 : IslandLayout.toastBandHeight
+    }
+
+    /// The island without a toast's band: what it shows, which the band never resizes.
+    var contentSize: CGSize {
+        let size = islandSize
+        return CGSize(width: size.width, height: size.height - toastBandHeight)
     }
 
     /// Whether the music's own wings are what the closed island shows: nothing else outranks them.
     var musicIsBesideNotch: Bool {
         guard state == .collapsed, showsMusicActivity else { return false }
-        if activities.current != nil && musicLevel == nil { return false }
+        // A device connecting keeps the music in the notch row above its card.
+        if let activity = activities.current { return activity.kind.keepsMusicBesideNotch }
         if features.recorder.showsWings || (showsKoiPass && koiPassFirst) { return false }
         if showsMeetingActivity && calendar.imminentMeeting != nil { return false }
         if showsAgentActivity && features.agents.workingAgent != nil { return false }
         return true
+    }
+
+    /// Whether the closed island shows a recording's wings: when nothing outranks them, and in
+    /// the notch row above a notice's card.
+    var showsRecordingWings: Bool {
+        guard state == .collapsed, features.recorder.showsWings else { return false }
+        return activities.current == nil || RecordingWings.sharesRow(with: activities.current?.kind)
     }
 
     /// Where the music's artwork and bars sit: one pair that travels between the wings and the
@@ -270,7 +298,6 @@ final class NotchViewModel: ObservableObject {
         var artRadius: CGFloat
         var bars: CGPoint
         var barsScale: CGFloat
-        var showsBars: Bool
     }
 
     var musicPlacement: MusicPlacement {
@@ -281,13 +308,13 @@ final class NotchViewModel: ObservableObject {
                                   artRadius: 11,
                                   bars: CGPoint(x: islandSize.width - IslandLayout.horizontalPadding - IslandLayout.playerBarsWidth / 2,
                                                 y: top + side / 2),
-                                  barsScale: 1.3, showsBars: true)
+                                  barsScale: 1.3)
         }
         let side: CGFloat = 22
         return MusicPlacement(art: CGRect(x: (compactWing - side) / 2, y: (notchSize.height - side) / 2, width: side, height: side),
                               artRadius: 6,
                               bars: CGPoint(x: islandSize.width - compactWing / 2, y: notchSize.height / 2),
-                              barsScale: 1, showsBars: musicLevel == nil)
+                              barsScale: 1)
     }
 
     /// Whether the travelling artwork and bars are on screen: beside the notch, or in the player.
@@ -332,29 +359,9 @@ final class NotchViewModel: ObservableObject {
         }
     }
 
-    /// Each wing of the activity on screen. "Copied to clipboard" grows the notch downward only,
-    /// keeping the narrow music wings if music is showing; every other activity takes the open
-    /// island's width.
+    /// Each wing of the activity on screen: the open island's width, so a notice only grows down.
     var activityWingWidth: CGFloat {
-        if activities.current?.kind == .copied { return showsMusicActivity ? compactWing : 0 }
-        if musicLevel != nil { return compactWing }
-        return activities.wingWidth
-    }
-
-    /// Volume or brightness changing while the music wings are what's beside the notch: the music
-    /// shows it in place, rather than giving way to a separate activity.
-    var musicLevel: ActivityKind? {
-        guard state == .collapsed, showsMusicActivity, !showsMeetingActivity, !showsAgentActivity,
-              let kind = activities.current?.kind, kind.isLevel else { return nil }
-        return kind
-    }
-
-    /// Volume or brightness changing while the island is open, where the keys show nothing else
-    /// (Topsail takes them from macOS). The player shows it in its own row; other pages in the
-    /// island's bottom margin.
-    var expandedLevel: ActivityKind? {
-        guard state == .expanded, let kind = activities.current?.kind, kind.isLevel else { return nil }
-        return kind
+        activities.wingWidth
     }
 
     // MARK: - Voice notes
@@ -573,11 +580,13 @@ final class NotchViewModel: ObservableObject {
     }
 
     private func expandedActiveZone() -> CGRect {
+        // A toast's band is part of the island: the pointer on it has not left.
+        let height = expandedSize.height + toastBandHeight
         let rect = CGRect(
             x: notchRect.midX - expandedSize.width / 2,
-            y: notchRect.maxY - expandedSize.height,
+            y: notchRect.maxY - height,
             width: expandedSize.width,
-            height: expandedSize.height
+            height: height
         )
         return rect.insetBy(dx: -14, dy: -14)
     }
@@ -626,7 +635,7 @@ final class NotchViewModel: ObservableObject {
                 // Only hide if still paused (no track or not playing).
                 guard !self.nowPlaying.isPlaying else { return }
                 self.hideActivityWork = nil
-                Motion.perform(Motion.islandShrink) {
+                Motion.performShrink(Motion.islandShrink) {
                     self.showsMusicActivity = false
                 }
             }
@@ -743,7 +752,11 @@ final class NotchViewModel: ObservableObject {
         let height = contentHeightForCurrentState
         guard height != expandedContentHeight else { return }
         if animated && state == .expanded {
-            Motion.perform(Motion.gentle) { expandedContentHeight = height }
+            if height < expandedContentHeight {
+                Motion.performShrink(Motion.gentle) { expandedContentHeight = height }
+            } else {
+                Motion.perform(Motion.gentle) { expandedContentHeight = height }
+            }
         } else {
             expandedContentHeight = height
         }
@@ -759,6 +772,8 @@ final class NotchViewModel: ObservableObject {
         Motion.perform(Motion.snappy) {
             self.page = page
         }
+        // In the same frame: the page and the island's height change together, one move.
+        updateContentHeight(animated: true)
     }
 
     // MARK: - Koi pond
@@ -798,7 +813,7 @@ final class NotchViewModel: ObservableObject {
     /// The koi has crossed (or the wings gave way to something else): they fold back in.
     func endKoiPass() {
         guard showsKoiPass else { return }
-        Motion.perform(Motion.islandShrink) {
+        Motion.performShrink(Motion.islandShrink) {
             showsKoiPass = false
             koiPassFirst = false
         }
@@ -820,6 +835,7 @@ final class NotchViewModel: ObservableObject {
     func showCalendarMode(_ mode: CalendarMode) {
         guard mode != visibleCalendarMode else { return }
         Motion.perform(Motion.snappy) { calendarMode = mode }
+        updateContentHeight(animated: true)
     }
 
     // MARK: - Clipboard tab and shelf
@@ -838,6 +854,7 @@ final class NotchViewModel: ObservableObject {
     func showClipboardMode(_ mode: ClipboardMode) {
         guard mode != visibleClipboardMode else { return }
         Motion.perform(Motion.snappy) { clipboardMode = mode }
+        updateContentHeight(animated: true)
     }
 
     /// Files dragged over (or off) the open island: the shelf comes forward to take them.
@@ -900,6 +917,22 @@ final class NotchViewModel: ObservableObject {
         activities.reminderAnswered()
     }
 
+    /// Something was copied in another app just now.
+    func noteCopy() {
+        lastCopyAt = Date()
+    }
+
+    private var copiedRecently: Bool {
+        lastCopyAt.map { Date().timeIntervalSince($0) < Self.copyRelevance } ?? false
+    }
+
+    /// A row of the clipboard page was clicked: it goes back on the clipboard, and the toast in
+    /// the band says so.
+    func copyAgain(_ item: ClipboardItem) {
+        clipboard.copy(item)
+        activities.post(.copied(snippet: item.snippet), confirming: true)
+    }
+
     /// The ☕ button in the notch row: on for the chosen time (Settings), or off.
     func toggleKeepAwake() {
         let keepAwake = features.keepAwake
@@ -924,8 +957,8 @@ final class NotchViewModel: ObservableObject {
 
     func expand() {
         guard state != .expanded else { return }
-        // Hovering "Copied to clipboard" opens the history; files dragged to the notch, the shelf.
-        let fromCopy = activities.current?.kind == .copied && clipboardModes.contains(.clipboard)
+        // A copy in the last minute opens the history; files dragged to the notch, the shelf.
+        let fromCopy = copiedRecently && clipboardModes.contains(.clipboard)
         let fromDrag = isDraggingFiles
         page = fromCopy || fromDrag ? .clipboard : preferredPage
         if fromCopy { clipboardMode = .clipboard }
@@ -951,7 +984,7 @@ final class NotchViewModel: ObservableObject {
     func collapse() {
         guard state != .collapsed else { return }
         cancelPendingCollapse()
-        Motion.perform(Motion.islandShrink) {
+        Motion.performShrink(Motion.islandShrink) {
             state = .collapsed
         }
         tasksExpanded = false
@@ -1010,6 +1043,7 @@ extension NotchViewModel {
          "page": "\(visiblePage)",
          "lean": leaning ? "1" : "0",
          "act": activities.current.map { $0.kind.traceName } ?? "",
+         "toast": activities.toast.map { $0.kind.traceName } ?? "",
          "tele": teleprompterActive ? "1" : "0",
          "side": (showsMusicActivity ? "m" : "") + (features.recorder.showsWings ? "r" : "")
              + (showsAgentActivity ? "a" : "") + (showsMeetingActivity ? "c" : "") + (showsKoiPass ? "k" : ""),

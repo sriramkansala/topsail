@@ -9,31 +9,56 @@ struct NotchView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        ZStack(alignment: .top) {
-            island
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-
+        island
             // The teleprompter's handle hangs just below the island, outside it: pull it down.
-            if model.state == .expanded && model.teleprompterActive {
-                TeleprompterHandle(onDrag: model.dragTeleprompter(by:), onEnd: model.endTeleprompterDrag(predicted:))
-                    .traced("tele.handle", control: true)
-                    .padding(.top, model.islandSize.height + IslandLayout.teleprompterHandleGap)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                    .transition(.opacity.animation(reduceMotion ? nil : Motion.fast))
+            // It is fastened to the island's bottom edge, so it follows the edge exactly.
+            .overlay(alignment: .top) {
+                if model.state == .expanded && model.teleprompterActive {
+                    TeleprompterHandle(onDrag: model.dragTeleprompter(by:), onEnd: model.endTeleprompterDrag(predicted:))
+                        .traced("tele.handle", control: true)
+                        // Below the content's bottom edge (padding, like the band), and below a
+                        // toast's band when there is one (an offset, on the toast's spring).
+                        .padding(.top, model.contentSize.height + IslandLayout.teleprompterHandleGap)
+                        .fixedSize()
+                        .offset(y: model.toastBandHeight)
+                        .transition(.opacity.animation(Motion.fadeFast))
+                }
             }
-        }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         #if DEBUG
         .modifier(ContinuityEnvironmentModifier())
         #endif
     }
 
+    /// The island is what it shows (`content`, in its own frame) and, under that, the band a
+    /// toast sits in. The band is not part of the frame: the black shape reaches down past the
+    /// frame by `reach`, and the toast hangs from the frame's bottom edge. So the content's frame
+    /// is only ever moved by what changes the content, the band only by a toast, and however
+    /// the two overlap (a toast during an expand, a page switch during a toast) the band is at
+    /// the island's base and nothing above it is moved by it.
     private var island: some View {
+        content
+            .modifier(IslandFrame(size: model.contentSize, band: ToastBand(toast: model.activities.toast)))
+            .padding(.horizontal, model.topRadius)
+            .background(NotchShape(topRadius: model.topRadius, bottomRadius: model.bottomRadius,
+                                   reach: model.toastBandHeight).fill(Color.black))
+            .clipShape(NotchShape(topRadius: model.topRadius, bottomRadius: model.bottomRadius,
+                                  reach: model.toastBandHeight))
+            .modifier(ShelfDrop(model: model))
+            .environment(\.recorder, model.features.recorder)
+            .shadow(color: .black.opacity(model.state == .expanded ? 0.35 : 0), radius: 10, y: 4)
+            // A page coming into being or going away under the open island (a track starting or
+            // ending): its tab, the page and the island's width adapt in one move.
+            .animation(reduceMotion ? nil : Motion.gentle, value: model.availablePages)
+    }
+
+    private var content: some View {
         ZStack(alignment: .top) {
             // The Koi pond page fills the whole open island, behind the notch row.
             if model.state == .expanded, model.visiblePage == .pond, !model.voiceActive, !model.teleprompterActive {
                 PondPageView(size: model.expandedSize, notchHeight: model.notchSize.height)
                     .traced("pond")
-                    .transition(.opacity.animation(reduceMotion ? nil : Motion.fast))
+                    .transition(.opacity.animation(Motion.fadeFast))
             }
 
             // Always mounted; its parts enter and leave with the expanded state.
@@ -41,7 +66,7 @@ struct NotchView: View {
                             linear: model.linear, clipboard: model.clipboard)
 
             if model.state == .collapsed {
-                if let activity = model.activities.current, model.musicLevel == nil {
+                if let activity = model.activities.current {
                     TransientActivityView(activity: activity,
                                           notchSize: model.notchSize,
                                           wingWidth: model.activityWingWidth,
@@ -49,16 +74,12 @@ struct NotchView: View {
                                           onRequestLowPowerMode: model.requestLowPowerMode,
                                           onMeetingAnswer: model.answerMeeting,
                                           showsNotificationText: model.settings.notificationText,
-                                          onAgentAnswer: model.answerAgent,
-                                          nowPlaying: model.showsMusicActivity ? nowPlaying : nil)
+                                          onAgentAnswer: model.answerAgent)
                         .id(activity.id)
-                        .transition(activity.kind.isNotice ? .noticeBlur(reduceMotion: reduceMotion)
+                        .transition(activity.kind.isNotice ? .noticeArrival(reduceMotion: reduceMotion)
                                                            : .cascade(0, reduceMotion: reduceMotion))
                 } else if model.features.recorder.showsWings {
-                    RecordingWings(recorder: model.features.recorder, notchSize: model.notchSize,
-                                   wingWidth: RecorderLayout.wing)
-                        .traced("wings.recording")
-                        .transition(.cascade(0, reduceMotion: reduceMotion))
+                    // The recording's wings, drawn below: one view, whether or not a notice hangs under it.
                 } else if model.showsKoiPass && model.koiPassFirst {
                     KoiPassWings(notchSize: model.notchSize, wingWidth: IslandLayout.koiPassWing,
                                  onFinished: model.endKoiPass)
@@ -74,8 +95,7 @@ struct NotchView: View {
                         .traced("wings.agent")
                         .transition(.cascade(0, reduceMotion: reduceMotion))
                 } else if model.showsMusicActivity {
-                    CompactMusicWings(nowPlaying: nowPlaying, notchSize: model.notchSize, wingWidth: model.compactWing,
-                                      level: model.musicLevel, meterHeight: model.activities.meterHeight)
+                    CompactMusicWings(nowPlaying: nowPlaying, notchSize: model.notchSize, wingWidth: model.compactWing)
                         .transition(.cascade(0, reduceMotion: reduceMotion))
                 } else if model.showsKoiPass {
                     KoiPassWings(notchSize: model.notchSize, wingWidth: IslandLayout.koiPassWing,
@@ -83,10 +103,13 @@ struct NotchView: View {
                         .traced("wings.koi")
                         .transition(.cascade(0, reduceMotion: reduceMotion))
                 }
-                // A recording stays in sight in the notch row while a notice hangs below it.
-                if model.features.recorder.showsWings, RecordingWings.sharesRow(with: model.activities.current?.kind) {
+                // A recording stays in sight in the notch row while a notice hangs below it: the
+                // same wings, which ride out to the notice's width and back.
+                if model.showsRecordingWings {
+                    let underNotice = model.activities.current != nil
                     RecordingWings(recorder: model.features.recorder, notchSize: model.notchSize,
-                                   wingWidth: model.activityWingWidth, rowOnly: true)
+                                   wingWidth: underNotice ? model.activityWingWidth : RecorderLayout.wing,
+                                   rowOnly: underNotice)
                         .traced("wings.recording")
                         .transition(.cascade(0, reduceMotion: reduceMotion))
                 }
@@ -95,23 +118,36 @@ struct NotchView: View {
             // The music's artwork and bars: the same two views travel from the wings into the
             // player and back, as the island grows and shrinks.
             MusicTraveler(nowPlaying: nowPlaying, placement: model.musicPlacement, visible: model.showsMusicTraveler)
-
-            if let level = model.expandedLevel, model.visiblePage != .player || model.voiceActive || model.teleprompterActive {
-                ExpandedLevelIndicator(kind: level)
-                    .traced("toast.\(level.traceName)")
-                    .padding(.bottom, IslandLayout.levelIndicatorBottom)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-                    .transition(.opacity.animation(reduceMotion ? nil : Motion.fast))
-            }
         }
-        .frame(width: model.islandSize.width, height: model.islandSize.height, alignment: .top)
-        .traced("island")
-        .frame(width: model.islandSize.width + 2 * model.topRadius, height: model.islandSize.height)
-        .background(NotchShape(topRadius: model.topRadius, bottomRadius: model.bottomRadius).fill(Color.black))
-        .clipShape(NotchShape(topRadius: model.topRadius, bottomRadius: model.bottomRadius))
-        .modifier(ShelfDrop(model: model))
-        .environment(\.recorder, model.features.recorder)
-        .shadow(color: .black.opacity(model.state == .expanded ? 0.35 : 0), radius: 10, y: 4)
+    }
+
+    /// Sizes what the island shows and hangs the toast's band from its bottom edge, both from
+    /// one animated size. Because it is `Animatable`, SwiftUI hands it the size for each frame
+    /// and the frame and the band's place are set from that same number: the band is on the
+    /// edge at every frame, whatever else is animating. (Set as two modifiers, each kept its
+    /// own animation, and a toast arriving while the island was closing sent the band up to
+    /// 30 pt ahead of the edge.)
+    private struct IslandFrame<Band: View>: ViewModifier, Animatable {
+        var size: CGSize
+        let band: Band
+
+        var animatableData: CGSize.AnimatableData {
+            get { size.animatableData }
+            set { size.animatableData = newValue }
+        }
+
+        func body(content: Content) -> some View {
+            content
+                .frame(width: size.width, height: size.height, alignment: .top)
+                // What is leaving the content never spills into the band.
+                .clipped()
+                .traced("island")
+                .overlay(alignment: .top) {
+                    band
+                        .padding(.top, size.height)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+        }
     }
 
     private struct ExpandedContent: View {
@@ -166,7 +202,7 @@ struct NotchView: View {
                         }
                     }
                     .traced("tabs", control: true)
-                    .transition(.opacity.animation(reduceMotion ? nil : Motion.fast))
+                    .transition(.opacity.animation(Motion.fadeFast))
                 }
                 Spacer(minLength: model.notchSize.width)
                 HStack(spacing: 14) {
@@ -247,8 +283,7 @@ struct NotchView: View {
                     Color.clear
                         .transition(.contentMorph(reduceMotion: reduceMotion))
                 } else if nowPlaying.track != nil {
-                    ExpandedPlayerView(service: nowPlaying,
-                                       level: model.voiceActive || model.teleprompterActive ? nil : model.expandedLevel)
+                    ExpandedPlayerView(service: nowPlaying)
                         .traced("page.player")
                         .transition(.contentMorph(reduceMotion: reduceMotion))
                 } else {
@@ -317,49 +352,18 @@ struct NotchView: View {
 }
 
 /// What is playing, beside the notch on the collapsed island: the artwork in the left wing, the
-/// bars in the right, each centred in its narrow wing.
+/// bars in the right, each centred in its narrow wing. Both are drawn by `MusicTraveler`, so they
+/// can travel into the player; this view keeps their places and says what is playing.
 struct CompactMusicWings: View {
     @ObservedObject var nowPlaying: NowPlayingService
     let notchSize: CGSize
     let wingWidth: CGFloat
-    /// Volume or brightness being changed: shown in place of the bars, with the level along the
-    /// island's bottom edge, while the music stays.
-    var level: ActivityKind? = nil
-    var meterHeight: CGFloat = 0
-
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        VStack(spacing: 0) {
-            // The artwork and the bars themselves are drawn by `MusicTraveler`, so they can travel
-            // into the player; these wings keep their places and show a level in the bars' place.
-            HStack(spacing: 0) {
-                Color.clear
-                    .frame(width: wingWidth + notchSize.width, height: notchSize.height)
-
-                ZStack {
-                    if let level {
-                        LevelGlyph(kind: level)
-                            .traced("toast.\(level.traceName)")
-                            .transition(Self.swap(reduceMotion))
-                    }
-                }
-                .frame(width: wingWidth, height: notchSize.height)
-            }
-
-            if let reading = level?.levelReading, meterHeight > 0 {
-                LevelMeter(level: reading.value, color: .white, dimmed: reading.dimmed)
-                    .frame(height: meterHeight, alignment: .top)
-                    .transition(.opacity.animation(reduceMotion ? nil : Motion.instant))
-            }
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(level?.levelPercent.map { Text(verbatim: "\($0)%") } ?? Text(nowPlaying.track?.title ?? ""))
-    }
-
-    /// The bars and a level trading places in the right wing.
-    static func swap(_ reduceMotion: Bool) -> AnyTransition {
-        reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.7))
+        Color.clear
+            .frame(width: notchSize.width + 2 * wingWidth, height: notchSize.height)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text(nowPlaying.track?.title ?? ""))
     }
 }
 
@@ -371,25 +375,30 @@ struct MusicTraveler: View {
     let placement: NotchViewModel.MusicPlacement
     let visible: Bool
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// The last artwork, which the pair keeps while it fades out after the track has ended.
+    @State private var lastArtwork: NSImage?
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            ArtworkView(image: nowPlaying.artwork, size: placement.art.width, cornerRadius: placement.artRadius)
+            ArtworkView(image: nowPlaying.track == nil ? lastArtwork : nowPlaying.artwork,
+                        size: placement.art.width, cornerRadius: placement.artRadius)
                 .traced("art")
                 .offset(x: placement.art.minX, y: placement.art.minY)
             EqualizerView(isPlaying: nowPlaying.isPlaying, color: nowPlaying.accentColor)
                 .traced("bars")
                 .scaleEffect(placement.barsScale)
                 .position(placement.bars)
-                .opacity(placement.showsBars ? 1 : 0)
-                .animation(reduceMotion ? nil : Motion.fast, value: placement.showsBars)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .opacity(visible ? 1 : 0)
-        .animation(reduceMotion ? nil : Motion.fast, value: visible)
+        // Only the fade runs on its own clock. (An `.animation(_:value:)` here also took over
+        // the pair's travel whenever they appeared or left in the same update, so they shot
+        // across on a tween instead of riding the island's spring.)
+        .animation(Motion.fadeFast) { $0.opacity(visible ? 1 : 0) }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
+        .onChange(of: nowPlaying.artwork, initial: true) { _, artwork in
+            if let artwork { lastArtwork = artwork }
+        }
     }
 }
 
@@ -416,14 +425,16 @@ private struct ShelfDrop: ViewModifier {
     @ObservedObject var model: NotchViewModel
 
     func body(content: Content) -> some View {
-        if model.state == .expanded && model.clipboardModes.contains(.shelf) {
-            content.onDrop(of: [.fileURL], isTargeted: Binding(get: { model.shelfTargeted },
-                                                               set: { model.setShelfTargeted($0) })) { providers in
-                load(providers)
-                return true
-            }
-        } else {
-            content
+        // Always the same view: while the island is closed or the shelf is off, the drop simply
+        // accepts nothing. (Wrapping `content` in an `if` here gave the whole island a new
+        // identity each time it opened or closed, so it was torn down and cross-faded with a
+        // fresh copy instead of growing.)
+        let accepts = model.state == .expanded && model.clipboardModes.contains(.shelf)
+        content.onDrop(of: accepts ? [.fileURL] : [], isTargeted: Binding(get: { model.shelfTargeted },
+                                                                          set: { model.setShelfTargeted($0) })) { providers in
+            guard accepts else { return false }
+            load(providers)
+            return true
         }
     }
 

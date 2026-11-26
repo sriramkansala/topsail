@@ -30,6 +30,8 @@ func fail(_ message: String) -> Never {
 /// The part of the notch window that is filmed: its top, where the island is, in points.
 let filmedSize = CGSize(width: 700, height: 480)
 let filmScale: CGFloat = 2
+/// Behind the window in the film (the stream only borrows the colour, so it is kept here).
+let filmBackground = CGColor(gray: 0.42, alpha: 1)
 
 // MARK: - Recording
 
@@ -64,7 +66,7 @@ final class Recorder: NSObject, SCStreamOutput, SCStreamDelegate {
         configuration.minimumFrameInterval = CMTime(value: 1, timescale: 60)
         configuration.pixelFormat = kCVPixelFormatType_32BGRA
         configuration.showsCursor = false
-        configuration.backgroundColor = CGColor(gray: 0.42, alpha: 1)
+        configuration.backgroundColor = filmBackground
         configuration.queueDepth = 8
         let stream = SCStream(filter: SCContentFilter(desktopIndependentWindow: window), configuration: configuration,
                               delegate: self)

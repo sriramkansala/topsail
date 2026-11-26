@@ -99,7 +99,7 @@ struct RecorderDot: View {
                 Image(systemName: "pause.fill")
                     .font(.system(size: size + 1, weight: .bold))
                     .foregroundStyle(.white.opacity(0.75))
-                    .transition(CompactMusicWings.swap(reduceMotion))
+                    .transition(.glyphSwap(reduceMotion: reduceMotion))
             } else {
                 Circle()
                     .fill(RecorderColors.red)
@@ -109,7 +109,7 @@ struct RecorderDot: View {
                     } animation: { _ in
                         Motion.easeInOut(Motion.Duration.spin)
                     }
-                    .transition(CompactMusicWings.swap(reduceMotion))
+                    .transition(.glyphSwap(reduceMotion: reduceMotion))
             }
         }
         .frame(width: size + 4, height: size + 4)

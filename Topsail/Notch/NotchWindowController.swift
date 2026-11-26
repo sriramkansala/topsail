@@ -36,7 +36,12 @@ final class NotchWindowController: NSWindowController {
         let model = NotchViewModel(nowPlaying: nowPlaying, activities: activities, calendar: calendar,
                                    linear: linear, voice: voice, system: system, clipboard: clipboard,
                                    features: features, settings: settings)
-        clipboard.onCopy = { [weak activities] in activities?.post(.copied) }
+        // A copy in another app: a toast says so (with a glimpse of it, when Topsail may read
+        // the clipboard), and for the next minute the island opens on the clipboard.
+        clipboard.onCopy = { [weak activities, weak model] item in
+            model?.noteCopy()
+            activities?.post(.copied(snippet: item?.snippet))
+        }
         voice.onPresent = { [weak model] in model?.presentVoice() }
         linear.onDue = { [weak activities] issues in
             guard let first = issues.first else { return }
@@ -191,7 +196,9 @@ final class NotchWindowController: NSWindowController {
         case "headphones":
             // The App Store build's card: no battery.
             model.activities.post(.audioDevice(name: "Headphones", battery: nil))
-        case "copied": model.activities.post(.copied)
+        case "keep-awake": model.activities.post(.keepAwake(on: true))
+        case "volume": model.activities.post(.volume(level: 0.6, muted: false))
+        case "copied": model.activities.post(.copied(snippet: "Harbour lights at dusk"))
         case let name where name.hasPrefix("recording") || name == "countdown": model.features.recorder.preview(name)
         case "koi": model.startKoiPass(first: true)
         default: break

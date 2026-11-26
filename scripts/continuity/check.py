@@ -19,10 +19,14 @@ CENTRE = 0.5            # pt: the island's centre against the notch's
 SLOW_FRAME = 25.0       # ms
 VISIBLE = 0.05          # opacity above which something counts as on screen
 BLINK = 400.0           # ms: gone and back within this is a swap, not a leave and a return
+SKEW = 17.0             # ms: a parent's animated size and a child placed against it can be one
+                        # frame apart inside SwiftUI; rules that compare the two allow for it
 RADII = {"collapsed": (6.0, 14.0), "expanded": (14.0, 24.0)}
 REST = 250.0            # ms without the island changing size: at rest
 # Elements whose own content keeps changing size (never judged for stillness).
 RESTLESS = ("wings.koi",)
+# Elements that hang outside the island by design (never clipped by it).
+OUTSIDE = ("tele.handle",)
 # A page pick, or a page that has just gone away: the page may change after these.
 PAGE_STEPS = ("click tab.", "pick ", "music off", "teleprompter")
 
@@ -106,6 +110,18 @@ def overlap(a, b):
     return min(a[2], b[2]) - max(a[0], b[0]) > 0.5 and min(a[3], b[3]) - max(a[1], b[1]) > 0.5
 
 
+def inside(value, island):
+    """The fraction of an element's frame that is inside the island's shape."""
+    if value is None or island is None:
+        return 0.0
+    x, y, w, h = value[:4]
+    if w <= 0 or h <= 0:
+        return 0.0
+    width = min(x + w, island[0] / 2 + 1) - max(x, -island[0] / 2 - 1)
+    height = min(y + h, island[1] + 1) - max(y, -1)
+    return max(0.0, min(1.0, width / w)) * max(0.0, min(1.0, height / h))
+
+
 def is_toast(name):
     return name.startswith("toast.")
 
@@ -136,18 +152,34 @@ def check(trace):
             fail("harness", t[index], "the island was still moving before the first trigger")
             break
 
-    # 1. Opacity: nothing appears or disappears by more than 0.35 in one frame.
+    # 1. Opacity: nothing appears or disappears by more than 0.35 in one frame. What counts is
+    # what can be seen: the element's opacity times the part of it inside the island's shape, so
+    # being cut off by the island snapping shut is a pop too, and sliding in under its edge is not.
     for key, series in trace.instances.items():
-        worst = (0, 0)
+        name = key[0]
+        if name in OUTSIDE:
+            seen = [(opacity(value),) for value in series]
+        else:
+            seen = [(opacity(value) * inside(value, trace.island[index]),) for index, value in enumerate(series)]
+        worst = (0, 0, False)
         for index in range(1, count):
-            now, before = opacity(series[index]), opacity(trace.sample(series, index))
             if series[index] is None and series[index - 1] is None:
                 continue
-            step = abs(now - before)
+            step = abs(seen[index][0] - trace.sample(seen, index)[0])
             if step > worst[0]:
-                worst = (step, t[index])
+                cut = abs(opacity(series[index]) - opacity(trace.sample(series, index))) <= OPACITY_STEP
+                worst = (step, t[index], cut)
         if worst[0] > OPACITY_STEP + 0.005:
-            fail("opacity step", worst[1], f"{key[0]} changed opacity by {worst[0]:.2f} in one frame")
+            if worst[2]:
+                # An edge sweeping past a thin element is a wipe, not a cut; the island's edge
+                # jumping over it is a cut.
+                index = trace.index_at(worst[1])
+                now, before = trace.island[index], trace.sample(trace.island, index)
+                jumped = now and before and max(abs(now[0] - before[0]) / 2, abs(now[1] - before[1])) > 24
+                if jumped:
+                    fail("opacity step", worst[1], f"{name} was cut off by the island's edge ({worst[0]:.2f} of it in one frame)")
+            else:
+                fail("opacity step", worst[1], f"{name} changed opacity by {worst[0]:.2f} in one frame")
 
     # 2. Pop or swap: the same thing before and after must be one view that stays on screen.
     for name in names:
@@ -168,7 +200,10 @@ def check(trace):
             if visible[index - 1] and not visible[index]:
                 gone_since = t[index]
             elif visible[index] and not visible[index - 1] and gone_since is not None:
-                if t[index] - gone_since < BLINK:
+                # Sent away by one event and brought back by another (the pointer left, then
+                # returned) is a leave and a return; within one event it is a swap.
+                asked_back = any(gone_since - 30 < cause <= t[index] for cause in causes)
+                if t[index] - gone_since < BLINK and not asked_back:
                     fail("blink", gone_since, f"{name} went away and came back {t[index] - gone_since:.0f} ms later")
                 gone_since = None
 
@@ -239,6 +274,19 @@ def check(trace):
 
     # 7–8. Toasts: in the base band, vertical only, in and out the same way, never over a control.
     toast_names = [name for name in names if is_toast(name)]
+    # The band's top is the content's bottom edge (traced as "content"); before that was traced,
+    # the island's bottom edge less the band.
+    band_top = []
+    for index in range(count):
+        content = next((trace.instances[key][index] for key in by_name.get("content", [])
+                        if trace.instances[key][index] is not None), None)
+        if content is not None:
+            band_top.append(content[1] + content[3])
+        elif "content" in by_name:
+            band_top.append(None)
+        else:
+            band_top.append(0.0)  # traces from before the content was traced: judged by position on screen
+    has_content = "content" in by_name
     for name in toast_names:
         for key in by_name[name]:
             series = trace.instances[key]
@@ -248,12 +296,19 @@ def check(trace):
             full = [index for index in shown if opacity(series[index]) >= 0.95]
             if not full:
                 continue
-            # Its place once it has arrived: where it sits at full opacity, the first time it holds still.
+            # How far below the band's top (the content's bottom edge) the toast is: 0 once it has
+            # arrived, more while it is sliding in or out.
+            def below(index):
+                tops = [band_top[j] for j in (index, trace.index_at(t[index] - SKEW), trace.index_at(t[index] + SKEW))
+                        if band_top[j] is not None]
+                return None if not tops else series[index][1] - min(tops)
+
             rest_y = None
             for index in full:
                 later = [j for j in full if 0 <= t[j] - t[index] <= 120]
-                if len(later) > 3 and all(abs(series[j][1] - series[index][1]) < 0.3 for j in later):
-                    rest_y = series[index][1] - (trace.island[index][1])  # from the island's bottom edge
+                if below(index) is not None and len(later) > 3 and \
+                        all(below(j) is not None and abs(below(j) - below(index)) < 0.3 for j in later):
+                    rest_y = below(index)
                     break
             centre = series[full[0]][0] + series[full[0]][2] / 2
             reported = set()
@@ -265,43 +320,97 @@ def check(trace):
 
             for index in shown:
                 value, island = series[index], trace.island[index]
-                if value[1] < island[1] - trace.band - 1.0:
-                    once("toast band", t[index], f"{name} was {island[1] - trace.band - value[1]:.0f} pt above the base band")
+                bottoms = [island[1]] + [other[1] for other in (trace.sample(trace.island, index, SKEW),
+                                                                trace.island[trace.index_at(t[index] + SKEW)]) if other]
+                if value[1] < min(bottoms) - trace.band - 1.0:
+                    once("toast band", t[index], f"{name} was {min(bottoms) - trace.band - value[1]:.0f} pt above the base band")
                 if abs(value[0] + value[2] / 2 - centre) > 0.75:
                     once("toast band", t[index], f"{name} moved sideways by {abs(value[0] + value[2] / 2 - centre):.1f} pt")
                 clipped = (max(value[0], -island[0] / 2), max(value[1], 0),
                            min(value[0] + value[2], island[0] / 2), min(value[1] + value[3], island[1]))
                 if clipped[2] - clipped[0] <= 0.5 or clipped[3] - clipped[1] <= 0.5:
                     continue
+                # The content is clipped at its own bottom edge: nothing of it shows below that.
+                # (Taken a frame either side as well: see SKEW.)
+                near = [index, trace.index_at(t[index] - SKEW), trace.index_at(t[index] + SKEW)]
+                floors = [band_top[j] if has_content and band_top[j] is not None else trace.island[j][1]
+                          for j in near if trace.island[j]]
                 for other in names:
-                    if is_toast(other) or not (other in trace.controls or other == "page"):
+                    if is_toast(other) or other in OUTSIDE or not (other in trace.controls or other == "page"):
                         continue
                     for other_key in by_name[other]:
-                        rect = trace.instances[other_key][index]
-                        if rect is not None and rect[4] > VISIBLE and overlap(clipped, edges(rect)):
+                        rects = [trace.instances[other_key][j] for j in near]
+                        if any(rect is None or rect[4] <= VISIBLE for rect in rects):
+                            continue
+                        if all(overlap(clipped, (rect[0], rect[1], rect[0] + rect[2], min(rect[1] + rect[3], floor)))
+                               for rect in rects for floor in floors):
                             once("toast overlap", t[index], f"{name} covered {other}")
             if rest_y is not None:
-                entering = [index for index in shown if index < full[0]]
-                leaving = [index for index in shown if index > full[-1]]
-                offset = lambda index: series[index][1] - trace.island[index][1] - rest_y
+                entering = [index for index in shown if index < full[0] and below(index) is not None]
+                leaving = [index for index in shown if index > full[-1] and below(index) is not None]
                 if trace.reduce_motion:
-                    if any(abs(offset(index)) > 0.5 for index in shown):
+                    if any(abs(series[index][1] - series[full[0]][1]) > 0.5 for index in shown) and \
+                            len({trace.state[index].get("st") for index in shown}) == 1 and \
+                            len({trace.state[index].get("page") for index in shown}) == 1:
                         once("reduce motion", t[shown[0]], f"{name} slid although Reduce Motion is on")
                 else:
-                    came_up = entering and max(series[index][1] for index in entering) > series[full[0]][1] + 1.0 \
-                        if entering else False
-                    if entering and not came_up:
+                    if entering and max(below(index) for index in entering) <= rest_y + 1.0:
                         once("toast path", t[entering[0]], f"{name} did not slide up from the bottom edge")
                     if not entering and shown[0] > 0:
                         once("toast path", t[shown[0]], f"{name} appeared at full opacity")
                     if leaving:
-                        went_down = max(series[index][1] for index in leaving) > series[full[-1]][1] + 1.0
-                        last_cause = max((c for c in causes if c <= t[leaving[0]]), default=0)
-                        closing = any(trace.state[j].get("st") != trace.state[full[-1]].get("st") for j in leaving)
-                        if not went_down and not closing:
+                        if max(below(index) for index in leaving) <= rest_y + 1.0:
                             once("toast path", t[leaving[0]], f"{name} did not leave the way it came (down, through the bottom edge)")
                     elif shown[-1] < count - 1:
                         once("toast path", t[shown[-1]], f"{name} vanished at full opacity")
+
+    # Notices grow out of the notch: the shape leads and the words follow; going back, the
+    # words are gone before the shape closes over them.
+    if not trace.reduce_motion:
+        for name in names:
+            if not name.startswith("notice."):
+                continue
+            for key in by_name[name]:
+                series = trace.instances[key]
+                present = [index for index in range(count) if series[index] is not None and trace.island[index]]
+                full = [index for index in present if opacity(series[index]) >= 0.95]
+                if not full or present[0] == 0:
+                    continue
+                height = lambda index: trace.island[index][1]
+                before, shown = height(present[0] - 1), max(height(index) for index in full)
+                if abs(shown - before) >= 8:
+                    for index in present:
+                        if index >= full[0]:
+                            break
+                        if (height(index) - before) / (shown - before) >= 0.5:
+                            if opacity(series[index]) > 0.4:
+                                fail("notice order", t[index],
+                                     f"{name} was {opacity(series[index]):.0%} there when the shape was half open: the shape must lead")
+                            break
+                after_index = trace.index_at(t[present[-1]] + 400) if present[-1] < count - 1 else None
+                if after_index is not None:
+                    after = height(after_index)
+                    if abs(shown - after) >= 8:
+                        for index in present:
+                            if index <= full[-1]:
+                                continue
+                            if (shown - height(index)) / (shown - after) >= 0.5:
+                                if opacity(series[index]) > 0.4:
+                                    fail("notice order", t[index],
+                                         f"{name} was still {opacity(series[index]):.0%} there when the shape was half closed")
+                                break
+
+    # What hangs outside the island (the teleprompter's handle) is below its bottom edge.
+    for name in OUTSIDE:
+        for key in by_name.get(name, []):
+            series = trace.instances[key]
+            for index in range(count):
+                value, island = series[index], trace.island[index]
+                bottoms = [other[1] for other in (island, trace.sample(trace.island, index, SKEW),
+                                                  trace.island[trace.index_at(t[index] + SKEW)]) if other]
+                if value is not None and value[4] > 0.5 and bottoms and value[1] < min(bottoms) - 1.0:
+                    fail("outside", t[index], f"{name} was {min(bottoms) - value[1]:.0f} pt inside the island, not below it")
+                    break
 
     # Expected to show: toasts, notices and wings named by the cell.
     for kind in expect.get("toasts", []):
@@ -309,15 +418,18 @@ def check(trace):
         best = 0
         for key in by_name.get(name, []):
             series = trace.instances[key]
-            inside = [index for index in range(count) if opacity(series[index]) >= 0.9 and trace.island[index]
+            within = [index for index in range(count) if opacity(series[index]) >= 0.9 and trace.island[index]
                       and series[index][1] + series[index][3] <= trace.island[index][1] + 0.5 and series[index][1] >= 0]
-            if inside:
-                best = max(best, t[inside[-1]] - t[inside[0]])
+            if within:
+                best = max(best, t[within[-1]] - t[within[0]])
         if best < 300:
             fail("toast missing", t[-1], f"the {kind} toast never showed fully inside the island")
     for name in expect.get("shows", []):
         if not any(opacity(value) >= 0.9 for key in by_name.get(name, []) for value in trace.instances[key]):
             fail("missing", t[-1], f"{name} never showed")
+    for name in expect.get("glimpses", []):
+        if not any(opacity(value) >= 0.3 for key in by_name.get(name, []) for value in trace.instances[key]):
+            fail("missing", t[-1], f"{name} was never seen")
     for name in expect.get("never", []):
         if any(opacity(value) > VISIBLE for key in by_name.get(name, []) for value in trace.instances[key]):
             fail("unexpected", t[-1], f"{name} showed")
@@ -327,7 +439,7 @@ def check(trace):
         start = trace.index_at(max(first_cause - 30, 0))
         for key, series in trace.instances.items():
             name = key[0]
-            if is_toast(name) or name in RESTLESS or name == "tele.handle":
+            if is_toast(name) or name in RESTLESS or name in OUTSIDE:
                 continue
             base = series[start]
             for index in range(start, count):
@@ -338,7 +450,8 @@ def check(trace):
                 if value is None:
                     continue
                 if any(abs(a - b) > 0.5 for a, b in zip(edges(value), edges(base))) or abs(value[4] - base[4]) > 0.03:
-                    fail(label, t[index], f"{name} changed (frame or opacity) while only a toast was showing")
+                    why = "while only a toast was showing" if allow_height else "though nothing should have changed"
+                    fail(label, t[index], f"{name} changed (frame or opacity) {why}")
                     break
         base = trace.island[start]
         for index in range(start, count):
@@ -364,9 +477,29 @@ def check(trace):
         first, last = trace.index_at(start), trace.index_at(end - 0.01)
         if last - first < 4:
             continue
-        for axis, label in ((0, "width"), (1, "height")):
-            values = [(t[i], trace.island[i][axis]) for i in range(first, last + 1) if trace.island[i]]
+        tracks = [("width", [(i, trace.island[i][0]) for i in range(first, last + 1) if trace.island[i]])]
+        if has_content:
+            # What the island shows and a toast's band are resized by different events, each once.
+            tracks.append(("height", [(i, band_top[i]) for i in range(first, last + 1) if band_top[i] is not None]))
+            tracks.append(("band", [(i, trace.island[i][1] - band_top[i]) for i in range(first, last + 1)
+                                    if trace.island[i] and band_top[i] is not None]))
+        else:
+            tracks.append(("height", [(i, trace.island[i][1]) for i in range(first, last + 1) if trace.island[i]]))
+        for label, track in tracks:
+            if len(track) < 4:
+                continue
+            axis_at = dict(track)
+            values = [(t[i], value) for i, value in track]
             runs = moves(values)
+            # Already moving when the event came: the spring carries on a little before it turns
+            # for the new target. That is momentum, not a second resize.
+            if len(runs) > 1 and first >= 3 and first in axis_at and trace.island[first - 3]:
+                before = {"width": trace.island[first - 3][0],
+                          "height": band_top[first - 3] if has_content and band_top[first - 3] is not None else trace.island[first - 3][1],
+                          "band": trace.island[first - 3][1] - (band_top[first - 3] or 0) if has_content else 0}[label]
+                carried = axis_at[first] - before
+                if abs(carried) > 0.3 and (carried > 0) == (runs[0] > 0) and (runs[1] > 0) != (runs[0] > 0):
+                    runs = runs[1:]
             if len(runs) > 1:
                 text = ", then ".join(f"{run:+.0f} pt" for run in runs[:3])
                 fail("double resize", start, f"one event resized the island's {label} more than once ({text})")

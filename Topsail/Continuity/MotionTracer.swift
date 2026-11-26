@@ -50,16 +50,18 @@ struct TraceProbe: NSViewRepresentable {
 /// so they are the radii on screen, mid-spring included.
 enum NotchRadiiTrace {
     private static let lock = NSLock()
-    nonisolated(unsafe) private static var radii: (top: CGFloat, bottom: CGFloat) = (0, 0)
+    nonisolated(unsafe) private static var radii: (top: CGFloat, bottom: CGFloat, reach: CGFloat, frame: CGSize) = (0, 0, 0, .zero)
 
-    static func note(top: CGFloat, bottom: CGFloat) {
+    static func note(top: CGFloat, bottom: CGFloat, reach: CGFloat, frame: CGSize) {
         guard Continuity.isActive else { return }
         lock.lock()
-        radii = (top, bottom)
+        radii = (top, bottom, reach, frame)
         lock.unlock()
     }
 
-    static var last: (top: CGFloat, bottom: CGFloat) {
+    /// The radii, how far below its frame the shape reached (a toast's band), and the frame it
+    /// was drawn in (the island's content, plus an ear of `top` on either side).
+    static var last: (top: CGFloat, bottom: CGFloat, reach: CGFloat, frame: CGSize) {
         lock.lock()
         defer { lock.unlock() }
         return radii
@@ -150,9 +152,18 @@ final class MotionTracer: NSObject {
             guard walker === root else { continue }
             let x = rect.minX - centre
             if probe.name == "island" {
-                let radii = NotchRadiiTrace.last
-                island = "[\(Self.number(rect.width)),\(Self.number(rect.height)),\(Self.number(rect.midX - centre)),"
-                    + "\(Self.number(rect.minY)),\(Self.number(radii.top)),\(Self.number(radii.bottom))]"
+                // The island is its content's frame plus the shape's reach below it (a toast's
+                // band), both as drawn this frame. The frame alone is traced as "content".
+                // Its size is the shape's own, as drawn this frame (the probe's view is resized a
+                // frame after it is moved, so its size would be a frame stale).
+                let shape = NotchRadiiTrace.last
+                let width = shape.frame.width - 2 * shape.top, height = shape.frame.height
+                island = "[\(Self.number(width)),\(Self.number(height + shape.reach)),\(Self.number(rect.midX - centre)),"
+                    + "\(Self.number(rect.minY)),\(Self.number(shape.top)),\(Self.number(shape.bottom))]"
+                elements["content"] = ["[\(probe.serial),\(Self.number(-width / 2)),\(Self.number(rect.minY)),\(Self.number(width)),"
+                    + "\(Self.number(height)),1,0]"]
+                elements["probe.island"] = ["[\(probe.serial),\(Self.number(x)),\(Self.number(rect.minY)),\(Self.number(rect.width)),"
+                    + "\(Self.number(rect.height)),0,0]"]
                 continue
             }
             let entry = "[\(probe.serial),\(Self.number(x)),\(Self.number(rect.minY)),\(Self.number(rect.width)),"
@@ -173,10 +184,21 @@ final class MotionTracer: NSObject {
         lines.append(line)
     }
 
-    /// The middle of a traced element, in its window's coordinates (for a click).
+    /// The middle of a traced element, in its window's coordinates (for a click). `prefix#2`
+    /// is the third element, from the top, whose name starts with the prefix.
     func windowCentre(of name: String) -> CGPoint? {
-        guard let probe = probes.allObjects.first(where: { $0.name == name && $0.window != nil }) else { return nil }
-        let rect = probe.convert(probe.bounds, to: nil)
+        let shown = probes.allObjects.filter { $0.window != nil }
+        let rect: CGRect
+        if let hash = name.firstIndex(of: "#"), let index = Int(name[name.index(after: hash)...]) {
+            let prefix = name[..<hash]
+            let rects = shown.filter { $0.name.hasPrefix(prefix) }.map { $0.convert($0.bounds, to: nil) }
+                .sorted { $0.midY > $1.midY }
+            guard index < rects.count else { return nil }
+            rect = rects[index]
+        } else {
+            guard let probe = shown.first(where: { $0.name == name }) else { return nil }
+            rect = probe.convert(probe.bounds, to: nil)
+        }
         return CGPoint(x: rect.midX, y: rect.midY)
     }
 
