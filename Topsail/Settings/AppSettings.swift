@@ -35,6 +35,8 @@ final class AppSettings: ObservableObject {
     @Published var teleprompterScript: String { didSet { defaults.set(teleprompterScript, forKey: "teleprompterScript") } }
     @Published var teleprompterSpeed: Double { didSet { defaults.set(teleprompterSpeed, forKey: "teleprompterSpeed") } }
     @Published var teleprompterFontSize: Double { didSet { defaults.set(teleprompterFontSize, forKey: "teleprompterFontSize") } }
+    /// How far the teleprompter is pulled down below the camera, in points.
+    @Published var teleprompterHeight: Double { didSet { defaults.set(teleprompterHeight, forKey: "teleprompterHeight") } }
     /// AI agents: read-only commands are approved without asking; other commands ask in the notch,
     /// for this long, before the agent asks in its own window.
     @Published var agentsAutoApprove: Bool { didSet { save(agentsAutoApprove, "agentsAutoApprove") } }
@@ -90,6 +92,7 @@ final class AppSettings: ObservableObject {
             "teleprompterScript": "",
             "teleprompterSpeed": 40.0,
             "teleprompterFontSize": 20.0,
+            "teleprompterHeight": Double(IslandLayout.teleprompterHeight),
             "hideSystemVolumeHUD": Self.takesOverKeysByDefault,
         ])
         showMusicActivity = defaults.bool(forKey: "showMusicActivity")
@@ -118,6 +121,7 @@ final class AppSettings: ObservableObject {
         teleprompterScript = defaults.string(forKey: "teleprompterScript") ?? ""
         teleprompterSpeed = defaults.double(forKey: "teleprompterSpeed")
         teleprompterFontSize = defaults.double(forKey: "teleprompterFontSize")
+        teleprompterHeight = defaults.double(forKey: "teleprompterHeight")
         launchAtLogin = false
         let stored = UserDefaults.standard
         features = Set(Feature.available.filter { stored.bool(forKey: Self.featureKey($0)) })

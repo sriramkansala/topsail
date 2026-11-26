@@ -136,3 +136,45 @@ private struct ScrollWheelCatcher: NSViewRepresentable {
         }
     }
 }
+
+/// The grip below the teleprompter: drag it to pull the script down or push it back up. It follows
+/// the pointer directly and settles on a spring when let go; ↑ ↓ adjust it for VoiceOver.
+struct TeleprompterHandle: View {
+    let onDrag: (CGFloat) -> Void
+    let onEnd: (CGFloat) -> Void
+
+    @State private var hovering = false
+    @State private var dragging = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        Capsule()
+            .fill(Color.white.opacity(hovering || dragging ? 0.95 : 0.7))
+            .frame(width: hovering || dragging ? 48 : 40, height: 5)
+            .shadow(color: .black.opacity(0.45), radius: 2, y: 1)
+            .frame(width: 120, height: 22)
+            .contentShape(Rectangle())
+            .pointerStyle(.frameResize(position: .bottom))
+            .onHover { hovering = $0 }
+            .gesture(
+                DragGesture(minimumDistance: 1, coordinateSpace: .global)
+                    .onChanged { value in
+                        dragging = true
+                        onDrag(value.translation.height)
+                    }
+                    .onEnded { value in
+                        dragging = false
+                        onEnd(value.predictedEndTranslation.height)
+                    }
+            )
+            .animation(reduceMotion ? nil : Motion.hover, value: hovering || dragging)
+            .accessibilityElement()
+            .accessibilityLabel("Teleprompter height")
+            .accessibilityHint("Drag to pull the teleprompter down or push it up")
+            .accessibilityAdjustableAction { direction in
+                let step: CGFloat = direction == .increment ? 40 : -40
+                onDrag(step)
+                onEnd(step)
+            }
+    }
+}

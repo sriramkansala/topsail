@@ -12,6 +12,14 @@ struct NotchView: View {
         ZStack(alignment: .top) {
             island
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+
+            // The teleprompter's handle hangs just below the island, outside it: pull it down.
+            if model.state == .expanded && model.teleprompterActive {
+                TeleprompterHandle(onDrag: model.dragTeleprompter(by:), onEnd: model.endTeleprompterDrag(predicted:))
+                    .padding(.top, model.islandSize.height + IslandLayout.teleprompterHandleGap)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    .transition(.opacity.animation(reduceMotion ? nil : Motion.fast))
+            }
         }
     }
 

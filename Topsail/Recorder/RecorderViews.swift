@@ -233,6 +233,23 @@ struct RecorderPageView: View {
                 }
             }
             .frame(height: RecorderLayout.chipHeight)
+            // Where the files go, and a way there.
+            Button(action: settings.showFolder) {
+                HStack(spacing: 5) {
+                    Image(systemName: "folder")
+                    Text("Saves to \(settings.folderBreadcrumb)")
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                    Image(systemName: "arrow.up.forward")
+                        .font(.system(size: 8.5, weight: .bold))
+                }
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(.white.opacity(0.5))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(height: RecorderLayout.folderRowHeight)
+            }
+            .buttonStyle(.pressable(.subtle))
+            .help("Show the folder in Finder")
         }
     }
 
@@ -481,7 +498,8 @@ struct RecorderNoticeView: View {
         switch notice {
         case .saved(let saved):
             VStack(alignment: .leading, spacing: IslandLayout.reminderRowGap) {
-                header(symbol: "checkmark", tint: RecorderColors.green, title: Text("Saved"),
+                header(symbol: "checkmark", tint: RecorderColors.green,
+                       title: Text("Saved to \(RecorderSettings.breadcrumb(of: saved.url.deletingLastPathComponent()))"),
                        detail: Text(verbatim: "\(saved.kind.title) · \(RecordingClock.format(saved.duration))"))
                 HStack(spacing: 8) {
                     Spacer(minLength: 0)

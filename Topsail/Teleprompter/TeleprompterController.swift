@@ -118,7 +118,8 @@ final class TeleprompterController: ObservableObject {
     }
 }
 
-private extension Comparable {
+extension Comparable {
+    /// The value, kept within `range`.
     func clamped(to range: ClosedRange<Self>) -> Self {
         min(max(self, range.lowerBound), range.upperBound)
     }

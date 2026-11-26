@@ -104,7 +104,9 @@ enum RecorderLayout {
     static let chipHeight: CGFloat = 22
     static let rowGap: CGFloat = 10
     static let buttonHeight: CGFloat = IslandLayout.reminderButtonHeight
-    static let idleHeight: CGFloat = tileHeight + rowGap + chipHeight
+    /// "Saves to Movies › Topsail", under the chips.
+    static let folderRowHeight: CGFloat = 14
+    static let idleHeight: CGFloat = tileHeight + rowGap + chipHeight + rowGap + folderRowHeight
     static let recordingHeight: CGFloat = 30 + rowGap + buttonHeight
     static let messageHeight: CGFloat = 34 + rowGap + buttonHeight
 }

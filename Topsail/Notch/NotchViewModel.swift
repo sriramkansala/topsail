@@ -47,6 +47,10 @@ final class NotchViewModel: ObservableObject {
     @Published private(set) var voiceActive = false
     /// The teleprompter is running: the island holds it, pinned open.
     @Published private(set) var teleprompterActive = false
+    /// While the teleprompter's handle is held: the height it's pulled to (it follows the pointer
+    /// directly, with resistance past the limits). nil when it rests at the saved height.
+    @Published private(set) var teleprompterDragHeight: CGFloat?
+    private var teleprompterDragStart: CGFloat?
     /// Natural height of the voice note's content, reported by `VoiceIslandView`.
     @Published private(set) var voiceHeight: CGFloat = 160
     @Published private(set) var page: ExpandedPage = .player
@@ -305,6 +309,41 @@ final class NotchViewModel: ObservableObject {
 
     // MARK: - Teleprompter
 
+    /// The script's height below the camera: where the handle holds it, or where it was left.
+    var teleprompterHeight: CGFloat {
+        teleprompterDragHeight ?? CGFloat(settings.teleprompterHeight).clamped(to: IslandLayout.teleprompterHeightRange)
+    }
+
+    /// The handle moved `translation` points down (negative: up) since it was grabbed.
+    func dragTeleprompter(by translation: CGFloat) {
+        let start = teleprompterDragStart ?? teleprompterHeight
+        teleprompterDragStart = start
+        teleprompterDragHeight = Self.resisted(start + translation, within: IslandLayout.teleprompterHeightRange)
+    }
+
+    /// The handle was let go: the height settles where the pointer's momentum would have carried
+    /// it (`predicted` is that translation), within the limits, and is remembered.
+    func endTeleprompterDrag(predicted: CGFloat) {
+        let start = teleprompterDragStart ?? teleprompterHeight
+        let target = (start + predicted).clamped(to: IslandLayout.teleprompterHeightRange)
+        teleprompterDragStart = nil
+        Motion.perform(Motion.settle) {
+            teleprompterDragHeight = nil
+            settings.teleprompterHeight = Double(target.rounded())
+        }
+    }
+
+    /// Past a limit the height still moves, less and less: it resists rather than stopping dead.
+    static func resisted(_ value: CGFloat, within range: ClosedRange<CGFloat>) -> CGFloat {
+        if value > range.upperBound {
+            return range.upperBound + 40 * (1 - exp(-(value - range.upperBound) / 90))
+        }
+        if value < range.lowerBound {
+            return range.lowerBound - 30 * (1 - exp(-(range.lowerBound - value) / 70))
+        }
+        return value
+    }
+
     /// Starts the script from Settings (the notch row's button, the menu bar, Settings).
     func startTeleprompter() {
         guard settings.isEnabled(.teleprompter) else { return }
@@ -506,7 +545,7 @@ final class NotchViewModel: ObservableObject {
         }
         if teleprompterActive {
             return CGSize(width: max(IslandLayout.teleprompterWidth, notchSize.width + 2 * IslandLayout.minimumExpandedWing),
-                          height: notchSize.height + IslandLayout.teleprompterHeight)
+                          height: notchSize.height + teleprompterHeight)
         }
         let wing = IslandLayout.expandedWing(tabs: showsPageTabs ? availablePages.count : 0)
         return CGSize(width: max(IslandLayout.expandedWidth, notchSize.width + 2 * wing),

@@ -144,6 +144,10 @@ enum IslandLayout {
     // Teleprompter: the open island, wider, holding the script over a row of controls.
     static let teleprompterWidth: CGFloat = 500
     static let teleprompterHeight: CGFloat = 168
+    /// How far it can be pulled down, from the handle below it.
+    static let teleprompterHeightRange: ClosedRange<CGFloat> = 120...400
+    /// The handle hangs this far below the island's bottom edge.
+    static let teleprompterHandleGap: CGFloat = 4
     static let teleprompterControlsHeight: CGFloat = 30
     /// The script's first line starts this far below the top edge.
     static let teleprompterLeadIn: CGFloat = 22

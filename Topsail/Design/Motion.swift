@@ -97,6 +97,9 @@ enum Motion {
     /// Leaving: a plain tween, a tier quicker than arriving.
     static let fluidExit = Animation.easeOut(duration: 0.06)
 
+    /// Something let go of settling where its momentum takes it: a trace of overshoot.
+    static let settle = Animation.spring(duration: 0.42, bounce: 0.12)
+
     // MARK: The island
 
     /// The island growing: the container moves now; content cascades in beneath it.

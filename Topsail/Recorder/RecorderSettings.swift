@@ -84,6 +84,15 @@ final class RecorderSettings: ObservableObject {
 
     var isDefaultFolder: Bool { folder.standardizedFileURL == Self.defaultFolder.standardizedFileURL }
 
+    /// Where recordings go, as Finder names it: "Movies › Topsail".
+    var folderBreadcrumb: String { Self.breadcrumb(of: folder) }
+
+    /// A folder as Finder names it, with its parent: "Movies › Topsail".
+    static func breadcrumb(of folder: URL) -> String {
+        let names = [folder.deletingLastPathComponent(), folder].map { FileManager.default.displayName(atPath: $0.path) }
+        return names.joined(separator: " › ")
+    }
+
     /// The folder as people say it: ~/Movies/Topsail.
     var folderDisplayPath: String {
         let home = Self.defaultFolder.deletingLastPathComponent().deletingLastPathComponent().path
