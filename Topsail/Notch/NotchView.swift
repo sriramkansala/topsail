@@ -35,6 +35,10 @@ struct NotchView: View {
                         .id(activity.id)
                         .transition(activity.kind.isNotice ? .noticeBlur(reduceMotion: reduceMotion)
                                                            : .cascade(0, reduceMotion: reduceMotion))
+                } else if model.features.recorder.showsWings {
+                    RecordingWings(recorder: model.features.recorder, notchSize: model.notchSize,
+                                   wingWidth: RecorderLayout.wing)
+                        .transition(.cascade(0, reduceMotion: reduceMotion))
                 } else if model.showsMeetingActivity, let meeting = model.calendar.imminentMeeting {
                     MeetingSoonView(meeting: meeting, notchSize: model.notchSize)
                         .id(meeting.id)
@@ -45,6 +49,12 @@ struct NotchView: View {
                 } else if model.showsMusicActivity {
                     CompactMusicWings(nowPlaying: nowPlaying, notchSize: model.notchSize, wingWidth: model.compactWing,
                                       level: model.musicLevel, meterHeight: model.activities.meterHeight)
+                        .transition(.cascade(0, reduceMotion: reduceMotion))
+                }
+                // A recording stays in sight in the notch row while a notice hangs below it.
+                if model.features.recorder.showsWings, RecordingWings.sharesRow(with: model.activities.current?.kind) {
+                    RecordingWings(recorder: model.features.recorder, notchSize: model.notchSize,
+                                   wingWidth: model.activityWingWidth, rowOnly: true)
                         .transition(.cascade(0, reduceMotion: reduceMotion))
                 }
             }
@@ -61,6 +71,7 @@ struct NotchView: View {
         .background(NotchShape(topRadius: model.topRadius, bottomRadius: model.bottomRadius).fill(Color.black))
         .clipShape(NotchShape(topRadius: model.topRadius, bottomRadius: model.bottomRadius))
         .modifier(ShelfDrop(model: model))
+        .environment(\.recorder, model.features.recorder)
         .shadow(color: .black.opacity(model.state == .expanded ? 0.35 : 0), radius: 10, y: 4)
     }
 
@@ -116,6 +127,9 @@ struct NotchView: View {
                 }
                 Spacer(minLength: model.notchSize.width)
                 HStack(spacing: 14) {
+                    if model.settings.isEnabled(.recorder), model.visiblePage != .recorder {
+                        RecordingRowBadge(recorder: model.features.recorder) { model.show(.recorder) }
+                    }
                     if model.settings.isEnabled(.teleprompter) {
                         Button(action: { model.startTeleprompter() }) {
                             Image(systemName: "text.alignleft")
@@ -170,6 +184,9 @@ struct NotchView: View {
                     AgentsPageView(hub: model.features.agents,
                                    connected: AgentKind.allCases.contains(where: AgentHooks.isConnected))
                         .transition(.contentMorph(reduceMotion: reduceMotion))
+                } else if model.visiblePage == .recorder {
+                    RecorderPageView(recorder: model.features.recorder)
+                        .transition(.contentMorph(reduceMotion: reduceMotion))
                 } else if model.visiblePage == .clipboard {
                     ClipboardTabView(model: model, shelf: model.features.shelf)
                         .transition(.contentMorph(reduceMotion: reduceMotion))
@@ -194,6 +211,7 @@ struct NotchView: View {
             case .clipboard: return model.clipboardModes == [.shelf] ? "tray.full" : "doc.on.doc"
             case .agents: return "sparkles"
             case .apps: return "square.grid.2x2"
+            case .recorder: return model.features.recorder.showsWings ? "record.circle.fill" : "record.circle"
             }
         }
     }

@@ -72,19 +72,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Topsail listens while you record a voice note about your tasks."
+            "value": "Topsail listens while you record a voice note about your tasks, or record your screen or a call with the microphone on."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Topsail escucha mientras grabas una nota de voz sobre tus tareas."
+            "value": "Topsail escucha mientras grabas una nota de voz sobre tus tareas, o cuando grabas la pantalla o una llamada con el micrófono activado."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Topsail écoute pendant que vous enregistrez une note vocale sur vos tâches."
+            "value": "Topsail écoute pendant que vous enregistrez une note vocale sur vos tâches, ou votre écran ou un appel avec le micro activé."
           }
         }
       }

@@ -155,6 +155,7 @@ final class AppSettings: ObservableObject {
         case .copied: return showCopyActivity
         case .keepAwake: return true
         case .agentApproval, .agentFinished: return isEnabled(.agents)
+        case .recorder: return isEnabled(.recorder)
         case .notification(let notification):
             return isEnabled(.notifications) && notificationApps.contains(notification.bundleID.lowercased())
         }

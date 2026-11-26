@@ -8,6 +8,7 @@ enum Feature: String, CaseIterable, Identifiable {
     case reminders
     case keepAwake
     case teleprompter
+    case recorder
     case agents
     case notifications
     case apps
@@ -21,6 +22,7 @@ enum Feature: String, CaseIterable, Identifiable {
         case .reminders: return String(localized: "Reminders")
         case .keepAwake: return String(localized: "Keep Awake")
         case .teleprompter: return String(localized: "Teleprompter")
+        case .recorder: return String(localized: "Screen and call recorder")
         case .agents: return String(localized: "AI coding agents")
         case .notifications: return String(localized: "Notifications")
         case .apps: return String(localized: "Terminal, Chrome and YouTube")
@@ -38,6 +40,8 @@ enum Feature: String, CaseIterable, Identifiable {
             return String(localized: "A button in the island that stops your Mac sleeping during a long job.")
         case .teleprompter:
             return String(localized: "Your script scrolls out of the notch, right under the camera, at your pace.")
+        case .recorder:
+            return String(localized: "Record your screen, or a call's audio, and start, pause and stop it from the notch.")
         case .agents:
             return String(localized: "Claude Code, Codex, Cursor and Antigravity show their progress in the notch and ask you there before risky commands.")
         case .notifications:
@@ -55,6 +59,7 @@ enum Feature: String, CaseIterable, Identifiable {
         case .reminders: return "checklist"
         case .keepAwake: return "cup.and.saucer.fill"
         case .teleprompter: return "text.alignleft"
+        case .recorder: return "record.circle"
         case .agents: return "sparkles"
         case .notifications: return "bell.badge"
         case .apps: return "square.grid.2x2"
@@ -66,7 +71,7 @@ enum Feature: String, CaseIterable, Identifiable {
     var directOnly: Bool {
         switch self {
         case .agents, .notifications, .apps, .autoUpdates: return true
-        case .shelf, .reminders, .keepAwake, .teleprompter: return false
+        case .shelf, .reminders, .keepAwake, .teleprompter, .recorder: return false
         }
     }
 

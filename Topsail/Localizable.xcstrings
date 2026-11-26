@@ -291,6 +291,22 @@
         }
       }
     },
+    "After you join a call from the meeting reminder. It never records by itself.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Al unirte a una llamada desde el recordatorio de reunión. Nunca graba por sí solo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Après avoir rejoint un appel depuis le rappel de réunion. Rien n’est enregistré sans votre accord."
+          }
+        }
+      }
+    },
     "AI coding agents": {
       "localizations": {
         "es": {
@@ -425,6 +441,38 @@
         }
       }
     },
+    "Allow Topsail under Privacy & Security › Microphone": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permite Topsail en Privacidad y seguridad › Micrófono"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Autorisez Topsail dans Confidentialité et sécurité › Micro"
+          }
+        }
+      }
+    },
+    "Allow Topsail under Privacy & Security › Microphone, or record without it.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permite Topsail en Privacidad y seguridad › Micrófono, o graba sin él."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Autorisez Topsail dans Confidentialité et sécurité › Micro, ou enregistrez sans."
+          }
+        }
+      }
+    },
     "Allow Topsail under Privacy & Security › Reminders": {
       "localizations": {
         "es": {
@@ -437,6 +485,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Autorisez Topsail dans Confidentialité et sécurité › Rappels"
+          }
+        }
+      }
+    },
+    "Allow Topsail under Privacy & Security › Screen & System Audio Recording": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permite Topsail en Privacidad y seguridad › Grabación de pantalla y audio del sistema"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Autorisez Topsail dans Confidentialité et sécurité › Enregistrement de l’écran et de l’audio système"
+          }
+        }
+      }
+    },
+    "Allow Topsail under Privacy & Security › Screen & System Audio Recording.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permite Topsail en Privacidad y seguridad › Grabación de pantalla y audio del sistema."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Autorisez Topsail dans Confidentialité et sécurité › Enregistrement de l’écran et de l’audio système."
           }
         }
       }
@@ -649,6 +729,22 @@
         }
       }
     },
+    "Both sides": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ambas partes"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les deux côtés"
+          }
+        }
+      }
+    },
     "Brightness": {
       "localizations": {
         "es": {
@@ -677,6 +773,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Navigation"
+          }
+        }
+      }
+    },
+    "Call recording": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grabación de llamada"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrement d’appel"
+          }
+        }
+      }
+    },
+    "Calls are saved as .m4a audio.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las llamadas se guardan como audio .m4a."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les appels sont enregistrés en audio .m4a."
           }
         }
       }
@@ -761,6 +889,22 @@
         }
       }
     },
+    "Choose": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elegir"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisir"
+          }
+        }
+      }
+    },
     "Choose apps, and allow Full Disk Access, in Integrations.": {
       "localizations": {
         "es": {
@@ -773,6 +917,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Choisissez les apps et autorisez l’accès complet au disque dans Intégrations."
+          }
+        }
+      }
+    },
+    "Choose where Topsail saves your recordings.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elige dónde guarda Topsail tus grabaciones."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisissez le dossier où Topsail range vos enregistrements."
+          }
+        }
+      }
+    },
+    "Choose…": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elegir…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisir…"
           }
         }
       }
@@ -908,6 +1084,694 @@
         }
       }
     },
+    "Couldn't record": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se ha podido grabar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible d’enregistrer"
+          }
+        }
+      }
+    },
+    "Mac sound": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonido del Mac"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Son du Mac"
+          }
+        }
+      }
+    },
+    "Meeting": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reunión"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réunion"
+          }
+        }
+      }
+    },
+    "Microphone": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Micrófono"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Micro"
+          }
+        }
+      }
+    },
+    "MPEG-4 (.mp4)": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MPEG-4 (.mp4)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MPEG-4 (.mp4)"
+          }
+        }
+      }
+    },
+    "Not now": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ahora no"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plus tard"
+          }
+        }
+      }
+    },
+    "Nothing was recorded.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se ha grabado nada."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rien n’a été enregistré."
+          }
+        }
+      }
+    },
+    "Offer to record calls": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ofrecer grabar las llamadas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proposer d’enregistrer les appels"
+          }
+        }
+      }
+    },
+    "Pause": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pausa"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pause"
+          }
+        }
+      }
+    },
+    "Paused": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En pausa"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En pause"
+          }
+        }
+      }
+    },
+    "QuickTime movie (.mov)": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Película QuickTime (.mov)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Film QuickTime (.mov)"
+          }
+        }
+      }
+    },
+    "Record": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grabar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrer"
+          }
+        }
+      }
+    },
+    "Record another display": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grabar otra pantalla"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrer un autre écran"
+          }
+        }
+      }
+    },
+    "Record call": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grabar llamada"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrer un appel"
+          }
+        }
+      }
+    },
+    "Record screen": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grabar pantalla"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrer l’écran"
+          }
+        }
+      }
+    },
+    "Record this call?": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Grabar esta llamada?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrer cet appel ?"
+          }
+        }
+      }
+    },
+    "Record your screen, or a call's audio, and start, pause and stop it from the notch.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Graba tu pantalla, o el audio de una llamada, y empieza, pausa y detén desde el notch."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrez votre écran, ou le son d’un appel, et lancez, mettez en pause et arrêtez depuis l’encoche."
+          }
+        }
+      }
+    },
+    "Recording call": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grabando la llamada"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrement de l’appel"
+          }
+        }
+      }
+    },
+    "Recording laws may require telling everyone on the call.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La ley puede exigir que avises a todos los participantes de la llamada."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La loi peut exiger de prévenir tous les participants à l’appel."
+          }
+        }
+      }
+    },
+    "Recording paused at %@": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grabación en pausa en %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrement en pause à %@"
+          }
+        }
+      }
+    },
+    "Recording screen": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grabando la pantalla"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrement de l’écran"
+          }
+        }
+      }
+    },
+    "Recording starts in %lld": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La grabación empieza en %lld"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’enregistrement commence dans %lld"
+          }
+        }
+      }
+    },
+    "Recording starts in %lld…": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La grabación empieza en %lld…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’enregistrement commence dans %lld…"
+          }
+        }
+      }
+    },
+    "Recording, %@": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grabando, %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrement, %@"
+          }
+        }
+      }
+    },
+    "Recording: show the controls": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grabando: mostrar los controles"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrement : afficher les commandes"
+          }
+        }
+      }
+    },
+    "Reset": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restablecer"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réinitialiser"
+          }
+        }
+      }
+    },
+    "Resume": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reanudar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reprendre"
+          }
+        }
+      }
+    },
+    "Save to": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guardar en"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrer dans"
+          }
+        }
+      }
+    },
+    "Saved": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guardado"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistré"
+          }
+        }
+      }
+    },
+    "Saving the recording": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guardando la grabación"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sauvegarde de l’enregistrement"
+          }
+        }
+      }
+    },
+    "Saving…": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guardando…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sauvegarde…"
+          }
+        }
+      }
+    },
+    "Screen and call recorder": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grabadora de pantalla y llamadas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistreur d’écran et d’appels"
+          }
+        }
+      }
+    },
+    "Screen recording": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grabación de pantalla"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrement de l’écran"
+          }
+        }
+      }
+    },
+    "Screen recordings": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grabaciones de pantalla"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrements de l’écran"
+          }
+        }
+      }
+    },
+    "Separate tracks": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pistas separadas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pistes séparées"
+          }
+        }
+      }
+    },
+    "Show": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afficher"
+          }
+        }
+      }
+    },
+    "Show the island in screen recordings": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar la isla en las grabaciones de pantalla"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Montrer l’îlot dans les enregistrements de l’écran"
+          }
+        }
+      }
+    },
+    "Starting…": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Iniciando…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Démarrage…"
+          }
+        }
+      }
+    },
+    "Stop": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Detener"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arrêter"
+          }
+        }
+      }
+    },
+    "The recording didn't finish writing.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La grabación no terminó de guardarse."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’enregistrement n’a pas fini de s’écrire."
+          }
+        }
+      }
+    },
+    "The whole screen": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toda la pantalla"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tout l’écran"
+          }
+        }
+      }
+    },
+    "Their side only": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solo la otra parte"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leur côté seulement"
+          }
+        }
+      }
+    },
+    "There's no display to record.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No hay ninguna pantalla que grabar."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun écran à enregistrer."
+          }
+        }
+      }
+    },
     "Topsail %@": {
       "shouldTranslate": false
     },
@@ -943,6 +1807,22 @@
         }
       }
     },
+    "Topsail couldn't join the recording's parts.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Topsail no ha podido unir las partes de la grabación."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Topsail n’a pas pu assembler les parties de l’enregistrement."
+          }
+        }
+      }
+    },
     "Topsail couldn't listen for agents: %@": {
       "localizations": {
         "es": {
@@ -955,6 +1835,54 @@
           "stringUnit": {
             "state": "translated",
             "value": "Topsail n’a pas pu écouter les agents : %@"
+          }
+        }
+      }
+    },
+    "Topsail couldn't mix the call.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Topsail no ha podido mezclar la llamada."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Topsail n’a pas pu mixer l’appel."
+          }
+        }
+      }
+    },
+    "Topsail couldn't save to %@.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Topsail no ha podido guardar en %@."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Topsail n’a pas pu enregistrer dans %@."
+          }
+        }
+      }
+    },
+    "Topsail couldn't set up the recording.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Topsail no ha podido preparar la grabación."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Topsail n’a pas pu préparer l’enregistrement."
           }
         }
       }
@@ -987,6 +1915,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Topsail est à jour."
+          }
+        }
+      }
+    },
+    "Topsail isn't allowed to record the screen.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Topsail no tiene permiso para grabar la pantalla."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Topsail n’est pas autorisé à enregistrer l’écran."
+          }
+        }
+      }
+    },
+    "Topsail isn't allowed to use the microphone.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Topsail no tiene permiso para usar el micrófono."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Topsail n’est pas autorisé à utiliser le micro."
           }
         }
       }
@@ -1035,6 +1995,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Topsail a besoin d’accéder à vos rappels"
+          }
+        }
+      }
+    },
+    "Topsail needs the microphone to record your voice": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Topsail necesita el micrófono para grabar tu voz"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Topsail a besoin du micro pour enregistrer votre voix"
           }
         }
       }
@@ -3816,6 +4792,22 @@
         }
       }
     },
+    "Turn on a sound": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activa un sonido"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activez un son"
+          }
+        }
+      }
+    },
     "Turn on AI coding agents to follow them in the notch.": {
       "localizations": {
         "es": {
@@ -3844,6 +4836,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Activez les notifications pour choisir les apps."
+          }
+        }
+      }
+    },
+    "Turn on the microphone or the Mac's sound to record a call.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activa el micrófono o el sonido del Mac para grabar una llamada."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activez le micro ou le son du Mac pour enregistrer un appel."
           }
         }
       }
@@ -4008,6 +5016,22 @@
         }
       }
     },
+    "What your Mac plays, and the other side of a call.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lo que reproduce tu Mac y la otra parte de una llamada."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce que joue votre Mac, et l’autre côté d’un appel."
+          }
+        }
+      }
+    },
     "Will be applied": {
       "localizations": {
         "es": {
@@ -4020,6 +5044,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sera appliqué"
+          }
+        }
+      }
+    },
+    "Without mic": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin micrófono"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sans micro"
           }
         }
       }
@@ -4052,6 +5092,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hier"
+          }
+        }
+      }
+    },
+    "Your side only": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solo tu parte"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Votre côté seulement"
+          }
+        }
+      }
+    },
+    "Your voice and the Mac's sound stay apart in calls, for editing. Screen recordings are mixed until macOS 27.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu voz y el sonido del Mac quedan separados en las llamadas, para editarlos. Las grabaciones de pantalla se mezclan hasta macOS 27."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Votre voix et le son du Mac restent séparés dans les appels, pour le montage. Les enregistrements de l’écran sont mixés avant macOS 27."
+          }
+        }
+      }
+    },
+    "Your voice and the Mac's sound stay apart, for editing. Off, they're mixed into one track.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu voz y el sonido del Mac quedan separados, para editarlos. Desactivado, se mezclan en una sola pista."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Votre voix et le son du Mac restent séparés, pour le montage. Désactivé, ils sont mixés sur une seule piste."
+          }
+        }
+      }
+    },
+    "Your voice, with the screen and as your side of a call.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu voz, con la pantalla y como tu parte de una llamada."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Votre voix, avec l’écran, et votre côté d’un appel."
           }
         }
       }

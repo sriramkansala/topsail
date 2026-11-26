@@ -38,6 +38,8 @@ final class CalendarService: ObservableObject {
     var onReminder: ((UpcomingEvent) -> Void)? {
         didSet { updateImminentMeeting() }
     }
+    /// A call was joined from its reminder (the recorder may offer to record it).
+    var onJoin: ((UpcomingEvent) -> Void)?
     /// Calls whose reminder has been shown, and calls the user joined or ignored (no more
     /// reminders, nothing beside the notch). Keyed by event id, which includes the start time.
     private var reminded: Set<String> = []
@@ -119,6 +121,7 @@ final class CalendarService: ObservableObject {
         guard let url = event.joinURL else { return }
         NSWorkspace.shared.open(url)
         answer(event)
+        onJoin?(event)
     }
 
     /// The user isn't taking this call: no more reminders, and it leaves the notch.

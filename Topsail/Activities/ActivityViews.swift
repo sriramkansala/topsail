@@ -43,6 +43,8 @@ struct TransientActivityView: View {
             AgentApprovalNotice(approval: approval, notchSize: notchSize) { onAgentAnswer(approval, $0) }
         case .notification(let notification):
             NotificationNotice(notification: notification, showsText: showsNotificationText, notchSize: notchSize)
+        case .recorder(let notice):
+            RecorderNoticeView(notice: notice, notchSize: notchSize)
         default:
             wingsAndMeter
         }
@@ -79,7 +81,7 @@ struct TransientActivityView: View {
             LevelGlyph(kind: activity.kind)
         case .charging, .lowBattery, .meetingReminder, .audioDevice, .copied:
             EmptyView()  // ChargingSweep and the notices draw their own.
-        case .agentApproval, .notification:
+        case .agentApproval, .notification, .recorder:
             EmptyView()
         case .agentFinished(let agent, _):
             HStack(spacing: 5) {
@@ -132,7 +134,7 @@ struct TransientActivityView: View {
             value(overdue ? String(localized: "Overdue") : String(localized: "Due today"), overdue ? .red : .orange)
         case .keepAwake(let on):
             value(on ? String(localized: "On") : String(localized: "Off"), on ? Self.awake : .white.opacity(0.5))
-        case .agentApproval, .notification:
+        case .agentApproval, .notification, .recorder:
             EmptyView()
         case .agentFinished(_, let project):
             HStack(spacing: 4) {

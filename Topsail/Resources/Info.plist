@@ -50,7 +50,7 @@
 	<key>NSRemindersFullAccessUsageDescription</key>
 	<string>Topsail shows your reminders in the notch, and lets you tick them off or add one there.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Topsail listens while you record a voice note about your tasks.</string>
+	<string>Topsail listens while you record a voice note about your tasks, or record your screen or a call with the microphone on.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 	<key>NSSpeechRecognitionUsageDescription</key>

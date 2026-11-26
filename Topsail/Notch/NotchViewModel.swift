@@ -30,6 +30,7 @@ final class NotchViewModel: ObservableObject {
         case clipboard
         case agents
         case apps
+        case recorder
     }
 
     @Published private(set) var state: IslandState = .collapsed
@@ -126,6 +127,11 @@ final class NotchViewModel: ObservableObject {
             .sink { [weak self] active in self?.setTeleprompterActive(active) }
             .store(in: &cancellables)
 
+        // The recorder's wings and Record page: redrawn inside the animation of each change.
+        features.recorder.objectWillChange
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
+
         // Views read settings (e.g. whether to show the calendar) through the model.
         settings.objectWillChange
             .sink { [weak self] _ in self?.objectWillChange.send() }
@@ -147,6 +153,7 @@ final class NotchViewModel: ObservableObject {
             settings.$features.map { _ in () }.eraseToAnyPublisher(),
             clipboard.objectWillChange.map { _ in () }.eraseToAnyPublisher(),
             features.shelf.objectWillChange.map { _ in () }.eraseToAnyPublisher(),
+            features.recorder.objectWillChange.map { _ in () }.eraseToAnyPublisher(),
         ]
         Publishers.MergeMany(changes)
         .receive(on: DispatchQueue.main)
@@ -224,6 +231,10 @@ final class NotchViewModel: ObservableObject {
             if activities.current != nil {
                 return CGSize(width: notchSize.width + 2 * activityWingWidth,
                               height: notchSize.height + activities.meterHeight)
+            }
+            if features.recorder.showsWings {
+                return CGSize(width: notchSize.width + 2 * RecorderLayout.wing,
+                              height: notchSize.height + features.recorder.stageHeight)
             }
             if showsMeetingActivity {
                 return CGSize(width: notchSize.width + 2 * IslandLayout.activityWing, height: notchSize.height)
@@ -514,6 +525,7 @@ final class NotchViewModel: ObservableObject {
         if !clipboardModes.isEmpty { pages.append(.clipboard) }
         if settings.isEnabled(.agents) { pages.append(.agents) }
         if settings.isEnabled(.apps) { pages.append(.apps) }
+        if settings.isEnabled(.recorder) { pages.append(.recorder) }
         return pages.isEmpty ? [.player] : pages
     }
 
@@ -532,6 +544,7 @@ final class NotchViewModel: ObservableObject {
     /// deadlines, then the calendar.
     private var preferredPage: ExpandedPage {
         let pages = availablePages
+        if features.recorder.showsWings, pages.contains(.recorder) { return .recorder }
         if calendar.imminentMeeting != nil, pages.contains(.calendar) { return .calendar }
         if !features.agents.approvals.isEmpty, pages.contains(.agents) { return .agents }
         if pages.contains(.player) { return .player }
@@ -564,6 +577,8 @@ final class NotchViewModel: ObservableObject {
             return IslandLayout.systemPageHeight(hasBattery: system.battery != nil)
         case .apps:
             return features.apps.needsRoom ? IslandLayout.appsHeight : IslandLayout.messageHeight
+        case .recorder:
+            return features.recorder.pageHeight
         case .agents:
             return IslandLayout.agentsHeight(approvals: features.agents.approvals.count,
                                              sessions: features.agents.sessions.count)

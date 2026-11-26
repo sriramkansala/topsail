@@ -89,7 +89,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             switch url.host {
             case "settings": showSettings()
             #if DEBUG
-            // Debug builds only: `open topsail://preview/low-battery` (or `/charging`, `/meeting`, `/airpods`, `/headphones`, `/copied`) shows that
+            // Debug builds only: `open topsail://preview/low-battery` (or `/charging`, `/meeting`, `/airpods`, `/headphones`, `/copied`, `/recording`, `/countdown`, `/recording-saved`; see `Recorder.preview`) shows that
             // activity now, without draining the battery or unplugging.
             case "preview": windowController?.preview(url.lastPathComponent)
             #endif
@@ -99,6 +99,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private static let launchedBeforeKey = "launchedBefore"
+
+    /// A recording in progress is saved before Topsail quits.
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard features.recorder.showsWings else { return .terminateNow }
+        features.recorder.finish { NSApp.reply(toApplicationShouldTerminate: true) }
+        return .terminateLater
+    }
 
     func applicationWillTerminate(_ notification: Notification) {
         windowController?.model.stopTracking()

@@ -14,6 +14,7 @@ enum ActivityKind: Equatable {
     case agentApproval(AgentApproval)      // an AI agent asks before a command: Deny or Approve
     case agentFinished(agent: AgentKind, project: String)  // an AI agent finished its turn
     case notification(MirroredNotification)  // another app's notification
+    case recorder(RecorderNotice)          // a recording saved or failed, an offer to record a call
 }
 
 /// The meeting reminder's three buttons.
@@ -39,14 +40,14 @@ extension ActivityKind {
     /// camera that the pointer can rest on (they stay put instead of opening the island).
     var isNotice: Bool {
         switch self {
-        case .lowBattery, .meetingReminder, .audioDevice, .agentApproval, .notification: return true
+        case .lowBattery, .meetingReminder, .audioDevice, .agentApproval, .notification, .recorder: return true
         default: return false
         }
     }
 
     var isClickable: Bool {
         switch self {
-        case .lowBattery(_, .off), .meetingReminder, .agentApproval, .notification: return true
+        case .lowBattery(_, .off), .meetingReminder, .agentApproval, .notification, .recorder: return true
         default: return false
         }
     }
@@ -66,7 +67,7 @@ extension ActivityKind {
         switch self {
         case .volume, .brightness, .copied, .keepAwake: return true
         case .charging, .lowBattery, .audioDevice, .taskDue, .meetingReminder, .agentApproval, .agentFinished,
-             .notification: return false
+             .notification, .recorder: return false
         }
     }
 
@@ -150,6 +151,7 @@ final class ActivityCenter: ObservableObject {
         case .agentApproval: return IslandLayout.approvalStageHeight
         case .agentFinished: return 0
         case .notification: return IslandLayout.notificationStageHeight
+        case .recorder(let notice): return notice.stageHeight
         case .volume, .brightness: return 8
         case .taskDue, .keepAwake, nil: return 0
         }
@@ -193,6 +195,7 @@ final class ActivityCenter: ObservableObject {
         case .audioDevice: return deviceDuration
         case .notification: return noticeDuration
         case .agentApproval(let approval): return max(approval.expires.timeIntervalSinceNow, 1)
+        case .recorder(let notice): return notice.duration
         default: return displayDuration
         }
     }

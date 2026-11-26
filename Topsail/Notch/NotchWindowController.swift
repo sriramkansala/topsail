@@ -114,6 +114,18 @@ final class NotchWindowController: NSWindowController {
         settings.publisher(for: .notifications)
             .sink { [weak mirror] on in if on { mirror?.start() } else { mirror?.stop() } }
             .store(in: &featureSubscriptions)
+        // The screen and call recorder: its notices grow out of the notch like the others, the island
+        // closes for a screen recording's countdown, and joining a call may offer to record it.
+        let recorder = features.recorder
+        recorder.isEnabled = { [weak settings] in settings?.isEnabled(.recorder) == true }
+        recorder.postNotice = { [weak activities] in activities?.post(.recorder($0)) }
+        recorder.replaceNotice = { [weak activities] in activities?.update(.recorder($0), to: .recorder($1)) }
+        recorder.withdrawNotice = { [weak activities] in activities?.withdraw(.recorder($0)) }
+        recorder.onCountdown = { [weak model] in model?.collapse() }
+        calendar.onJoin = { [weak recorder] in recorder?.offerCall(for: $0) }
+        settings.publisher(for: .recorder)
+            .sink { [weak recorder] on in if !on { recorder?.featureTurnedOff() } }
+            .store(in: &featureSubscriptions)
         settings.publisher(for: .reminders)
             .sink { [weak features] on in
                 if on { features?.reminders.start() } else { features?.reminders.stop() }
@@ -172,6 +184,7 @@ final class NotchWindowController: NSWindowController {
             // The App Store build's card: no battery.
             model.activities.post(.audioDevice(name: "Headphones", battery: nil))
         case "copied": model.activities.post(.copied)
+        case let name where name.hasPrefix("recording") || name == "countdown": model.features.recorder.preview(name)
         default: break
         }
     }
