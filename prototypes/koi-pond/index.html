@@ -62,7 +62,7 @@
   <h2>pipeline, on one patch of the pond</h2>
   <div class="strip" id="strip"></div>
 
-  <h2>koi sprites · four swim frames each, sampled from your cut-outs</h2>
+  <h2>koi sprites · four swim frames each, read from your cut-outs as flat colour regions</h2>
   <div class="sheet"><canvas id="sheet"></canvas></div>
 
   <h2>palette · 16 colours</h2>
@@ -144,7 +144,7 @@ function buildSheet(p) {
 }
 
 function palette() {
-  $('palette').innerHTML = Pond.PALETTE.map(([n, h]) => `<span class="sw"><i style="background:${h}"></i>${n}</span>`).join('');
+  $('palette').innerHTML = Pond.PALETTE.filter(([n]) => n !== 'void').map(([n, h]) => `<span class="sw"><i style="background:${h}"></i>${n}</span>`).join('');
 }
 
 for (const el of document.querySelectorAll('#controls input, #controls select')) {

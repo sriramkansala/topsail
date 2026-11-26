@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Koi Pond Notch</title>
+<style>
+  :root { --bg: #0e1008; --fg: #ebe7d4; --mute: #8e9079; --line: #2a2f1b; --accent: #8ca416; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 12px/1.5 ui-monospace, "SF Mono", Menlo, monospace; }
+  main { max-width: 1072px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 13px; font-weight: 600; margin: 0; }
+  header p, .note { margin: 4px 0 14px; color: var(--mute); max-width: 76ch; }
+  h2 { font-size: 12px; font-weight: 600; margin: 26px 0 4px; }
+  .bar { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 10px 0 6px; color: var(--mute); }
+  .bar label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+  .bar button { font: inherit; color: var(--fg); background: #1c2112; border: 1px solid var(--line); border-radius: 3px; padding: 2px 10px; cursor: pointer; }
+  .tag { color: var(--mute); margin: 10px 0 4px; }
+
+  /* A slice of a Mac screen: wallpaper, the menu bar, the island hanging from the top. */
+  .screen { position: relative; width: 100%; overflow: hidden; border-radius: 6px;
+    background: linear-gradient(160deg, #3b4a5c 0%, #6a5f78 55%, #a9837a 100%); }
+  .menubar { position: absolute; inset: 0 0 auto 0; height: 32px; display: flex; align-items: center; justify-content: space-between;
+    padding: 0 14px; background: rgba(28, 30, 36, 0.32); backdrop-filter: blur(20px);
+    font: 500 13px/1 -apple-system, "SF Pro Text", system-ui, sans-serif; color: #fff; }
+  .menubar span { margin-right: 18px; opacity: 0.92; }
+  .menubar b { font-weight: 700; }
+  .island { position: absolute; top: 0; left: 50%; }
+  .island canvas { position: absolute; left: 0; top: 0; image-rendering: pixelated; }
+  .island .fill { position: absolute; inset: 0; background: #000; }
+  .hw { position: absolute; top: 0; left: 50%; width: 185px; height: 32px; margin-left: -92.5px; background: #000;
+    border-radius: 0 0 9px 9px; z-index: 5; pointer-events: none; }
+  .hw::after { content: ''; position: absolute; left: 50%; top: 12px; width: 7px; height: 7px; margin-left: -3.5px; border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, #26303f 0 30%, #0a0c10 60%); box-shadow: 0 0 0 1px #11141a; }
+  .no-hw .hw { display: none; }
+  .row { position: absolute; top: 0; height: 32px; display: flex; align-items: center; gap: 2px; z-index: 6; pointer-events: none; }
+  .row i { width: 22px; height: 22px; display: grid; place-items: center; }
+  .row i::before { content: ''; width: 13px; height: 13px; border-radius: 4px; border: 1.5px solid rgba(255, 255, 255, 0.42); }
+  .row i.on::before { background: rgba(255, 255, 255, 0.9); border-color: transparent; }
+  .row i.dot::before { border-radius: 50%; }
+  .zoom .screen { zoom: 2; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>koi pond — in the notch</h1>
+    <p>Real sizes, 1 CSS px = 1 pt. The island keeps Topsail's shape and radii: 6 / 14 closed, 14 / 24 open. The black rounded block in the middle stands in for the camera housing; on a Mac, whatever the island draws there is hidden by the hardware.</p>
+  </header>
+  <div class="bar">
+    <label><input type="checkbox" id="hw" checked> camera housing</label>
+    <label><input type="checkbox" id="zoom"> zoom 2×</label>
+  </div>
+
+  <h2>A · idle: now and then a koi swims under the notch</h2>
+  <p class="note">The closed island grows two 60 pt wings, a koi crosses from one side to the other (out of sight under the camera for a few seconds), and the wings fold away. Each wing is open water from your render with the tip of a lily pad at its far end. In the app this would come every few minutes; here it repeats every few seconds.</p>
+  <div class="bar">
+    <label><input type="radio" name="amode" value="pass" checked> wings only while a koi passes</label>
+    <label><input type="radio" name="amode" value="always"> wings always out while idle</label>
+    <button id="sendKoi">send a koi now</button>
+  </div>
+  <div class="tag">day palette</div>
+  <div class="screen" style="height:96px"><div class="menubar"><div><b>Finder</b>&nbsp;&nbsp;<span>File</span><span>Edit</span><span>View</span><span>Go</span></div><div><span>Thu 27 Nov</span>00:42</div></div><div class="island" id="aDay"></div><div class="hw"></div></div>
+  <div class="tag">night palette</div>
+  <div class="screen" style="height:96px"><div class="menubar"><div><b>Finder</b>&nbsp;&nbsp;<span>File</span><span>Edit</span><span>View</span><span>Go</span></div><div><span>Thu 27 Nov</span>00:42</div></div><div class="island" id="aNight"></div><div class="hw"></div></div>
+
+  <h2>B · open: the pond as a page</h2>
+  <p class="note">The pond fills the open island below the notch row and dissolves into its black at the top, so the tabs sit on black as they do now. Click the water to drop food: the koi turn and come for it. The koi rise and sink; near the surface they leave ripples.</p>
+  <div class="bar"><label><input type="checkbox" id="words"> a line of words</label></div>
+  <div class="tag">day palette</div>
+  <div class="screen" style="height:270px"><div class="menubar"><div><b>Finder</b>&nbsp;&nbsp;<span>File</span><span>Edit</span><span>View</span><span>Go</span></div><div><span>Thu 27 Nov</span>00:42</div></div><div class="island" id="bDay"></div><div class="hw"></div></div>
+  <div class="tag">night palette</div>
+  <div class="screen" style="height:270px"><div class="menubar"><div><b>Finder</b>&nbsp;&nbsp;<span>File</span><span>Edit</span><span>View</span><span>Go</span></div><div><span>Thu 27 Nov</span>00:42</div></div><div class="island" id="bNight"></div><div class="hw"></div></div>
+</main>
+
+<script src="pond.js"></script>
+<script>
+const NOTCH = { w: 185, h: 32 };
+const CLOSED = { top: 6, bottom: 14 };
+const OPEN = { top: 14, bottom: 24, w: 549, h: 220 };
+const WING = 60;
+
+// Topsail's NotchShape: the top corners flare out into the menu bar, the bottom ones round in.
+function notchPath(w, h, rt, rb, dx = 0) {
+  const fw = w + 2 * rt, p = (x, y) => `${(x + dx).toFixed(2)},${y.toFixed(2)}`;
+  return `path('M${p(0, 0)} Q${p(rt, 0)} ${p(rt, rt)} L${p(rt, h - rb)} Q${p(rt, h)} ${p(rt + rb, h)} ` +
+    `L${p(fw - rt - rb, h)} Q${p(fw - rt, h)} ${p(fw - rt, h - rb)} L${p(fw - rt, rt)} Q${p(fw - rt, 0)} ${p(fw, 0)} Z')`;
+}
+
+// ---------------------------------------------------------------- A: koi under the notch
+function wings(el, night) {
+  const maxW = NOTCH.w + 2 * WING, FW = maxW + 2 * CLOSED.top, H = NOTCH.h;
+  el.style.cssText += `;width:${FW}px;height:${H}px;margin-left:${-FW / 2}px`;
+  const c = document.createElement('canvas');
+  el.appendChild(c);
+  const pond = new Pond(c, {
+    width: FW, height: H, cell: 4, line: 0.75, fat: 1.7, night, toneShift: night ? -0.12 : 0,
+    // The middle 72% of the render, so each wing is open water with a pad's tip at its far end.
+    crop: [0.14, 0.409, 0.72, 0.182], koi: [], ripples: true, blossoms: true, fps: 12,
+  });
+  const st = { p: 0, v: 0, target: 0, state: 'wait', until: performance.now() / 1000 + 1.5 + Math.random() };
+  const kinds = ['kohaku', 'showa', 'beni'];
+  let n = 0;
+
+  function launch() {
+    const dir = n % 2 ? -1 : 1, len = 54;
+    const k = pond._koi({ kind: kinds[n % 3], len, fat: 2.1, depth: 0.15, speed: 32, t: Math.random() * 10 }, n++);
+    k.x = dir > 0 ? -len * 0.6 : FW + len * 0.6;
+    k.y = H / 2;
+    k.drive = (k, dt, P) => {
+      k.t += dt;
+      const wob = Math.sin(k.t * 0.8 + k.seed);
+      k.heading = (dir > 0 ? 0 : Math.PI) + 0.1 * Math.cos(k.t * 0.8 + k.seed) * dir;
+      k.x += Math.cos(k.heading) * k.speed * dt;
+      k.y = H / 2 + wob * 3;
+      k.phase += dt * 5;
+      k.bend = 0;
+      k.depth = 0.15;
+      if (Math.random() < dt * 0.15) P.ripple(k.x + dir * len * 0.42, k.y, true);
+    };
+    k.dir = dir;
+    pond.koi.push(k);
+    return k;
+  }
+  st.send = () => { if (st.state === 'wait') st.until = 0; };
+
+  let last = performance.now() / 1000;
+  function tick() {
+    requestAnimationFrame(tick);
+    const now = performance.now() / 1000, dt = Math.min(0.05, now - last);
+    last = now;
+    const mode = document.querySelector('input[name=amode]:checked').value;
+    // A spring toward the wings' target.
+    const a = 170 * (st.target - st.p) - 24 * st.v;
+    st.v += a * dt;
+    st.p += st.v * dt;
+    if (st.state === 'wait' && (now > st.until || mode === 'always' && st.p < 0.5)) {
+      st.target = 1;
+      st.state = 'opening';
+    } else if (st.state === 'opening' && (st.p > 0.8 || mode === 'always' && st.p > 0.5)) {
+      st.koi = launch();
+      st.state = 'swimming';
+    } else if (st.state === 'swimming') {
+      const k = st.koi;
+      if ((k.dir > 0 && k.x > FW + k.len * 0.6) || (k.dir < 0 && k.x < -k.len * 0.6)) {
+        pond.koi = pond.koi.filter((q) => q !== k);
+        st.state = 'wait';
+        st.target = mode === 'always' ? 1 : 0;
+        st.until = now + (mode === 'always' ? 1 + Math.random() * 3 : 2.5 + Math.random() * 3);
+      }
+    }
+    if (mode === 'always' && st.state === 'wait') st.target = 1;
+    const w = NOTCH.w + 2 * WING * Math.max(0, st.p);
+    const rt = CLOSED.top;
+    el.style.clipPath = notchPath(w, H, rt, CLOSED.bottom, (FW - (w + 2 * rt)) / 2);
+  }
+  pond.start();
+  tick();
+  return st;
+}
+
+// ---------------------------------------------------------------- B: the pond page
+function page(el, night) {
+  const FW = OPEN.w + 2 * OPEN.top, H = OPEN.h;
+  el.style.cssText += `;width:${FW}px;height:${H}px;margin-left:${-FW / 2}px;clip-path:${notchPath(OPEN.w, H, OPEN.top, OPEN.bottom)};cursor:pointer`;
+  const c = document.createElement('canvas');
+  el.appendChild(c);
+  const len = 88;
+  const opts = {
+    width: FW, height: H, cell: 5, line: 1, fat: 1.6, night, toneShift: night ? -0.12 : 0, fade: [10, 76],
+    bounds: [OPEN.top + 10, 58, FW - OPEN.top - 10, H - 12],
+    koi: [
+      { kind: 'kohaku', len, x: FW * 0.45, y: H * 0.52, heading: -0.2, speed: 20 },
+      { kind: 'showa', len: len * 0.92, x: FW * 0.7, y: H * 0.74, heading: 2.8, speed: 18 },
+      { kind: 'beni', len: len * 0.86, x: FW * 0.28, y: H * 0.78, heading: 0.4, speed: 22 },
+    ],
+  };
+  let pond = new Pond(c, opts).start();
+  // The notch row: page tabs left of the camera (the pond's selected), mic and settings right.
+  const left = document.createElement('div'), right = document.createElement('div');
+  left.className = right.className = 'row';
+  left.innerHTML = '<i></i><i></i><i></i><i></i><i></i><i class="on"></i>';
+  right.innerHTML = '<i class="dot"></i><i class="dot"></i>';
+  left.style.right = `${FW / 2 + NOTCH.w / 2 + 4}px`;
+  right.style.left = `${FW / 2 + NOTCH.w / 2 + 4}px`;
+  el.append(left, right);
+  el.addEventListener('click', (e) => {
+    const r = c.getBoundingClientRect(), z = r.width / FW;
+    pond.feed((e.clientX - r.left) / z, (e.clientY - r.top) / z);
+  });
+  return {
+    words(on) {
+      pond.o.text = on ? { lines: ['still here?'], x: OPEN.top + 22, y: H - 30, px: 1, gap: 4 } : null;
+    },
+  };
+}
+
+let A = [], B = [];
+Pond.load('build/assets/').then(() => {
+  A = [wings(document.getElementById('aDay'), false), wings(document.getElementById('aNight'), true)];
+  B = [page(document.getElementById('bDay'), false), page(document.getElementById('bNight'), true)];
+});
+document.getElementById('sendKoi').onclick = () => A.forEach((a) => a.send && a.send());
+document.getElementById('hw').onchange = (e) => document.body.classList.toggle('no-hw', !e.target.checked);
+document.getElementById('zoom').onchange = (e) => document.body.classList.toggle('zoom', e.target.checked);
+document.getElementById('words').onchange = (e) => B.forEach((b) => b.words(e.target.checked));
+</script>
+</body>
+</html>

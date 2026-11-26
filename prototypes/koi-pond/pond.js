@@ -27,7 +27,15 @@
     ['orange', '#e07b2c'],
     ['red', '#bb3b23'],
     ['pink', '#e6a0b5'],
+    ['void', '#000000'], // not part of the art: the island's own black, for fades
   ];
+  // Night: the same entries, sunk toward black so the pond reads as part of a black island and
+  // only the koi and flowers keep their light.
+  const NIGHT = {
+    ink: '#030402', moss: '#151409', navy: '#091621', cobalt: '#112b42', steel: '#1f4a6a', pale: '#4e7c98',
+    white: '#d9e2db', sage: '#1f291e', dgreen: '#0f1c04', olive: '#203007', lime: '#43560f',
+    cream: '#ecdfbf', beige: '#b8955f', orange: '#df7a2b', red: '#bb3a21', pink: '#c98ba0', void: '#000000',
+  };
   const C = {};
   PALETTE.forEach(([n], i) => { C[n] = i; });
   const RGB = PALETTE.map(([, h]) => [1, 3, 5].map((o) => parseInt(h.slice(o, o + 2), 16)));
@@ -147,15 +155,68 @@
       Object.assign(Assets, {
         flora, water, render,
         waterLo: lums[Math.floor(lums.length * 0.03)], waterHi: lums[Math.floor(lums.length * 0.97)],
-        koi: {
-          w: k.width, h: k.height, axis: k.axisY,
-          kinds: { kohaku: pixels(kohaku), showa: pixels(showa), beni: pixels(beni) },
-          body: pixels(body),
-        },
+        koi: { levels: koiLevels(k, { kohaku, showa, beni }, body) },
       });
       return Assets;
     });
     return Assets.ready;
+  }
+
+  // Koi as flat colour regions, the way a pixel artist would draw them: every pixel of a cut-out
+  // is read as one of 1 fin, 2 cream, 3 red, 4 orange, 5 black (0 nothing). Shrinking then takes
+  // the majority in each block rather than an average, so patches stay pure instead of mixing
+  // into beige.
+  const KOI_RULE = {
+    kohaku: (lum, sat) => (lum < 60 ? 5 : sat < 0.3 ? 2 : 3),
+    showa: (lum, sat) => (lum < 85 ? 5 : sat < 0.3 ? 2 : 3),
+    beni: (lum, sat) => (sat < 0.25 ? 2 : lum < 105 ? 3 : 4),
+  };
+  const KOI_WEIGHT = [0, 1, 1, 1.25, 1, 1.5]; // small red and black spots survive shrinking
+
+  // The koi at 256, 128, 64 and 32 px long; each fish samples the size that puts a few sprite
+  // pixels in each cell, so small koi don't alias into noise.
+  function koiLevels(meta, imgs, bodyImg) {
+    const W = meta.width, H = meta.height, n = W * H;
+    const bodyPx = pixels(bodyImg), alphaPx = pixels(imgs.kohaku);
+    const alpha = new Float32Array(n), body = new Float32Array(n), full = {};
+    for (let i = 0; i < n; i++) { alpha[i] = alphaPx[i * 4 + 3] / 255; body[i] = bodyPx[i * 4] / 255; }
+    for (const kind in KOI_RULE) {
+      const px = pixels(imgs[kind]), cls = new Uint8Array(n);
+      for (let i = 0; i < n; i++) {
+        const r = px[i * 4], g = px[i * 4 + 1], b = px[i * 4 + 2];
+        if (px[i * 4 + 3] < 128) continue;
+        if (bodyPx[i * 4] < 128) { cls[i] = 1; continue; }
+        const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+        cls[i] = KOI_RULE[kind](0.3 * r + 0.59 * g + 0.11 * b, mx ? (mx - mn) / mx : 0);
+      }
+      full[kind] = cls;
+    }
+    const levels = [];
+    for (let f = 1; f <= 8; f *= 2) {
+      const w = Math.floor(W / f), h = Math.floor(H / f);
+      const lv = { w, h, axis: (H / f) / 2, alpha: new Float32Array(w * h), body: new Float32Array(w * h), kinds: {} };
+      for (const kind in full) lv.kinds[kind] = new Uint8Array(w * h);
+      const cnt = new Float32Array(6);
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const j = y * w + x;
+          let a = 0, bo = 0;
+          for (let yy = 0; yy < f; yy++) for (let xx = 0; xx < f; xx++) { const i = (y * f + yy) * W + x * f + xx; a += alpha[i]; bo += body[i]; }
+          lv.alpha[j] = a / (f * f);
+          lv.body[j] = bo / (f * f);
+          for (const kind in full) {
+            cnt.fill(0);
+            const cl = full[kind];
+            for (let yy = 0; yy < f; yy++) for (let xx = 0; xx < f; xx++) cnt[cl[(y * f + yy) * W + x * f + xx]] += 1;
+            let best = 0, bn = 0;
+            for (let c = 1; c < 6; c++) if (cnt[c] * KOI_WEIGHT[c] > bn) { bn = cnt[c] * KOI_WEIGHT[c]; best = c; }
+            lv.kinds[kind][j] = best;
+          }
+        }
+      }
+      levels.push(lv);
+    }
+    return levels;
   }
 
   // ---------------------------------------------------------------- the pond
@@ -176,6 +237,9 @@
     fat: 1.55,                    // koi drawn this much wider than the render: pixel proportions
     shimmer: 1,
     flat: false,                  // plain water instead of the render (sprite sheets)
+    night: false,                 // the dark palette
+    toneShift: 0,                 // added to every water tone (night uses about -0.12)
+    fade: null,                   // [y0, y1] canvas pt: black above y0, dissolving to the pond by y1
     koi: [],                      // { kind, len, x, y, heading, speed, fixed, phase, depth }
     bounds: null,                 // where koi swim: [x0, y0, x1, y1] in scene pt
     ripples: true,
@@ -251,8 +315,9 @@
       this.tone = new Float32Array(N);
       this.img = this.ctx.createImageData(pw, ph);
       this.out = new Uint32Array(this.img.data.buffer);
-      this.COL = RGB.map(pack);
-      this.LINE = RGB.map((c) => pack(mix(c, RGB[C.ink], 0.8)));
+      const rgb = this.o.night ? PALETTE.map(([n]) => [1, 3, 5].map((q) => parseInt(NIGHT[n].slice(q, q + 2), 16))) : RGB;
+      this.COL = rgb.map(pack);
+      this.LINE = rgb.map((c) => pack(mix(c, this.o.night ? [0, 0, 0] : RGB[C.ink], 0.8)));
     }
 
     // ---- the still scene: material, tone and colour of every cell
@@ -365,6 +430,12 @@
       }, k);
     }
 
+    // The sprite size for a koi this long: about three sprite pixels across each cell.
+    _level(k) {
+      const perCell = (256 / k.len) * this.o.cell;
+      return clamp(Math.floor(Math.log2(perCell / 3)), 0, 3);
+    }
+
     _bounds() {
       const o = this.o;
       return o.bounds || [0, 0, o.scene[0], o.scene[1]];
@@ -382,6 +453,19 @@
       if (ax > x1 - m) fx -= (ax - (x1 - m)) / m;
       if (ay < y0 + m) fy += (y0 + m - ay) / m;
       if (ay > y1 - m) fy -= (ay - (y1 - m)) / m;
+      const lure = this.lure;
+      if (lure) {
+        // Food on the water: every koi turns toward it; the first to reach it takes it.
+        const hx = k.x + Math.cos(k.heading) * k.len * 0.45, hy = k.y + Math.sin(k.heading) * k.len * 0.45;
+        let da = Math.atan2(lure.y - k.y, lure.x - k.x) - k.heading;
+        da = Math.atan2(Math.sin(da), Math.cos(da));
+        turn += da * 2.2;
+        fx *= 0.3; fy *= 0.3;
+        if (Math.hypot(lure.x - hx, lure.y - hy) < k.len * 0.18) {
+          this.ripple(lure.x, lure.y, true);
+          this.lure = null;
+        }
+      }
       if (fx || fy) {
         let da = Math.atan2(fy, fx) - k.heading;
         da = Math.atan2(Math.sin(da), Math.cos(da));
@@ -399,7 +483,7 @@
       turn = clamp(turn, -1.3, 1.3);
       k.turn += (turn - k.turn) * (1 - Math.exp(-dt * 2.2));
       k.heading += k.turn * dt;
-      const sp = k.speed * (0.5 + 0.75 * vnoise(k.t * 0.07, 3.3, k.seed + 9));
+      const sp = k.speed * (this.lure ? 1.9 : 0.5 + 0.75 * vnoise(k.t * 0.07, 3.3, k.seed + 9));
       k.x += Math.cos(k.heading) * sp * dt;
       k.y += Math.sin(k.heading) * sp * dt;
       k.phase += dt * (1.5 + (3.4 * sp) / k.speed);
@@ -418,37 +502,34 @@
       const t = 0.5 - u / k.len;
       if (t < 0 || t > 1) return 0;
       const w = k.len * (k.amp * Math.sin(k.phase - 5.5 * t) * (0.12 + 0.88 * t * t) + k.bend * t * t);
-      const S = Assets.koi, sc = S.w / k.len;
+      const S = Assets.koi.levels[k.lv], sc = S.w / k.len;
       const px = t * (S.w - 1), py = S.axis - ((v - w) * sc) / k.fat;
-      if (py < 0 || py >= S.h - 1) return 0;
-      const x0 = Math.min(px | 0, S.w - 2), y0 = py | 0, tx = px - x0, ty = py - y0;
-      const D = S.kinds[k.kind], Bm = S.body;
-      const w00 = (1 - tx) * (1 - ty), w10 = tx * (1 - ty), w01 = (1 - tx) * ty, w11 = tx * ty;
-      const p00 = (y0 * S.w + x0) * 4, p10 = p00 + 4, p01 = p00 + S.w * 4, p11 = p01 + 4;
-      const a = (D[p00 + 3] * w00 + D[p10 + 3] * w10 + D[p01 + 3] * w01 + D[p11 + 3] * w11) / 255;
+      if (py < 0 || py > S.h - 1) return 0;
+      const x0 = Math.min(px | 0, S.w - 2), y0 = Math.min(py | 0, S.h - 2), tx = px - x0, ty = py - y0, j = y0 * S.w + x0;
+      const bl = (m) => (m[j] * (1 - tx) + m[j + 1] * tx) * (1 - ty) + (m[j + S.w] * (1 - tx) + m[j + S.w + 1] * tx) * ty;
+      const a = bl(S.alpha);
       if (a < 0.45) return 0;
-      const body = (Bm[p00] * w00 + Bm[p10] * w10 + Bm[p01] * w01 + Bm[p11] * w11) / 255;
+      const body = bl(S.body);
       if (body < 0.5) { out[3] = a; return 2; }
-      for (let ch = 0; ch < 3; ch++) {
-        out[ch] = (D[p00 + ch] * D[p00 + 3] * w00 + D[p10 + ch] * D[p10 + 3] * w10 +
-          D[p01 + ch] * D[p01 + 3] * w01 + D[p11 + ch] * D[p11 + 3] * w11) / (a * 255);
-      }
+      out[0] = S.kinds[k.kind][Math.round(py) * S.w + Math.round(px)];
+      out[1] = body;
       return 1;
     }
 
-    // Nearest of the koi's own colours: cream and white for the body, beige for its shading, the
-    // reds, ink for showa black, pale once the fish is deep enough to take on the water's colour.
-    _koiColour(rgb, depth, kind) {
-      const sub = 0.04 + 0.3 * depth, w = RGB[C.steel];
-      const r = rgb[0] + (w[0] - rgb[0]) * sub, g = (rgb[1] * 0.97) + (w[1] - rgb[1] * 0.97) * sub, b = (rgb[2] * 0.88) + (w[2] - rgb[2] * 0.88) * sub;
-      let best = 0, bd = 1e9;
-      for (const k of KOI_SET[kind] || KOI_SET.kohaku) {
-        const P = RGB[k], rm = (r + P[0]) / 2, dr = r - P[0], dg = g - P[1], db = b - P[2];
-        let dd = (2 + rm / 256) * dr * dr + 4 * dg * dg + (2 + (255 - rm) / 256) * db * db;
-        if (k === C.white) dd += 900;
-        if (dd < bd) { bd = dd; best = k; }
-      }
-      return best;
+    // A koi colour region to a palette entry. Cream turns beige at the body's rim, a pixel
+    // artist's roundness; a deep fish's cream takes on the water as pale.
+    _koiColour(cls, body, depth) {
+      const rim = body < 0.72;
+      if (cls === 5) return C.ink;
+      if (cls === 3) return C.red;
+      if (cls === 4) return rim ? C.red : C.orange;
+      return depth > 0.75 ? C.pale : rim ? C.beige : C.cream;
+    }
+
+    // Drop food at a scene point: a ripple, and the koi come.
+    feed(x, y) {
+      this.ripple(x, y, false);
+      this.lure = { x, y, until: this.time + 9 };
     }
 
     ripple(x, y, splash) {
@@ -473,7 +554,11 @@
 
     update(dt) {
       this.time += dt;
-      for (const k of this.koi) if (!k.fixed) this._stepKoi(k, dt);
+      for (const k of this.koi) {
+        if (k.drive) k.drive(k, dt, this);
+        else if (!k.fixed) this._stepKoi(k, dt);
+      }
+      if (this.lure && this.time > this.lure.until) this.lure = null;
       const o = this.o;
       if (o.ripples && Math.random() < dt / 7) {
         const [x0, y0, x1, y1] = this._bounds();
@@ -490,7 +575,7 @@
       for (let i = 0; i < N; i++) {
         if (!live[i] || mat[i] !== M.water) continue;
         const X = this.cx[i] + vx, Y = this.cy[i] + vy;
-        tone[i] = this.base[i] + sh * (0.1 * (vnoise(X / (cell * 6) - t * 0.35, Y / (cell * 1.1), s + 21) - 0.5) +
+        tone[i] = this.base[i] + o.toneShift + sh * (0.1 * (vnoise(X / (cell * 6) - t * 0.35, Y / (cell * 1.1), s + 21) - 0.5) +
           0.07 * (vnoise(X / (cell * 3) + t * 0.22, Y / (cell * 0.8) + t * 0.05, s + 22) - 0.5));
       }
       const white = new Set(), fins = new Map();
@@ -498,7 +583,8 @@
       const koi = this.koi.slice().sort((p, q) => q.depth - p.depth);
       // Shadows on the bed, and fins as lighter, translucent water.
       for (const k of koi) {
-        const off = 1.1 - 0.7 * k.depth, ox = k.len * 0.09 * off, oy = k.len * 0.16 * off, r = k.len * 0.62;
+        if (k.lv == null) k.lv = this._level(k);
+        const off = 1.1 - 0.7 * k.depth, ox = Math.max(k.len * 0.09, cell * 0.8) * off, oy = Math.max(k.len * 0.16, cell * 1.6) * off, r = k.len * 0.62;
         this._cells(k.x - vx - r + ox, k.y - vy - r + oy, k.x - vx + r + ox, k.y - vy + r + oy, (i, x, y) => {
           if (mat[i] !== M.water) return;
           if (this._koiAt(k, x + vx - ox, y + vy - oy, tmp) === 1 && hash(this.ca[i], this.cb[i], 99) > 0.12) tone[i] -= 0.3;
@@ -551,7 +637,7 @@
         const r = k.len * 0.62;
         this._cells(k.x - vx - r, k.y - vy - r, k.x - vx + r, k.y - vy + r, (i, x, y) => {
           if (mat[i] !== M.water) return;
-          if (this._koiAt(k, x + vx, y + vy, tmp) === 1) idx[i] = this._koiColour(tmp, k.depth, k.kind);
+          if (this._koiAt(k, x + vx, y + vy, tmp) === 1) idx[i] = this._koiColour(tmp[0], tmp[1], k.depth);
         });
       }
       // Glints: a cell of light water flashes white for a frame or two.
@@ -568,6 +654,14 @@
         idx[bl.i] = bl.heart;
         const lit = Math.sin(t * 0.9 + bl.phase) > -0.2;
         for (const j of bl.nb) idx[j] = lit ? bl.petal : C.lime;
+      }
+      // Dissolve into the island's black, ordered-dithered like everything else.
+      if (o.fade) {
+        const [f0, f1] = o.fade;
+        for (let i = 0; i < N; i++) {
+          if (!live[i] || this.cy[i] >= f1) continue;
+          if ((this.cy[i] - f0) / (f1 - f0) < BAYER[((this.ca[i] & 3) << 2) | (this.cb[i] & 3)]) idx[i] = C.void;
+        }
       }
     }
 
@@ -625,12 +719,6 @@
     stop() { cancelAnimationFrame(this.raf); }
   }
 
-  // Each koi's own colours: kohaku and showa keep true red patches, the beni is orange all over.
-  const KOI_SET = {
-    kohaku: [C.cream, C.white, C.beige, C.red, C.ink, C.pale],
-    showa: [C.cream, C.white, C.beige, C.red, C.ink, C.pale],
-    beni: [C.orange, C.red, C.beige, C.cream, C.ink, C.pale],
-  };
 
   root.Pond = Pond;
   Pond.load = load;
