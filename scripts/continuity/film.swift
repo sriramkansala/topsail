@@ -7,6 +7,10 @@
 //   film strips --film <film.mov> --traces <folder> --cells a,b,c --out <folder> --label before
 //       For each cell, a PNG with two rows: every frame for the first quarter second after the
 //       cell's first trigger, and the whole cell at even steps. Times come from the cell's trace.
+//   film strips --snaps <folder> --traces <folder> --cells a,b,c --out <folder> --label before
+//       The same strips from pictures the app took of its own window (`--continuity-snap`),
+//       for when the screen cannot be filmed: ScreenCaptureKit gets a few frames a second of a
+//       window behind the lock screen.
 //
 // Built and run by scripts/continuity.sh (`--film`). Needs Screen Recording permission for the
 // terminal it runs from.
@@ -42,6 +46,11 @@ final class Recorder: NSObject, SCStreamOutput, SCStreamDelegate {
     private var firstTime: CMTime?
     private var frames = 0
     private let queue = DispatchQueue(label: "film")
+    /// Set when the stream ends by itself (the window was taken off screen for a moment, which
+    /// Topsail does to hand the keyboard back): the film carries on with a new stream.
+    private(set) var stopped = false
+    /// How many frames came with each status (complete, idle, blank, suspended…).
+    private var statuses: [Int: Int] = [:]
 
     init(url: URL) throws {
         self.url = url
@@ -59,6 +68,7 @@ final class Recorder: NSObject, SCStreamOutput, SCStreamDelegate {
     }
 
     func start(window: SCWindow) async throws -> SCStream {
+        stopped = false
         let configuration = SCStreamConfiguration()
         configuration.sourceRect = CGRect(origin: .zero, size: filmedSize)
         configuration.width = Int(filmedSize.width * filmScale)
@@ -78,7 +88,9 @@ final class Recorder: NSObject, SCStreamOutput, SCStreamDelegate {
     func stream(_ stream: SCStream, didOutputSampleBuffer buffer: CMSampleBuffer, of type: SCStreamOutputType) {
         guard type == .screen, buffer.isValid,
               let attachments = CMSampleBufferGetSampleAttachmentsArray(buffer, createIfNecessary: false) as? [[SCStreamFrameInfo: Any]],
-              let raw = attachments.first?[.status] as? Int, SCFrameStatus(rawValue: raw) == .complete else { return }
+              let raw = attachments.first?[.status] as? Int else { return }
+        statuses[raw, default: 0] += 1
+        guard SCFrameStatus(rawValue: raw) == .complete else { return }
         let time = buffer.presentationTimeStamp
         if firstTime == nil {
             firstTime = time
@@ -89,7 +101,7 @@ final class Recorder: NSObject, SCStreamOutput, SCStreamDelegate {
     }
 
     func stream(_ stream: SCStream, didStopWithError error: Error) {
-        FileHandle.standardError.write("The film stopped: \(error.localizedDescription)\n".data(using: .utf8)!)
+        stopped = true
     }
 
     func finish() async {
@@ -99,7 +111,7 @@ final class Recorder: NSObject, SCStreamOutput, SCStreamDelegate {
         await writer.finishWriting()
         let clock: [String: Any] = ["start": firstTime.seconds, "frames": frames]
         try? JSONSerialization.data(withJSONObject: clock).write(to: URL(fileURLWithPath: url.path + ".json"))
-        print("Filmed \(frames) frames into \(url.lastPathComponent)")
+        print("Filmed \(frames) frames into \(url.lastPathComponent) (frames by status: \(statuses.sorted { $0.key < $1.key }))")
     }
 }
 
@@ -107,21 +119,34 @@ func record() async {
     guard let pidText = argument("--pid"), let pid = Int32(pidText), let out = argument("--out") else {
         fail("film record --pid <pid> --out <film.mov>")
     }
-    var window: SCWindow?
-    for _ in 0..<40 where window == nil {
-        let content = try? await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
-        window = content?.windows
-            .filter { $0.owningApplication?.processID == pid && $0.frame.width >= 600 }
-            .max { $0.frame.height < $1.frame.height }
-        if window == nil { try? await Task.sleep(for: .milliseconds(250)) }
+    func notchWindow() async -> SCWindow? {
+        for _ in 0..<40 {
+            let content = try? await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+            let window = content?.windows
+                .filter { $0.owningApplication?.processID == pid && $0.frame.width >= 600 }
+                .max { $0.frame.height < $1.frame.height }
+            if let window { return window }
+            if kill(pid, 0) != 0 { return nil }
+            try? await Task.sleep(for: .milliseconds(100))
+        }
+        return nil
     }
-    guard let window else { fail("Topsail's notch window was not found (pid \(pid)).") }
+    guard let window = await notchWindow() else { fail("Topsail's notch window was not found (pid \(pid)).") }
     do {
         let recorder = try Recorder(url: URL(fileURLWithPath: out))
-        let stream = try await recorder.start(window: window)
-        while kill(pid, 0) == 0 { try? await Task.sleep(for: .milliseconds(200)) }
+        var stream = try await recorder.start(window: window)
+        var restarts = 0
+        while kill(pid, 0) == 0 {
+            if recorder.stopped {
+                guard let window = await notchWindow() else { break }
+                stream = try await recorder.start(window: window)
+                restarts += 1
+            }
+            try? await Task.sleep(for: .milliseconds(50))
+        }
         try? await stream.stopCapture()
         await recorder.finish()
+        if restarts > 0 { print("The window left the screen \(restarts) time(s); the film carried on.") }
     } catch {
         fail("Could not film: \(error.localizedDescription)")
     }
@@ -174,11 +199,36 @@ struct CellTrace {
 }
 
 func strips() async {
-    guard let film = argument("--film"), let traces = argument("--traces"), let cells = argument("--cells"),
-          let out = argument("--out") else {
-        fail("film strips --film <film.mov> --traces <folder> --cells a,b --out <folder> [--label before]")
+    guard let traces = argument("--traces"), let cells = argument("--cells"), let out = argument("--out") else {
+        fail("film strips (--film <film.mov> | --snaps <folder>) --traces <folder> --cells a,b --out <folder> [--label before]")
     }
     let label = argument("--label") ?? "run"
+    try? FileManager.default.createDirectory(atPath: out, withIntermediateDirectories: true)
+    if let snaps = argument("--snaps") {
+        for id in cells.split(separator: ",").map(String.init) {
+            guard let trace = CellTrace(url: URL(fileURLWithPath: traces).appendingPathComponent(id + ".jsonl")) else { continue }
+            let folder = URL(fileURLWithPath: snaps).appendingPathComponent(id)
+            let files = ((try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? []).filter { $0.hasSuffix(".png") }.sorted()
+            var rows: [[(time: Double, image: CGImage)]] = [[], []]
+            for file in files {
+                let parts = file.dropLast(4).split(separator: "-")
+                guard parts.count == 3, let time = Double(parts[2]),
+                      let image = NSImage(contentsOf: folder.appendingPathComponent(file))?.cgImage(forProposedRect: nil, context: nil, hints: nil)
+                else { continue }
+                rows[parts[0] == "a" ? 0 : 1].append((time, image))
+            }
+            guard rows.allSatisfy({ !$0.isEmpty }) else {
+                print("No pictures for \(id); skipped.")
+                continue
+            }
+            let url = URL(fileURLWithPath: out).appendingPathComponent("\(id).\(label).png")
+            compose(trace: trace, rows: rows, titles: ["Every frame from the first trigger (60 fps)", "The whole cell"],
+                    label: label + " · the window's own layers", to: url)
+            print("Wrote \(url.lastPathComponent)")
+        }
+        return
+    }
+    guard let film = argument("--film") else { fail("film strips needs --film or --snaps") }
     guard let clockData = try? Data(contentsOf: URL(fileURLWithPath: film + ".json")),
           let clock = try? JSONSerialization.jsonObject(with: clockData) as? [String: Any],
           let filmStart = clock["start"] as? Double else { fail("No clock beside \(film).") }
@@ -186,7 +236,6 @@ func strips() async {
     let generator = AVAssetImageGenerator(asset: asset)
     generator.requestedTimeToleranceBefore = .zero
     generator.requestedTimeToleranceAfter = .zero
-    try? FileManager.default.createDirectory(atPath: out, withIntermediateDirectories: true)
 
     for id in cells.split(separator: ",").map(String.init) {
         guard let trace = CellTrace(url: URL(fileURLWithPath: traces).appendingPathComponent(id + ".jsonl")) else {
@@ -224,7 +273,7 @@ func strips() async {
 func compose(trace: CellTrace, rows: [[(time: Double, image: CGImage)]], titles: [String], label: String, to url: URL) {
     // Each frame is cropped to the island's reach, centred on the notch.
     let crop = CGSize(width: min(filmedSize.width, trace.reach.width + 44), height: min(filmedSize.height, trace.reach.height + 26))
-    let shown: CGFloat = min(1, 300 / crop.width)   // points on the strip per point on screen
+    let shown: CGFloat = min(1, 240 / crop.width)   // points on the strip per point on screen
     let cell = CGSize(width: (crop.width * shown).rounded(), height: (crop.height * shown).rounded())
     let columns = 8
     let gap: CGFloat = 6, margin: CGFloat = 16, caption: CGFloat = 14, heading: CGFloat = 54, rowTitle: CGFloat = 22
@@ -238,8 +287,10 @@ func compose(trace: CellTrace, rows: [[(time: Double, image: CGImage)]], titles:
     guard let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(width * scale), pixelsHigh: Int(height * scale),
                                         bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
                                         colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0),
-          let context = NSGraphicsContext(bitmapImageRep: bitmap) else { return }
-    bitmap.size = NSSize(width: width, height: height)
+          let context = { () -> NSGraphicsContext? in
+              bitmap.size = NSSize(width: width, height: height)
+              return NSGraphicsContext(bitmapImageRep: bitmap)
+          }() else { return }
     NSGraphicsContext.saveGraphicsState()
     NSGraphicsContext.current = context
     NSColor(white: 0.13, alpha: 1).setFill()
@@ -265,9 +316,13 @@ func compose(trace: CellTrace, rows: [[(time: Double, image: CGImage)]], titles:
             let column = position % columns
             if position > 0, column == 0 { y += cell.height + caption + gap }
             let x = margin + CGFloat(column) * (cell.width + gap)
-            let pixels = CGRect(x: (filmedSize.width - crop.width) / 2 * filmScale, y: 0,
-                                width: crop.width * filmScale, height: crop.height * filmScale)
+            // A frame is the top of the notch window, 700 pt wide, at whatever scale it was taken.
+            let scale = CGFloat(frame.image.width) / filmedSize.width
+            let pixels = CGRect(x: (filmedSize.width - crop.width) / 2 * scale, y: 0,
+                                width: crop.width * scale, height: crop.height * scale)
             if let cropped = frame.image.cropping(to: pixels) {
+                NSColor(white: 0.42, alpha: 1).setFill()
+                NSRect(x: x, y: height - y - cell.height, width: cell.width, height: cell.height).fill()
                 context.cgContext.interpolationQuality = .high
                 context.cgContext.draw(cropped, in: CGRect(x: x, y: height - y - cell.height, width: cell.width, height: cell.height))
             }
@@ -283,6 +338,9 @@ func compose(trace: CellTrace, rows: [[(time: Double, image: CGImage)]], titles:
 // MARK: - Main
 
 let mode = CommandLine.arguments.dropFirst().first ?? ""
+// A command-line tool has to open its own connection to the window server before it can ask
+// ScreenCaptureKit for windows.
+_ = NSApplication.shared
 Task {
     switch mode {
     case "record": await record()

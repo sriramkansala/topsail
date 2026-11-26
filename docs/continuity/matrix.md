@@ -373,17 +373,17 @@ it is the suite.
 
 ## What a trace is checked for
 
-Every cell is traced on the real island at the display's refresh rate (120 fps here): the
-island's size, centre and the corner radii its shape was actually drawn with, and the frame and
-opacity of each named element (artwork, bars, title, tabs, each control, the page, each toast,
-each notice, each set of wings), read from the layers on screen that frame. `scripts/continuity/check.py`
-fails a cell if:
+Every cell is traced on the real island at the display's refresh rate (120 fps here). Each frame
+records the island's size, centre and the corner radii its shape was actually drawn with (the
+shape reports them as it draws), and the frame and opacity of each named element (artwork, bars,
+title, tabs, each control, the page, each toast, each notice, each set of wings), read from the
+layers on screen that frame. `scripts/continuity/check.py` fails a cell if:
 
 | Rule | Fails when |
 | --- | --- |
-| opacity step | an element's opacity changes by more than 0.35 within one 16.7 ms frame |
-| second copy, blink | two copies of one named element are on screen at once, or an element goes away and comes back within 400 ms (a swap instead of a travel) |
-| teleport | any edge of anything visible moves more than 40 pt within one 16.7 ms frame |
+| opacity step | what can be seen of an element (its opacity, times the part of it inside the island) changes by more than 0.35 within one 16.7 ms frame; that includes being cut off by the island's edge jumping over it |
+| second copy, blink | two copies of one named element are on screen at once, or an element goes away and comes back within 400 ms inside one event (a swap instead of a travel) |
+| teleport | any edge of anything visible, or of the island, moves more than 40 pt within one 16.7 ms frame |
 | centre | the island's centre is more than 0.5 pt off the notch's, or its top leaves the top of the screen |
 | radii | at rest (250 ms without resizing) the radii are not 6/14 closed or 14/24 open |
 | page | the page at the end is not the expected one, or the page changes without a pick, an opening island or its own page going away |
@@ -391,10 +391,15 @@ fails a cell if:
 | toast overlap | a toast covers a control or the page |
 | toast missing, missing | a toast, notice or wings the cell expects never shows fully |
 | still, quiet | during a toast, anything but the band changes (frame or opacity), or the island changes width; "quiet" cells allow no change at all |
-| double resize | one event (a trigger, or the model changing state) moves the island's width or height more than once; a spring's own overshoot does not count |
+| notice order | a notice's words are more than 40% there when its shape is half open (the shape must lead), or still that visible when it is half closed |
+| double resize | one event (a trigger, or the model changing state) moves the island's width, its content's height or its toast band more than once; a spring's own overshoot and its momentum when retargeted do not count |
+| outside | what hangs below the island (the teleprompter's handle) is inside it |
 | reduce motion | with Reduce Motion on, anything travels over several frames (changes of place must be immediate; opacity may fade) |
 | slow frame | a frame takes more than 25 ms during a transition (enforced on the optimised build, `--optimized`; reported only on a debug build) |
 | harness | the island was not at rest when the first trigger fired (the cell's setup is wrong, not the island) |
+
+Rules that compare a toast with the island's edge allow one frame (17 ms) either way: inside
+SwiftUI a view's animated size and something placed against it can be a frame apart.
 
 ## Coverage
 

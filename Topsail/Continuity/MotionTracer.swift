@@ -95,14 +95,23 @@ final class MotionTracer: NSObject {
     private var steps: [Step] = []
     private var startTime: CFTimeInterval = 0
     private(set) var isTracing = false
+    /// Times (ms into the trace) at which to keep a picture of the island, and the pictures.
+    /// These are the window's own layers drawn into a bitmap, for filmstrips when the screen
+    /// itself cannot be filmed (it is locked); `scripts/continuity/film.swift` films the screen.
+    private var snapTimes: [(time: Double, tag: String)] = []
+    private(set) var snaps: [(tag: String, time: Double, image: NSBitmapImageRep)] = []
+    /// The part of the window that is pictured: its top, where the island is.
+    var snapHeight: CGFloat = 300
 
     nonisolated func add(_ probe: TraceProbeView) {
         MainActor.assumeIsolated { probes.add(probe) }
     }
 
     /// Starts a trace. `header` is the cell's own description, written as the first line.
-    func begin(header: String, steps: [Step]) {
+    func begin(header: String, steps: [Step], snapAt times: [(time: Double, tag: String)] = []) {
         guard let host, !isTracing else { return }
+        snapTimes = times.sorted { $0.time < $1.time }
+        snaps = []
         lines = [header]
         self.steps = steps.sorted { $0.at < $1.at }
         startTime = CACurrentMediaTime()
@@ -182,6 +191,20 @@ final class MotionTracer: NSObject {
         }
         line += "}"
         lines.append(line)
+
+        // One picture a frame at most (a slow one must not be followed by a burst of stale
+        // ones), at one pixel a point so it is quick enough not to stall the frame after it.
+        if let next = snapTimes.first, next.time <= elapsed {
+            snapTimes.removeAll { $0.time <= elapsed }
+            let rect = NSRect(x: 0, y: 0, width: host.bounds.width, height: min(snapHeight, host.bounds.height))
+            if let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(rect.width), pixelsHigh: Int(rect.height),
+                                             bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+                                             colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0) {
+                bitmap.size = rect.size
+                host.cacheDisplay(in: rect, to: bitmap)
+                snaps.append((next.tag, elapsed, bitmap))
+            }
+        }
     }
 
     /// The middle of a traced element, in its window's coordinates (for a click). `prefix#2`

@@ -33,6 +33,8 @@ final class ContinuityRunner {
     private let controller: NotchWindowController
     private var model: NotchViewModel { controller.model }
     private var busy = false
+    /// `--continuity-snap <folder>`: pictures of each cell, for filmstrips (see `MotionTracer.snaps`).
+    private var snapFolder: URL?
 
     /// Where traces go unless a run names a folder.
     static var defaultFolder: URL {
@@ -62,6 +64,7 @@ final class ContinuityRunner {
             return
         }
         let folder = Continuity.argument("--continuity-out").map { URL(fileURLWithPath: $0, isDirectory: true) }
+        snapFolder = Continuity.argument("--continuity-snap").map { URL(fileURLWithPath: $0, isDirectory: true) }
         let exits = CommandLine.arguments.contains("--continuity-exit")
         Task {
             // The island settles on the notch before the first cell.
@@ -119,9 +122,26 @@ final class ContinuityRunner {
         }
         let header = cell.header(notch: model.notchSize, build: Self.build)
         let data = (try? JSONSerialization.data(withJSONObject: header, options: [.sortedKeys])) ?? Data()
-        MotionTracer.shared.begin(header: String(decoding: data, as: UTF8.self), steps: steps)
         let length = (cell.steps.map(\.at).max() ?? 0) + cell.tail
+        // For a filmstrip: every 60 fps frame for a quarter second from the first trigger
+        // ("a"), and the whole cell at even steps ("b").
+        var snapAt: [(time: Double, tag: String)] = []
+        if snapFolder != nil {
+            let trigger = cell.steps.map(\.at).min() ?? 250
+            snapAt = (0..<16).map { (trigger - 16.7 + Double($0) * 1000 / 60, "a") }
+                + (0..<16).map { (length * Double($0) / 15.5, "b") }
+        }
+        MotionTracer.shared.snapHeight = cell.start.island == .teleprompter || cell.id.hasPrefix("tele.") ? 470 : 300
+        MotionTracer.shared.begin(header: String(decoding: data, as: UTF8.self), steps: steps, snapAt: snapAt)
         try? await Task.sleep(for: .milliseconds(Int(length)))
+        if let snapFolder {
+            let folder = snapFolder.appendingPathComponent(cell.id, isDirectory: true)
+            try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            for (index, snap) in MotionTracer.shared.snaps.enumerated() {
+                let name = String(format: "%@-%02d-%05d.png", snap.tag, index, Int(snap.time.rounded()))
+                try? snap.image.representation(using: .png, properties: [:])?.write(to: folder.appendingPathComponent(name))
+            }
+        }
         return MotionTracer.shared.end()
     }
 

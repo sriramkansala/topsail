@@ -7,7 +7,10 @@
 #   add --no-build                           run the app that is already built
 #   add --app /Applications/Topsail.app      run that app instead of the one in build/
 #   add --optimized                          build and run the optimised flavour (frame times count)
-#   add --film cell-a,cell-b                 also film those cells (docs/continuity/evidence/)
+#   add --film cell-a,cell-b                 also film those cells off the screen (ScreenCaptureKit,
+#                                            60 fps) into docs/continuity/evidence/; `all` for every cell run
+#   add --snap cell-a,cell-b                 the same strips from pictures the app takes of its own
+#                                            window, for when the screen is locked and cannot be filmed
 #   add --label before                       name for the films and the report (default: run)
 #
 # The run takes over the notch: it quits the Topsail that is running, shows made-up data only
@@ -26,6 +29,7 @@ main() {
   OPTIMIZED=0
   APP=
   FILM=
+  SNAP=
   LABEL=run
   while (( $# )); do
     case $1 in
@@ -33,6 +37,7 @@ main() {
       --optimized) OPTIMIZED=1 ;;
       --app) APP=$2; BUILD=0; shift ;;
       --film) FILM=$2; shift ;;
+      --snap) SNAP=$2; shift ;;
       --label) LABEL=$2; shift ;;
       -*) echo "unknown option: $1"; exit 2 ;;
       *) PATTERN=$1 ;;
@@ -57,7 +62,7 @@ main() {
   BINARY=$OUT/Topsail.app/Contents/MacOS/Topsail
 
   FILM_TOOL=$ROOT/build/continuity/film
-  if [[ -n $FILM && ( ! -x $FILM_TOOL || $ROOT/scripts/continuity/film.swift -nt $FILM_TOOL ) ]]; then
+  if [[ -n $FILM$SNAP && ( ! -x $FILM_TOOL || $ROOT/scripts/continuity/film.swift -nt $FILM_TOOL ) ]]; then
     swiftc -O -o $FILM_TOOL $ROOT/scripts/continuity/film.swift 2> $OUT/film-build.log \
       || { echo "Could not build the film tool (see ${OUT#$ROOT/}/film-build.log)."; exit 1; }
   fi
@@ -75,8 +80,10 @@ main() {
   trap restore EXIT
 
   echo "Running '$PATTERN' on ${APP#$ROOT/} …"
+  SNAP_ARGS=()
+  [[ -n $SNAP ]] && SNAP_ARGS=(--continuity-snap $OUT/snaps)
   $BINARY --continuity --continuity-list $OUT/cells.json --continuity-run "$PATTERN" \
-    --continuity-out $OUT/traces --continuity-exit > $OUT/app.log 2>&1 &
+    --continuity-out $OUT/traces "${SNAP_ARGS[@]}" --continuity-exit > $OUT/app.log 2>&1 &
   APP_PID=$!
   # Animations only run while the display is on: wake it, and keep it from idling off for as long
   # as the run lasts (a power assertion, like playing a video; no setting is changed).
@@ -96,10 +103,11 @@ main() {
     sleep 2
     if [[ -f $OUT/traces/progress.txt ]]; then
       NOW=$(< $OUT/traces/progress.txt)
-      if [[ $NOW != $LAST ]]; then printf "\r\033[K%s" "$NOW"; LAST=$NOW; fi
+      if [[ $NOW != $LAST && -t 1 ]]; then printf "\r\033[K%s" "$NOW"; fi
+      LAST=$NOW
     fi
   done
-  echo
+  [[ -t 1 ]] && echo
   if [[ -n $FILM ]]; then wait $FILM_PID 2> /dev/null; fi
   if [[ ! -f $OUT/traces/done.txt ]]; then
     echo "The run stopped early (was Topsail quit or replaced meanwhile?). See ${OUT#$ROOT/}/app.log"
@@ -116,8 +124,15 @@ main() {
       --out $ROOT/docs/continuity/evidence --label $LABEL | tee -a $OUT/film.log
   fi
 
+  if [[ -n $SNAP ]]; then
+    [[ $SNAP == all ]] && SNAP=$(ls $OUT/traces | sed -n 's/\.jsonl$//p' | paste -sd, -)
+    $FILM_TOOL strips --snaps $OUT/snaps --traces $OUT/traces --cells "$SNAP" \
+      --out $ROOT/docs/continuity/evidence --label $LABEL | tail -3
+  fi
+
   # The document's cell tables are written from the app's own list, so they are always the suite.
-  [[ -f $OUT/cells.json ]] && python3 -I $ROOT/scripts/continuity/matrix.py $OUT/cells.json $ROOT/docs/continuity/matrix.md > /dev/null
+  [[ $PATTERN == all && -f $OUT/cells.json ]] \
+    && python3 -I $ROOT/scripts/continuity/matrix.py $OUT/cells.json $ROOT/docs/continuity/matrix.md > /dev/null
 
   python3 -I $ROOT/scripts/continuity/check.py $OUT/traces --report $OUT/report.md --json $OUT/report.json
   STATUS=$?

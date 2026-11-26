@@ -75,6 +75,12 @@ failure with its time in the trace).
     still fading, and several transitions were plain cuts. Content now fades, and when the
     island shrinks the shape changes in one step after the fade.
 13. **Clipboard rows were redrawn** when the list changed. They travel to their new places.
+14. **Two animations at once pulled things apart.** SwiftUI gives each animated value the
+    animation that last touched it, so a toast arriving while the island was closing put its
+    band up to 30 pt ahead of the island's edge. The island is now built so that cannot happen:
+    one animated size sets both the content's frame and where the band hangs
+    (`IslandFrame`), and the band's height is a separate value only a toast animates (the
+    shape's `reach`).
 
 ## Now
 
