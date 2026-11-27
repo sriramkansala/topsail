@@ -8,7 +8,9 @@
 #   add --app /Applications/Topsail.app      run that app instead of the one in build/
 #   add --optimized                          build and run the optimised flavour (frame times count)
 #   add --film cell-a,cell-b                 also film those cells off the screen (ScreenCaptureKit,
-#                                            60 fps) into docs/continuity/evidence/; `all` for every cell run
+#                                            60 fps): a filmstrip each in docs/continuity/evidence/
+#                                            and a short film each in docs/continuity/evidence/films/;
+#                                            `all` for every cell run. The screen must be unlocked.
 #   add --snap cell-a,cell-b                 the same strips from pictures the app takes of its own
 #                                            window, for when the screen is locked and cannot be filmed
 #   add --label before                       name for the films and the report (default: run)
@@ -127,6 +129,9 @@ main() {
     [[ $FILM == all ]] && FILM=$(ls $OUT/traces | sed -n 's/\.jsonl$//p' | paste -sd, -)
     $FILM_TOOL strips --film $OUT/film.mov --traces $OUT/traces --cells "$FILM" \
       --out $ROOT/docs/continuity/evidence --label $LABEL | tee -a $OUT/film.log
+    # And each cell's own short film, to watch at full speed.
+    $FILM_TOOL clips --film $OUT/film.mov --traces $OUT/traces --cells "$FILM" \
+      --out $ROOT/docs/continuity/evidence/films --label $LABEL | tee -a $OUT/film.log
   fi
 
   if [[ -n $SNAP ]]; then

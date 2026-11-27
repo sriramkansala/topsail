@@ -438,4 +438,7 @@ trace can judge; the filmstrips in `evidence/` are there for the eye.
 
 `docs/continuity/evidence/` holds filmstrips cut from 60 fps ScreenCaptureKit films of the real
 notch window (made-up data only): `<cell>.before.png` on the code before the fixes and
-`<cell>.after.png` after. `docs/continuity/report.md` has the counts before and after.
+`<cell>.after.png` after. `evidence/films/` has each of those cells as its own short film
+(`<cell>.before.mov`, `<cell>.after.mov`). Filming needs the screen unlocked; so does anything
+to do with the keyboard, which the island's panel is never given behind the lock screen.
+`docs/continuity/report.md` has the counts before and after.

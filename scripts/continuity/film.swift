@@ -11,6 +11,9 @@
 //       The same strips from pictures the app took of its own window (`--continuity-snap`),
 //       for when the screen cannot be filmed: ScreenCaptureKit gets a few frames a second of a
 //       window behind the lock screen.
+//   film clips --film <film.mov> --traces <folder> --cells a,b,c --out <folder> --label before
+//       For each cell, its own short film cut out of the run's film (<cell>.<label>.mov): the
+//       cell from start to end, cropped to the island's reach, to watch at full speed.
 //
 // Built and run by scripts/continuity.sh (`--film`). Needs Screen Recording permission for the
 // terminal it runs from.
@@ -196,6 +199,19 @@ struct CellTrace {
         length = last
         reach = CGSize(width: width, height: height)
     }
+
+    /// What is shown of each frame: the island's reach and a margin, centred on the notch, from
+    /// the top of the screen. In points.
+    var crop: CGSize {
+        CGSize(width: min(filmedSize.width, reach.width + 44), height: min(filmedSize.height, reach.height + 26))
+    }
+}
+
+/// Host-clock seconds of a film's first frame, from the note `record` leaves beside it.
+func filmStart(of film: String) -> Double? {
+    guard let data = try? Data(contentsOf: URL(fileURLWithPath: film + ".json")),
+          let clock = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
+    return clock["start"] as? Double
 }
 
 func strips() async {
@@ -229,9 +245,7 @@ func strips() async {
         return
     }
     guard let film = argument("--film") else { fail("film strips needs --film or --snaps") }
-    guard let clockData = try? Data(contentsOf: URL(fileURLWithPath: film + ".json")),
-          let clock = try? JSONSerialization.jsonObject(with: clockData) as? [String: Any],
-          let filmStart = clock["start"] as? Double else { fail("No clock beside \(film).") }
+    guard let filmStart = filmStart(of: film) else { fail("No clock beside \(film).") }
     let asset = AVURLAsset(url: URL(fileURLWithPath: film))
     let generator = AVAssetImageGenerator(asset: asset)
     generator.requestedTimeToleranceBefore = .zero
@@ -271,8 +285,7 @@ func strips() async {
 }
 
 func compose(trace: CellTrace, rows: [[(time: Double, image: CGImage)]], titles: [String], label: String, to url: URL) {
-    // Each frame is cropped to the island's reach, centred on the notch.
-    let crop = CGSize(width: min(filmedSize.width, trace.reach.width + 44), height: min(filmedSize.height, trace.reach.height + 26))
+    let crop = trace.crop
     let shown: CGFloat = min(1, 240 / crop.width)   // points on the strip per point on screen
     let cell = CGSize(width: (crop.width * shown).rounded(), height: (crop.height * shown).rounded())
     let columns = 8
@@ -335,6 +348,66 @@ func compose(trace: CellTrace, rows: [[(time: Double, image: CGImage)]], titles:
     try? bitmap.representation(using: .png, properties: [:])?.write(to: url)
 }
 
+// MARK: - Clips
+
+func clips() async {
+    guard let film = argument("--film"), let traces = argument("--traces"), let cells = argument("--cells"),
+          let out = argument("--out") else {
+        fail("film clips --film <film.mov> --traces <folder> --cells a,b --out <folder> [--label before]")
+    }
+    let label = argument("--label") ?? "run"
+    guard let filmStart = filmStart(of: film) else { fail("No clock beside \(film).") }
+    let asset = AVURLAsset(url: URL(fileURLWithPath: film))
+    guard let track = try? await asset.loadTracks(withMediaType: .video).first,
+          let whole = try? await asset.load(.duration) else { fail("\(film) has no picture.") }
+    try? FileManager.default.createDirectory(atPath: out, withIntermediateDirectories: true)
+
+    var written = 0
+    for id in cells.split(separator: ",").map(String.init) {
+        guard let trace = CellTrace(url: URL(fileURLWithPath: traces).appendingPathComponent(id + ".jsonl")) else {
+            print("No trace with a clock for \(id); skipped.")
+            continue
+        }
+        // From a quarter second before the trace (the cell at rest) to a little past its end.
+        let start = max(0, trace.clock - filmStart - 0.25)
+        let end = min(whole.seconds, trace.clock - filmStart + trace.length / 1000 + 0.15)
+        guard end - start > 0.2 else {
+            print("The film has no frames for \(id); skipped.")
+            continue
+        }
+        // The same crop as the strips, in whole even pixels (the encoder wants even sizes).
+        func even(_ points: CGFloat) -> CGFloat { (points * filmScale / 2).rounded(.up) * 2 }
+        let size = CGSize(width: even(trace.crop.width), height: even(trace.crop.height))
+        let left = ((filmedSize.width * filmScale - size.width) / 2).rounded()
+
+        let layer = AVMutableVideoCompositionLayerInstruction(assetTrack: track)
+        layer.setTransform(CGAffineTransform(translationX: -left, y: 0), at: .zero)
+        let instruction = AVMutableVideoCompositionInstruction()
+        instruction.timeRange = CMTimeRange(start: .zero, duration: whole)
+        instruction.layerInstructions = [layer]
+        let composition = AVMutableVideoComposition()
+        composition.renderSize = size
+        composition.frameDuration = CMTime(value: 1, timescale: 60)
+        composition.instructions = [instruction]
+
+        guard let export = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetHighestQuality) else {
+            fail("This Mac cannot cut the film.")
+        }
+        export.videoComposition = composition
+        export.timeRange = CMTimeRange(start: CMTime(seconds: start, preferredTimescale: 6000),
+                                       end: CMTime(seconds: end, preferredTimescale: 6000))
+        let url = URL(fileURLWithPath: out).appendingPathComponent("\(id).\(label).mov")
+        try? FileManager.default.removeItem(at: url)
+        do {
+            try await export.export(to: url, as: .mov)
+            written += 1
+        } catch {
+            print("Could not cut \(id): \(error.localizedDescription)")
+        }
+    }
+    print("Cut \(written) clip(s) into \(out)")
+}
+
 // MARK: - Main
 
 let mode = CommandLine.arguments.dropFirst().first ?? ""
@@ -345,7 +418,8 @@ Task {
     switch mode {
     case "record": await record()
     case "strips": await strips()
-    default: fail("film record … | film strips …  (see the top of scripts/continuity/film.swift)")
+    case "clips": await clips()
+    default: fail("film record … | film strips … | film clips …  (see the top of scripts/continuity/film.swift)")
     }
     exit(0)
 }

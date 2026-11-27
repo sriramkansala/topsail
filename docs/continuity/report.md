@@ -85,14 +85,32 @@ Reduce Motion toast, and the two cells on the far side of a relevance limit (61 
     one animated size sets both the content's frame and where the band hangs
     (`IslandFrame`), and the band's height is a separate value only a toast animates (the
     shape's `reach`).
+15. **Closing after a click stalled the island for a quarter of a second.** Clicking or typing
+    in the island gives its panel the keyboard, and when the island closed the panel handed it
+    back by being ordered out and straight back in. With its window off screen for that moment
+    the island was drawn at fifteen frames a second for four frames, exactly as it began to
+    close: a stutter every time something in the island was clicked before the pointer left.
+    This was on main before this work, and the suite could not see it until it ran with the
+    screen unlocked (behind the lock screen the panel is never given the keyboard); making the
+    screen films is what brought it out. The keyboard now goes to a second panel nobody can
+    see, and that one is ordered out (`KeyDrainPanel`); the island's window stays where it is.
+    A real key press confirmed the keyboard still returns to the app in front. Two rules keep
+    it from coming back: "stall" (several long frames in a row, on any build) and "keyboard"
+    (a closed island must not hold the keyboard).
 
 ## Now
 
-| Build | Cells passing |
-| --- | ---: |
-| The installed app, `/Applications/Topsail.app` (debug build of this branch, `scripts/build.sh --direct --install`) | **220 of 220** |
-| The same build run from `build/` | 220 of 220 |
-| Optimised build (`scripts/continuity.sh --optimized`), where frame times count | 218 of 220 |
+| Build | Screen | Cells passing |
+| --- | --- | ---: |
+| The installed app, `/Applications/Topsail.app` (debug build of this branch, `scripts/build.sh --direct --install`) | unlocked | **220 of 220** |
+| The same build before cause 15 was fixed | locked (overnight) | 220 of 220 |
+| Optimised build (`scripts/continuity.sh --optimized`), where frame times count, before cause 15 was fixed | locked (overnight) | 218 of 220 |
+
+The first row is the one that counts: all 220 cells, 88,693 frames, traced on the installed app
+with the screen unlocked; no stall, and the island never holds the keyboard while closed. The
+overnight runs were behind the lock screen, which hides cause 15. Unlocked, that earlier build
+failed `int.pointer-leaves-while-toast-slides` in each of four runs: it is the one cell that
+closes the island straight after a click. The optimised build has not been rerun since.
 
 The two that fail on the optimised build are single slow frames, explained under Leftovers
 ([optimized-report.md](optimized-report.md)). Nothing else fails on any build.
@@ -100,28 +118,39 @@ The two that fail on the optimised build are single slow frames, explained under
 The headline case, `toast.keepAwake.open.player` (music page open, click Keep Awake): the toast
 slides up into the band at the island's base and the player does not move. The trace says so
 (the "still" rule holds every other element to within half a point for the whole life of the
-toast) and the strips show it: [before](evidence/toast.keepAwake.open.player.before.png),
-[after](evidence/toast.keepAwake.open.player.after.png).
+toast) and the screen films show it: strips [before](evidence/toast.keepAwake.open.player.before.png)
+and [after](evidence/toast.keepAwake.open.player.after.png), films
+[before](evidence/films/toast.keepAwake.open.player.before.mov) and
+[after](evidence/films/toast.keepAwake.open.player.after.mov).
 
 How it got there: 18 of 220 at the start; 205 after the first batch of fixes (causes 1 to 13);
 220 after the second (cause 14, and the checker taught the difference between a real break and
-SwiftUI's one frame of slack). The whole matrix was rerun after each batch.
+SwiftUI's one frame of slack). Then the screen films, the first runs with the screen unlocked,
+showed cause 15 in one cell; with that fixed the whole matrix passes unlocked. The whole matrix
+was rerun after each batch.
 
 To run it yourself: `scripts/continuity.sh` (everything), `scripts/continuity.sh 'toast.*'`
 (a group), `scripts/continuity.sh --app /Applications/Topsail.app` (the installed copy),
 `open topsail://test/toast.keepAwake.open.player` (one cell, to watch). A run needs the display
-on; it wakes it and holds it on by itself, and works with the screen locked.
+on; it wakes it and holds it on by itself. It runs with the screen locked too, but a locked
+screen cannot be filmed and never gives the island's panel the keyboard, so a locked run cannot
+see cause 15: the result to trust is an unlocked one.
 
 ## Leftovers
 
-- **Screen films.** See the note under Filmstrips: strips are in-app pictures because the
-  screen was locked; the ScreenCaptureKit film is one command away once it is unlocked.
+- **A click in the island takes the keyboard until the island closes.** That is how it was
+  before (the panel becomes key on any click, not only in a text field), and it is why cause 15
+  was so common. Keys typed while the pointer is still on the open island go nowhere. Giving
+  the panel the keyboard only for text fields would be the tidier rule; it is not done here.
 - **Two slow frames on the optimised build.** The very first time the island opens after launch,
   one frame takes 28 ms (fonts and symbols being drawn for the first time); and when the koi
   pond page comes in, one frame takes 26 ms (the pond's canvas starting). Out of 88,304 frames
   traced on that build these are the only two over 25 ms. The pond is another session's work in
   progress and was left alone; warming the open island's content once after launch would deal
   with the first, and is not done.
+  On the debug build, unlocked and with the Mac in use, seven cells had a single frame over
+  25 ms (most 25 to 31 ms; one of 67 ms as a saved recording's notice arrives). Debug frame times
+  are reported, not judged; a run of long frames is (the "stall" rule).
 - **Icons.** The rule is free Pikaicons only. The repository has no Pikaicons yet (everything
   on main is an SF Symbol), so the toast's icons are SF Symbols too, in neutral grey. The switch
   is its own piece of work and nothing here stands in its way.
@@ -163,7 +192,7 @@ second from the first trigger, and the whole cell at even steps.
 | `arrive.music.stop.open.player` | [before](evidence/arrive.music.stop.open.player.before.png) | [after](evidence/arrive.music.stop.open.player.after.png) | The track ends while the player is open. Before: the title jumped 98 pt and the tab vanished in one frame. After: the page keeps its last track while it leaves and the tabs close up in one move. |
 | `act.lowBattery.closed.music` | [before](evidence/act.lowBattery.closed.music.before.png) | [after](evidence/act.lowBattery.closed.music.after.png) | A notice over music. Before: words arrive with the shape and are cut by it as it closes. After: the shape leads, the words follow, and leave first. |
 | `keys.volume-then-brightness.closed.music` | [before](evidence/keys.volume-then-brightness.closed.music.before.png) | [after](evidence/keys.volume-then-brightness.closed.music.after.png) | Volume then brightness, 400 ms apart. Before: wings and glyphs swapping, the island resizing each time. After: one band, the second level replaces the first inside it. |
-| `int.pointer-leaves-while-toast-slides` | [before](evidence/int.pointer-leaves-while-toast-slides.before.png) | [after](evidence/int.pointer-leaves-while-toast-slides.after.png) | The pointer leaves as the toast arrives. After: the toast stays on the island's base all the way down. |
+| `int.pointer-leaves-while-toast-slides` | [before](evidence/int.pointer-leaves-while-toast-slides.before.png) | [after](evidence/int.pointer-leaves-while-toast-slides.after.png) | The pointer leaves as the toast arrives, just after a click. Before: the island also stalls for a quarter of a second as it starts to close (cause 15; best seen in the film). After: it closes in one move and the toast stays on its base all the way down. |
 | `int.toast-during-page-switch` | [before](evidence/int.toast-during-page-switch.before.png) | [after](evidence/int.toast-during-page-switch.after.png) | A level changed mid page switch. After: the band joins the base of the page being switched to. |
 | `toast.keepAwake.closed.agent` | [before](evidence/toast.keepAwake.closed.agent.before.png) | [after](evidence/toast.keepAwake.closed.agent.after.png) | Over an agent's wings. Before: the toast replaced them. After: they stay. |
 | `toast.keepAwake.closed.recording` | [before](evidence/toast.keepAwake.closed.recording.before.png) | [after](evidence/toast.keepAwake.closed.recording.after.png) | Over a recording's wings: the same. |
@@ -171,18 +200,18 @@ second from the first trigger, and the whole cell at even steps.
 | `toast.brightness.closed.agent` | [before](evidence/toast.brightness.closed.agent.before.png) | [after](evidence/toast.brightness.closed.agent.after.png) | Brightness over an agent's wings. |
 | `toast.brightness.closed.recording` | [before](evidence/toast.brightness.closed.recording.before.png) | [after](evidence/toast.brightness.closed.recording.after.png) | Brightness over a recording. |
 
-**These strips are not screen films.** The brief asked for 60 fps ScreenCaptureKit films of the
-screen. The film tool is written and wired in (`scripts/continuity/film.swift`, `--film`), and
-it does capture Topsail's window; but the Mac's screen locked at 02:34 while its owner was away,
-and ScreenCaptureKit delivers only about five frames a second of a window behind the lock
-screen (most frames come back marked idle or suspended). So the strips here are pictures the
-app takes of its own window's layers at the same exact times (`--snap`): true positions, sizes
-and opacities, without blur effects. With the screen unlocked, this makes the real films of the
-fixed build:
+**The strips are cut from screen films**: 60 fps ScreenCaptureKit films of Topsail's own window
+on the real screen (nothing else on the screen is in them), made on 27 November with the screen
+unlocked. Each cell also has its own short film to watch at full speed, in
+[evidence/films/](evidence/films/): `<cell>.before.mov` and `<cell>.after.mov`. The first
+version of these strips was made overnight behind the lock screen, where the screen cannot be
+filmed, from pictures the app took of its own window (`--snap`, still there for that case).
+
+To film again (the screen must be unlocked):
 
 ```bash
 scripts/continuity.sh --no-build --label after --film all 'toast.keepAwake.open.player,toast.keepAwake.closed.music,hover.all-pages.music'
 ```
 
-(For "before" films, build commit `5ae9b09`, which is the suite on the unchanged island, and pass
-its app with `--app`.)
+The "before" films are of commit `5ae9b09` (the suite on the unchanged island), built apart and
+passed with `--app`.
