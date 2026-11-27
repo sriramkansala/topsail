@@ -17,6 +17,8 @@ OPACITY_STEP = 0.35     # largest opacity change in one frame
 TELEPORT = 40.0         # pt: largest move of any edge in one frame
 CENTRE = 0.5            # pt: the island's centre against the notch's
 SLOW_FRAME = 25.0       # ms
+STALL_FRAME = 50.0      # ms: three frames this long within STALL_SPAN are a stall on any build
+STALL_SPAN = 300.0      # ms
 VISIBLE = 0.05          # opacity above which something counts as on screen
 BLINK = 400.0           # ms: gone and back within this is a swap, not a leave and a return
 SKEW = 17.0             # ms: a parent's animated size and a child placed against it can be one
@@ -262,6 +264,14 @@ def check(trace):
         fail("page", t[-1], f"ended on the {final.get('page')} page, expected {expect['page']}")
     if "state" in expect and final.get("st") != expect["state"]:
         fail("page", t[-1], f"ended {final.get('st')}, expected {expect['state']}")
+    # 6b. The keyboard: a closed island does not keep it. (Clicking or typing in the island gives
+    # its panel the keyboard; closing must hand it back to the app the user is in. A frame of
+    # slack: the state changes just before the panel lets go.)
+    held = [index for index in range(count)
+            if trace.state[index].get("key") == "1" and trace.state[index].get("st") == "collapsed"
+            and trace.state[index].get("tele") != "1"]
+    if len(held) > 2:
+        fail("keyboard", t[held[0]], f"the island was closed but kept the keyboard for {len(held)} frames")
     for index in range(1, count):
         before, after = trace.state[index - 1], trace.state[index]
         if before.get("page") == after.get("page"):
@@ -540,6 +550,15 @@ def check(trace):
             fail("slow frame", worst[1], text)
         else:
             warnings.append(("slow frame", round(worst[1]), text))
+    # A stall is not a slow frame: several long frames in a row mean the island stopped being
+    # drawn mid-move (its window taken off screen and put back, say), whatever the build.
+    long = [(gap, time) for gap, time in slow if gap > STALL_FRAME]
+    for first in range(len(long) - 2):
+        if long[first + 2][1] - long[first][1] <= STALL_SPAN:
+            run = [gap for gap, time in long if long[first][1] <= time <= long[first][1] + STALL_SPAN]
+            fail("stall", long[first][1] - long[first][0],
+                 f"drawing stalled during a transition: {len(run)} frames of {min(run):.0f} to {max(run):.0f} ms in a row")
+            break
     return failures, warnings
 
 

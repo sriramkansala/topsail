@@ -46,7 +46,12 @@ final class ContinuityRunner {
         self.controller = controller
         let tracer = MotionTracer.shared
         tracer.host = controller.window?.contentView
-        tracer.state = { [weak controller] in controller?.model.traceState ?? [:] }
+        tracer.state = { [weak controller] in
+            var state = controller?.model.traceState ?? [:]
+            // Whether the island's panel holds the keyboard (it must give it back when it closes).
+            state["key"] = controller?.window?.isKeyWindow == true ? "1" : "0"
+            return state
+        }
         applyBaseline()
     }
 
@@ -176,6 +181,7 @@ final class ContinuityRunner {
         model.testCopied(ago: nil)
         model.activities.testClear()
         controller.reposition()
+        controller.testGiveUpKeyboard()
         let settings = model.settings
         settings.teleprompterHeight = Double(IslandLayout.teleprompterHeight)
     }

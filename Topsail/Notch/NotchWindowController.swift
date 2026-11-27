@@ -162,14 +162,27 @@ final class NotchWindowController: NSWindowController {
         fatalError("init(coder:) is not supported")
     }
 
-    /// Typing in the island (a reminder, a voice note's rename) made the panel key; once the
-    /// island closes, keystrokes must go back to the app the user is in, not to Topsail. Ordering
-    /// the panel out and in drops key status without activating anything.
+    /// Clicking or typing in the island (a button, a reminder, a voice note's rename) made the
+    /// panel key; once the island closes, keystrokes must go back to the app the user is in, not
+    /// to Topsail. A key panel that is ordered out drops the keyboard without activating
+    /// anything, so the island's panel passes it to a second panel nobody can see, and that one
+    /// is ordered out.
+    ///
+    /// The island's own panel must not be the one ordered out and back in: that stalls what it
+    /// draws for a quarter of a second (four frames at fifteen a second) at the very moment the
+    /// island starts to close. The continuity suite caught it, and only with the screen
+    /// unlocked, because behind the lock screen the panel never gets the keyboard at all.
     private func giveUpKeyboard() {
-        guard let window, window.isKeyWindow else { return }
-        window.orderOut(nil)
-        window.orderFrontRegardless()
+        guard let panel = window as? NotchPanel, panel.isKeyWindow else { return }
+        panel.refusesKey = true
+        keyDrain.setFrameOrigin(panel.frame.origin)
+        keyDrain.orderFrontRegardless()
+        keyDrain.makeKey()
+        keyDrain.orderOut(nil)
+        panel.refusesKey = false
     }
+
+    private lazy var keyDrain = KeyDrainPanel()
 
     /// A collapsed island lets clicks through to the menu bar, unless it is showing a notice that
     /// can be clicked.
@@ -178,6 +191,13 @@ final class NotchWindowController: NSWindowController {
     }
 
     #if DEBUG
+    /// For the continuity suite's starting state, a closed island that does not hold the
+    /// keyboard: the suite launches Topsail in front, which hands its panel the keyboard, where
+    /// the real app starts in the background.
+    func testGiveUpKeyboard() {
+        giveUpKeyboard()
+    }
+
     func preview(_ activity: String) {
         let lowPowerMode: LowPowerMode = ProcessInfo.processInfo.isLowPowerModeEnabled ? .on : .off
         switch activity {

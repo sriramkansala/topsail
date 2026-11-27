@@ -396,6 +396,8 @@ layers on screen that frame. `scripts/continuity/check.py` fails a cell if:
 | outside | what hangs below the island (the teleprompter's handle) is inside it |
 | reduce motion | with Reduce Motion on, anything travels over several frames (changes of place must be immediate; opacity may fade) |
 | slow frame | a frame takes more than 25 ms during a transition (enforced on the optimised build, `--optimized`; reported only on a debug build) |
+| stall | three or more frames of over 50 ms within 300 ms during a transition, on any build: the island stopped being drawn mid-move |
+| keyboard | the island is closed but its panel still holds the keyboard (clicking or typing in the island takes it; closing must hand it back to the app the user is in) |
 | harness | the island was not at rest when the first trigger fired (the cell's setup is wrong, not the island) |
 
 Rules that compare a toast with the island's edge allow one frame (17 ms) either way: inside
